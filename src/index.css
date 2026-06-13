@@ -1,0 +1,16 @@
+/*
+ * TailwindCSS 4 的推荐接入方式是在全局 CSS 入口直接引入 `tailwindcss`。
+ * Vite 插件会在构建期间处理这条导入语句，并按你实际使用到的 className
+ * 生成对应样式，因此这里不再需要额外的 `tailwind.config.js` 才能开始使用。
+ */
+@import "tailwindcss";
+
+/*
+ * 这里保留最基础的文档高度设置，确保像 `min-h-screen` 这类布局工具类
+ * 在整个应用里表现稳定。其余视觉样式尽量交给组件级样式或 Tailwind 工具类处理。
+ */
+html,
+body,
+#root {
+  min-height: 100%;
+}
