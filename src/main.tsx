@@ -1,12 +1,12 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import "./index.css";
-import App from "./App";
-import DiaryListPage from "./pages/DiaryListPage";
-import EditorPage from "./pages/EditorPage";
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import './index.css'
+import App from './App'
+import DiaryListPage from './pages/DiaryListPage'
+import EditorPage from './pages/EditorPage'
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <BrowserRouter>
       {/*
@@ -23,7 +23,6 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
            * React Router 会因为找不到匹配路由而不渲染页面；这里将旧地址
            * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
            */}
-          <Route path="today" element={<Navigate to="/list" replace />} />
           <Route path="list" element={<DiaryListPage />} />
           <Route path="editor" element={<EditorPage />} />
           {/*
@@ -34,5 +33,5 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         </Route>
       </Routes>
     </BrowserRouter>
-  </React.StrictMode>,
-);
+  </React.StrictMode>
+)

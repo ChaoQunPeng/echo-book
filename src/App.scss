@@ -83,3 +83,161 @@
   min-width: 0;
   padding: 24px;
 }
+
+/*
+ * 编辑页采用纵向工作台布局：
+ * 顶部只保留当前页面标题、保存状态和主操作，正文编辑器占据剩余空间。
+ * height 结合主内容区 padding 计算，避免编辑器内容较少时页面显得漂浮。
+ */
+.editor-page {
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/*
+ * 标题栏用两端对齐，让状态和按钮始终靠近操作区域。
+ * flex-wrap 保证窄屏下按钮可以自然换行，不会挤压标题文字。
+ */
+.editor-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/*
+ * 标题组只承载页面层级信息。
+ * 这里不把标题放进卡片，避免编辑器页面出现多层容器套娃，阅读焦点可以直接落到正文区域。
+ */
+.editor-page__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editor-page__eyebrow {
+  color: var(--echo-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.editor-page__title-group h1 {
+  color: var(--echo-color-text);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+/*
+ * 操作区包含保存状态和保存按钮。
+ * min-width: 0 可以让状态文本在小屏中正常收缩，按钮自身仍保持稳定点击面积。
+ */
+.editor-page__actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.editor-page__status {
+  color: rgba(25, 28, 29, 0.62);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/*
+ * workspace 是 Milkdown 编辑器的视觉边界。
+ * 它承担滚动和背景，不再额外把编辑器内部包成多层卡片，保证写作区域足够开阔。
+ */
+.editor-page__workspace {
+  flex: 1;
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 82, 56, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15, 82, 56, 0.08);
+}
+
+/*
+ * Milkdown 的根节点需要占满 workspace。
+ * Crepe 会在该节点下创建自己的编辑器结构，因此这里主要负责尺寸、滚动和字体继承。
+ */
+.editor-page__milkdown,
+.editor-page__milkdown .milkdown {
+  height: 100%;
+  min-height: inherit;
+}
+
+.editor-page__milkdown .milkdown {
+  overflow: auto;
+  color: var(--echo-color-text);
+  font-family: inherit;
+}
+
+/*
+ * Crepe frame 主题会生成 .milkdown-theme-frame 容器。
+ * 这里仅调整和应用布局强相关的尺寸，避免大范围覆盖 Milkdown 自带交互细节。
+ */
+.editor-page__milkdown .milkdown-theme-frame {
+  min-height: 100%;
+  border: 0;
+}
+
+/*
+ * ProseMirror 是实际可编辑区域。
+ * 使用最大宽度和水平居中，让长文行宽保持舒适；min-height 确保空文档时仍有充足可点击区域。
+ */
+.editor-page__milkdown .ProseMirror {
+  width: min(100%, 860px);
+  min-height: 480px;
+  margin: 0 auto;
+  padding: 40px 48px 64px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.editor-page__milkdown .ProseMirror h1,
+.editor-page__milkdown .ProseMirror h2,
+.editor-page__milkdown .ProseMirror h3 {
+  color: var(--echo-color-text);
+  line-height: 1.25;
+}
+
+/*
+ * 小屏下收紧页面和编辑器内边距，保证标题、按钮和正文都不会横向溢出。
+ */
+@media (max-width: 720px) {
+  .main-container {
+    padding: 16px;
+  }
+
+  .editor-page {
+    min-height: calc(100vh - 32px);
+  }
+
+  .editor-page__header {
+    align-items: flex-start;
+  }
+
+  .editor-page__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .editor-page__workspace {
+    min-height: 520px;
+  }
+
+  .editor-page__milkdown .ProseMirror {
+    min-height: 440px;
+    padding: 28px 20px 52px;
+  }
+}
