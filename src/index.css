@@ -4,6 +4,7 @@
  * 生成对应样式，因此这里不再需要额外的 `tailwind.config.js` 才能开始使用。
  */
 @import "tailwindcss";
+@import "./styles/design-tokens.css";
 
 /*
  * 这里保留最基础的文档高度设置，确保像 `min-h-screen` 这类布局工具类

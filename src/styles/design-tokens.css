@@ -1,0 +1,96 @@
+/*
+ * Echo Book 基础设计变量
+ * ------------------------------------------------------------
+ * 当前阶段只建立按钮组件真正需要的主题色，不提前扩展完整设计系统。
+ * 后续如果要继续增加输入框、卡片、布局等组件，可以继续在这里追加语义变量。
+ */
+:root {
+  /*
+   * 主题色变量：
+   * --echo-color-primary 表示产品主色，负责主按钮背景、线性按钮边框和文字。
+   * --echo-color-on-primary 表示放在主色背景上的文字颜色，保证纯色按钮有足够对比度。
+   */
+  --echo-color-primary: #0f5238;
+  --echo-color-primary-10: rgba(15, 82, 56, 0.1); /* #0f5238 的 RGB 分解: 15, 82, 56 */
+  --echo-color-on-primary: #ffffff;
+
+  /*
+   * 页面基础色只用于当前最小示例，让按钮放在干净背景上便于观察。
+   * 这些变量不绑定具体组件，因此后续替换页面视觉时不会影响按钮 API。
+   */
+  --echo-color-page: #f8f9fa;
+  --echo-color-text: #191c1d;
+
+  /*
+   * 按钮变量：
+   * 组件内部全部引用 --echo-button-*，这样未来如果某个局部区域想换主题，
+   * 只需要在父容器覆盖这些变量，不需要改 React 组件逻辑。
+   */
+  --echo-button-height: 40px;
+  --echo-button-padding-x: 16px;
+  --echo-button-radius: 8px;
+  --echo-button-border-width: 1px;
+  --echo-button-font-size: 14px;
+  --echo-button-font-weight: 600;
+
+  /*
+   * 两个按钮变体共用同一套主题来源：
+   * solid：主题色背景 + 白字。
+   * outline：透明背景 + 主题色边框 + 主题色文字。
+   */
+  --echo-button-solid-bg: var(--echo-color-primary);
+  --echo-button-solid-text: var(--echo-color-on-primary);
+  --echo-button-outline-border: var(--echo-color-primary);
+  --echo-button-outline-text: var(--echo-color-primary);
+  --echo-border: 1px solid var(--echo-color-primary);
+}
+
+/*
+ * EchoButton 基础样式
+ * ------------------------------------------------------------
+ * 这里只处理按钮本身的视觉和交互，不掺入任何页面布局规则。
+ * 这样按钮组件可以被放进工具栏、表单、弹窗等不同位置复用。
+ */
+.echo-button {
+  min-height: var(--echo-button-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 var(--echo-button-padding-x);
+  border: var(--echo-button-border-width) solid transparent;
+  border-radius: var(--echo-button-radius);
+  font-size: var(--echo-button-font-size);
+  font-weight: var(--echo-button-font-weight);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+/*
+ * 纯色按钮：用于保存、新建、确认等主操作。
+ * 颜色严格来自主题色变量，避免后续出现多个“看起来差不多”的主色。
+ */
+.echo-button--solid {
+  color: var(--echo-button-solid-text);
+  background-color: var(--echo-button-solid-bg);
+}
+
+/*
+ * 线性按钮：用于取消、返回、次级确认等操作。
+ * 背景保持透明，只通过主题色边框和文字传达可点击状态。
+ */
+.echo-button--outline {
+  color: var(--echo-button-outline-text);
+  border-color: var(--echo-button-outline-border);
+  background-color: transparent;
+}
+
+/*
+ * 禁用态统一降低透明度，同时移除点击光标。
+ * 这样两个变体可以共享同一套禁用反馈，不需要每个变体重复写一遍。
+ */
+.echo-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
