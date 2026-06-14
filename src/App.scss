@@ -3,3 +3,83 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/*
+ * 应用外壳采用左右分栏布局：
+ * 左侧固定宽度用于放置全局菜单，右侧主内容区交给路由出口渲染页面。
+ * min-height 使用视口高度，确保列表页或编辑页内容较少时侧边栏也能铺满页面。
+ */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  background: var(--echo-color-page);
+  color: var(--echo-color-text);
+}
+
+/*
+ * 侧边栏只承载导航入口，因此宽度保持稳定，避免页面切换时主内容区发生横向跳动。
+ * 右侧边框使用主色的低透明度版本，和当前已有设计变量保持同一视觉来源。
+ */
+.side-bar {
+  width: 180px;
+  flex: 0 0 180px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--echo-color-primary-10);
+  background: #ffffff;
+}
+
+/*
+ * 菜单容器使用纵向排列，后续继续增加归档、设置等入口时，只需要扩展数据源。
+ * gap 保持菜单项之间的清晰间隔，不依赖单个菜单项的外边距来拼接布局。
+ */
+.side-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/*
+ * 菜单项使用链接元素本身作为可点击区域。
+ * 固定高度和内边距可以保证鼠标可点击面积充足，也能让选中态背景更稳定。
+ */
+.side-menu__item {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--echo-color-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+/*
+ * 悬停态给用户明确的可点击反馈。
+ * 这里使用主色的浅色背景，不额外引入新的强调色，避免侧边栏颜色体系发散。
+ */
+.side-menu__item:hover {
+  color: var(--echo-color-primary);
+  background: var(--echo-color-primary-10);
+}
+
+/*
+ * 当前路由对应的菜单项使用同一套浅色背景和主色文字。
+ * 选中态和 hover 态保持接近，用户在列表页与编辑页之间切换时能快速确认当前位置。
+ */
+.side-menu__item--active {
+  color: var(--echo-color-primary);
+  background: var(--echo-color-primary-10);
+}
+
+/*
+ * 主内容区占据侧边栏之外的全部空间。
+ * padding 放在容器层，确保 list/editor 等页面组件可以专注于自身内容结构。
+ */
+.main-container {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+}
