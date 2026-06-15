@@ -3,13 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --noEmit && npm run electron:build && vite build",
     "preview": "vite preview",
-    "electron": "electron .",
-    "electron:dev": "npm run dev & sleep 1 && electron ."
+    "electron:build": "tsc -p tsconfig.electron.json",
+    "electron": "npm run electron:build && electron .",
+    "electron:dev": "npm run electron:build && (npm run dev & sleep 1 && electron .)"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",
