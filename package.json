@@ -9,8 +9,9 @@
     "build": "tsc --noEmit && npm run electron:build && vite build",
     "preview": "vite preview",
     "electron:build": "tsc -p tsconfig.electron.json",
-    "electron": "npm run electron:build && electron .",
-    "electron:dev": "npm run electron:build && (npm run dev & sleep 1 && electron .)"
+    "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
+    "electron": "npm run electron:build && npm run electron:rebuild && electron .",
+    "electron:dev": "node scripts/electron-dev.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",
@@ -28,7 +29,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "code-inspector-plugin": "^1.6.0",
-    "electron": "^42.4.0",
+    "electron": "^28.3.3",
     "electron-builder": "^26.15.3",
     "electron-rebuild": "^3.2.9",
     "sass-embedded": "^1.100.0",
