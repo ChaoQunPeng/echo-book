@@ -4,12 +4,12 @@ import './App.scss'
 const sidebarMenus = [
   {
     path: '/list',
-    label: '日记列表',
+    label: '日记列表1'
   },
   {
     path: '/editor',
-    label: '编辑页面',
-  },
+    label: '编辑页面'
+  }
 ]
 
 function App() {
@@ -27,13 +27,11 @@ function App() {
          * 从而给当前菜单项添加稳定的选中态。
          */}
         <nav className="side-menu" aria-label="主导航">
-          {sidebarMenus.map((menu) => (
+          {sidebarMenus.map(menu => (
             <NavLink
               key={menu.path}
               to={menu.path}
-              className={({ isActive }) =>
-                isActive ? 'side-menu__item side-menu__item--active' : 'side-menu__item'
-              }
+              className={({ isActive }) => (isActive ? 'side-menu__item side-menu__item--active' : 'side-menu__item')}
             >
               {menu.label}
             </NavLink>

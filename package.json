@@ -3,11 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "electron": "electron .",
+    "electron:dev": "npm run dev & sleep 1 && electron ."
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",
@@ -23,6 +25,8 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "code-inspector-plugin": "^1.6.0",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
     "sass-embedded": "^1.100.0",
     "tailwindcss": "^4.3.1",
     "typescript": "~5.8.3",
