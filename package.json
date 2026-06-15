@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && npm run electron:build && vite build",
     "preview": "vite preview",
-    "electron:build": "tsc -p tsconfig.electron.json",
+    "electron:build": "tsc -p tsconfig.electron.json && node scripts/write-electron-dist-package.mjs",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
     "electron": "npm run electron:build && npm run electron:rebuild && electron .",
     "electron:dev": "node scripts/electron-dev.mjs"
