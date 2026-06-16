@@ -1,5 +1,5 @@
 import { FolderOpenOutlined, SettingOutlined } from '@ant-design/icons'
-import { Alert, Button, Form, Input, Modal } from 'antd'
+import { Alert, Button, ConfigProvider, Form, Input, Modal } from 'antd'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
@@ -47,7 +47,7 @@ function App() {
 
     window.settingsAPI
       .getStorageInfo()
-      .then((info) => {
+      .then(info => {
         if (!cancelled) {
           setStorageInfo(info)
           setSettingsError('')
@@ -98,79 +98,78 @@ function App() {
    * 都会统一渲染到 `.main-container` 中，避免不同页面重复编写外层布局。
    */
   return (
-    <div className="app-shell">
-      <aside className="side-bar">
-        {/*
-         * 左侧菜单只负责页面级导航，不承载具体业务内容。
-         * 使用 NavLink 可以直接从 React Router 获得当前路由是否激活，
-         * 从而给当前菜单项添加稳定的选中态。
-         */}
-        <nav className="side-menu" aria-label="主导航">
-          {sidebarMenus.map(menu => (
-            <NavLink
-              key={menu.path}
-              to={menu.path}
-              className={({ isActive }) => (isActive ? 'side-menu__item side-menu__item--active' : 'side-menu__item')}
-            >
-              {menu.label}
-            </NavLink>
-          ))}
-        </nav>
-        <button
-          className="side-settings-button"
-          type="button"
-          onClick={() => setIsSettingsOpen(true)}
-        >
-          <SettingOutlined />
-          设置
-        </button>
-      </aside>
-      <div className="main-container">
-        <Outlet />
-      </div>
+    // theme={{ token: { colorPrimary: '#00b96b' } }}
+    <ConfigProvider>
+      <div className="app-shell">
+        <aside className="side-bar">
+          {/*
+           * 左侧菜单只负责页面级导航，不承载具体业务内容。
+           * 使用 NavLink 可以直接从 React Router 获得当前路由是否激活，
+           * 从而给当前菜单项添加稳定的选中态。
+           */}
+          <nav className="side-menu" aria-label="主导航">
+            {sidebarMenus.map(menu => (
+              <NavLink
+                key={menu.path}
+                to={menu.path}
+                className={({ isActive }) => (isActive ? 'side-menu__item side-menu__item--active' : 'side-menu__item')}
+              >
+                {menu.label}
+              </NavLink>
+            ))}
+          </nav>
+          <button className="side-settings-button" type="button" onClick={() => setIsSettingsOpen(true)}>
+            <SettingOutlined />
+            设置
+          </button>
+        </aside>
+        <div className="main-container">
+          <Outlet />
+        </div>
 
-      <Modal
-        title="设置"
-        open={isSettingsOpen}
-        onCancel={handleCloseSettings}
-        footer={[
-          <Button
-            key="open-storage-root"
-            type="primary"
-            icon={<FolderOpenOutlined />}
-            loading={isOpeningStorageRoot}
-            disabled={!storageInfo || Boolean(settingsError)}
-            onClick={handleOpenStorageRoot}
-          >
-            打开存储目录
-          </Button>,
-          <Button key="close-settings" onClick={handleCloseSettings}>
-            关闭
-          </Button>,
-        ]}
-      >
-        {/*
-         * 设置项当前只展示 main process 计算出的真实路径。
-         * Input 使用 readOnly 而不是 disabled，让用户仍然可以选中复制路径。
-         */}
-        <Form layout="vertical">
-          {settingsError ? (
-            <Form.Item>
-              <Alert message={settingsError} type="error" showIcon />
+        <Modal
+          title="设置"
+          open={isSettingsOpen}
+          onCancel={handleCloseSettings}
+          footer={[
+            <Button
+              key="open-storage-root"
+              type="primary"
+              icon={<FolderOpenOutlined />}
+              loading={isOpeningStorageRoot}
+              disabled={!storageInfo || Boolean(settingsError)}
+              onClick={handleOpenStorageRoot}
+            >
+              打开存储目录
+            </Button>,
+            <Button key="close-settings" onClick={handleCloseSettings}>
+              关闭
+            </Button>
+          ]}
+        >
+          {/*
+           * 设置项当前只展示 main process 计算出的真实路径。
+           * Input 使用 readOnly 而不是 disabled，让用户仍然可以选中复制路径。
+           */}
+          <Form layout="vertical">
+            {settingsError ? (
+              <Form.Item>
+                <Alert message={settingsError} type="error" showIcon />
+              </Form.Item>
+            ) : null}
+            <Form.Item label="日记文件目录">
+              <Input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
             </Form.Item>
-          ) : null}
-          <Form.Item label="日记文件目录">
-            <Input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
-          </Form.Item>
-          <Form.Item label="数据目录">
-            <Input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
-          </Form.Item>
-          <Form.Item label="数据库文件">
-            <Input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+            <Form.Item label="数据目录">
+              <Input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
+            </Form.Item>
+            <Form.Item label="数据库文件">
+              <Input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    </ConfigProvider>
   )
 }
 

@@ -19,7 +19,7 @@ import type { DiaryRepository } from "../repositories/diaryRepository.js";
  * - 后续增加全文搜索、标签归一化、自动摘要时可以自然放在这里
  */
 export class DiaryService {
-  public constructor(private readonly diaryRepository: DiaryRepository) {}
+  public constructor(private readonly diaryRepository: DiaryRepository) { }
 
   /**
    * 创建日记。
@@ -259,8 +259,9 @@ function generateFilePath(createdAt: number, id: string): string {
   const date = new Date(createdAt);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-  return `notes/${year}/${month}/${id}.md`;
+  return `notes/${year}/${month}/${year}_${month}_${day}_${id}.md`;
 }
 
 function writeDiaryFile(filepath: string, content: string): void {

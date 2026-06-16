@@ -54,7 +54,7 @@ function EditorPage() {
     title: '',
     diaryDate: getTodayDateString(),
     mood: '',
-    tagsInput: '',
+    tagsInput: ''
   })
   const lastPersistedSnapshotRef = useRef('')
   const isAutoSavingRef = useRef(false)
@@ -87,7 +87,7 @@ function EditorPage() {
       setLoadError('')
       setSaveStatus('草稿已就绪')
       setIsEditorReady(true)
-      setEditorVersion((version) => version + 1)
+      setEditorVersion(version => version + 1)
       return () => {
         cancelled = true
       }
@@ -99,7 +99,7 @@ function EditorPage() {
 
     window.diaryAPI
       .getDiaryById(diaryId)
-      .then((diary) => {
+      .then(diary => {
         if (cancelled) {
           return
         }
@@ -119,14 +119,14 @@ function EditorPage() {
           title: diary.title,
           diaryDate: diary.diaryDate,
           mood: diary.mood ?? '',
-          tagsInput: loadedTagsInput,
+          tagsInput: loadedTagsInput
         }
         /*
          * 记录载入时的持久化快照，后续自动保存只在快照发生变化后才触发。
          */
         lastPersistedSnapshotRef.current = buildDiarySnapshot({
           ...latestFieldsRef.current,
-          markdown: loadedMarkdown,
+          markdown: loadedMarkdown
         })
         setTitle(diary.title)
         setDiaryDate(diary.diaryDate)
@@ -134,7 +134,7 @@ function EditorPage() {
         setTagsInput(loadedTagsInput)
         setSaveStatus('日记已载入')
         setIsEditorReady(true)
-        setEditorVersion((version) => version + 1)
+        setEditorVersion(version => version + 1)
       })
       .catch(() => {
         if (!cancelled) {
@@ -157,7 +157,7 @@ function EditorPage() {
       title,
       diaryDate,
       mood,
-      tagsInput,
+      tagsInput
     }
   }, [diaryDate, mood, tagsInput, title])
 
@@ -186,7 +186,7 @@ function EditorPage() {
          * TopBar 默认关闭；这里打开它，让编辑页拥有固定格式工具栏。
          * 其余常用能力（选区工具栏、列表、链接、表格、代码块、数学公式等）沿用 Crepe 默认配置。
          */
-        [CrepeFeature.TopBar]: true,
+        [CrepeFeature.TopBar]: true
       },
       featureConfigs: {
         /*
@@ -195,9 +195,9 @@ function EditorPage() {
          */
         [CrepeFeature.Placeholder]: {
           text: '继续写下这一刻...',
-          mode: 'block',
-        },
-      },
+          mode: 'block'
+        }
+      }
     })
 
     crepeRef.current = crepe
@@ -206,14 +206,14 @@ function EditorPage() {
      * markdownUpdated 会在文档内容变化后给出最新 Markdown。
      * 这里先做本地自动保存，保证用户刷新页面或切换路由后还能找回未提交的正文。
      */
-    crepe.on((listener) => {
+    crepe.on(listener => {
       listener.markdownUpdated((_, markdown) => {
         latestMarkdownRef.current = markdown
 
         if (isEditing) {
           const currentSnapshot = buildDiarySnapshot({
             ...latestFieldsRef.current,
-            markdown,
+            markdown
           })
 
           if (currentSnapshot !== lastPersistedSnapshotRef.current) {
@@ -267,7 +267,7 @@ function EditorPage() {
       const markdown = crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
       const snapshot = buildDiarySnapshot({
         ...fields,
-        markdown,
+        markdown
       })
 
       if (snapshot === lastPersistedSnapshotRef.current) {
@@ -298,14 +298,14 @@ function EditorPage() {
           content: markdown,
           diaryDate: fields.diaryDate,
           mood: fields.mood.trim() ? fields.mood : null,
-          tags: parseTags(fields.tagsInput),
+          tags: parseTags(fields.tagsInput)
         })
 
         lastPersistedSnapshotRef.current = snapshot
 
         const latestSnapshot = buildDiarySnapshot({
           ...latestFieldsRef.current,
-          markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current,
+          markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
         })
         setSaveStatus(latestSnapshot === snapshot ? '已自动保存' : '有未保存更改')
       } catch (error) {
@@ -340,7 +340,7 @@ function EditorPage() {
       isEditing,
       hasDiaryAPI: Boolean(window.diaryAPI),
       titleLength: normalizedTitle.length,
-      markdownLength: markdown.length,
+      markdownLength: markdown.length
     })
 
     if (!normalizedTitle) {
@@ -373,7 +373,7 @@ function EditorPage() {
           content: markdown,
           diaryDate,
           mood: mood.trim() ? mood : null,
-          tags: parseTags(tagsInput),
+          tags: parseTags(tagsInput)
         })
       } else {
         await window.diaryAPI.createDiary({
@@ -381,7 +381,7 @@ function EditorPage() {
           content: markdown,
           diaryDate,
           mood: mood.trim() || undefined,
-          tags: parseTags(tagsInput),
+          tags: parseTags(tagsInput)
         })
       }
 
@@ -390,7 +390,7 @@ function EditorPage() {
         diaryDate,
         mood,
         tagsInput,
-        markdown,
+        markdown
       })
 
       window.localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY)
@@ -398,7 +398,7 @@ function EditorPage() {
 
       const latestSnapshot = buildDiarySnapshot({
         ...latestFieldsRef.current,
-        markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current,
+        markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
       })
       const isStillCurrent = latestSnapshot === savedSnapshot
       setSaveStatus('已保存')
@@ -425,9 +425,7 @@ function EditorPage() {
        * macOS / iPadOS 使用 Command+S，其余桌面平台使用 Ctrl+S。
        * Shift/Alt 组合通常代表“另存为”或系统级扩展快捷键，这里不抢占。
        */
-      const isExpectedSaveShortcut = isApplePlatform
-        ? event.metaKey && !event.ctrlKey
-        : event.ctrlKey && !event.metaKey
+      const isExpectedSaveShortcut = isApplePlatform ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey
 
       if (!isSaveKey || !isExpectedSaveShortcut || event.shiftKey || event.altKey) {
         return
@@ -489,7 +487,7 @@ function EditorPage() {
           <input
             value={title}
             placeholder="给这一天起个名字"
-            onChange={(event) => {
+            onChange={event => {
               setTitle(event.target.value)
               markExistingDiaryChanged()
             }}
@@ -500,7 +498,7 @@ function EditorPage() {
           <input
             type="date"
             value={diaryDate}
-            onChange={(event) => {
+            onChange={event => {
               setDiaryDate(event.target.value)
               markExistingDiaryChanged()
             }}
@@ -511,7 +509,7 @@ function EditorPage() {
           <input
             value={mood}
             placeholder="平静、期待..."
-            onChange={(event) => {
+            onChange={event => {
               setMood(event.target.value)
               markExistingDiaryChanged()
             }}
@@ -522,7 +520,7 @@ function EditorPage() {
           <input
             value={tagsInput}
             placeholder="工作, 生活"
-            onChange={(event) => {
+            onChange={event => {
               setTagsInput(event.target.value)
               markExistingDiaryChanged()
             }}
@@ -532,9 +530,7 @@ function EditorPage() {
 
       {loadError ? <p className="editor-page__error">{loadError}</p> : null}
 
-      <div className="editor-page__workspace">
-        {isEditorReady ? <div ref={editorRootRef} className="editor-page__milkdown" /> : null}
-      </div>
+      <div className="editor-page__workspace">{isEditorReady ? <div ref={editorRootRef} className="editor-page__milkdown" /> : null}</div>
 
       <div className="editor-page__footer-actions">
         <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
@@ -554,7 +550,7 @@ function parseTags(value: string): string[] {
    */
   return value
     .split(/[,，]/)
-    .map((tag) => tag.trim())
+    .map(tag => tag.trim())
     .filter(Boolean)
 }
 
@@ -568,7 +564,7 @@ function buildDiarySnapshot(input: DiaryDraftFields & { markdown: string }): str
     diaryDate: input.diaryDate,
     mood: input.mood.trim(),
     tags: parseTags(input.tagsInput),
-    markdown: input.markdown,
+    markdown: input.markdown
   })
 }
 
