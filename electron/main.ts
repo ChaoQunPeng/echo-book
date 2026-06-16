@@ -14,6 +14,38 @@ import { registerSettingsIpcHandlers } from "./ipc/settingsIpc.js";
  */
 
 /**
+ * 开发环境专用的 Electron userData 目录名。
+ *
+ * Electron 默认会按应用名生成 userData，例如 macOS 上通常是：
+ * ~/Library/Application Support/EchoBook。
+ *
+ * 如果开发环境和正式包都使用默认目录，它们会共用同一个 SQLite 数据库和 notes
+ * 正文目录，调试数据、测试迁移、临时删除等操作就可能污染正式数据。所以开发模式
+ * 主动改到 EchoBook-dev，正式包继续保留 EchoBook，不影响已经安装用户的数据位置。
+ */
+const DEVELOPMENT_USER_DATA_DIRECTORY_NAME = "EchoBook-dev";
+
+/**
+ * 在应用 ready 前固定开发环境的数据根目录。
+ *
+ * app.getPath("userData") 是数据库、Markdown 正文、设置页路径展示和备份导出的共同
+ * 根路径；只要在这里统一改掉，后续所有存储能力都会自动隔离到开发目录。
+ *
+ * 这个配置必须尽量早执行，早于窗口创建、IPC 注册和数据库初始化，避免某个模块先读取
+ * 默认 userData 后再切换路径，造成同一次启动里路径不一致。
+ */
+function configureEnvironmentStoragePath(): void {
+  if (app.isPackaged) {
+    return;
+  }
+
+  const developmentUserDataPath = path.join(app.getPath("appData"), DEVELOPMENT_USER_DATA_DIRECTORY_NAME);
+  app.setPath("userData", developmentUserDataPath);
+}
+
+configureEnvironmentStoragePath();
+
+/**
  * 创建主窗口。
  *
  * 安全策略：
