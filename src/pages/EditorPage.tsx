@@ -7,6 +7,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import EchoButton from '../components/EchoButton'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
+const AUTO_SAVE_INTERVAL_MS = 60 * 1000
+
+type DiaryDraftFields = {
+  title: string
+  diaryDate: string
+  mood: string
+  tagsInput: string
+}
 
 const DEFAULT_EDITOR_MARKDOWN = `# 今天的回声
 
@@ -41,6 +49,16 @@ function EditorPage() {
   const editorRootRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
   const initialMarkdownRef = useRef(readEditorDraft())
+  const latestMarkdownRef = useRef(initialMarkdownRef.current)
+  const latestFieldsRef = useRef<DiaryDraftFields>({
+    title: '',
+    diaryDate: getTodayDateString(),
+    mood: '',
+    tagsInput: '',
+  })
+  const lastPersistedSnapshotRef = useRef('')
+  const isAutoSavingRef = useRef(false)
+  const isManualSavingRef = useRef(false)
   const [editorVersion, setEditorVersion] = useState(0)
   const [isEditorReady, setIsEditorReady] = useState(!isEditing)
   const [title, setTitle] = useState('')
@@ -60,6 +78,8 @@ function EditorPage() {
      */
     if (!diaryId) {
       initialMarkdownRef.current = readEditorDraft()
+      latestMarkdownRef.current = initialMarkdownRef.current
+      lastPersistedSnapshotRef.current = ''
       setTitle('')
       setDiaryDate(getTodayDateString())
       setMood('')
@@ -90,11 +110,28 @@ function EditorPage() {
           return
         }
 
-        initialMarkdownRef.current = diary.content || DEFAULT_EDITOR_MARKDOWN
+        const loadedMarkdown = diary.content || DEFAULT_EDITOR_MARKDOWN
+        const loadedTagsInput = diary.tags?.join(', ') ?? ''
+
+        initialMarkdownRef.current = loadedMarkdown
+        latestMarkdownRef.current = loadedMarkdown
+        latestFieldsRef.current = {
+          title: diary.title,
+          diaryDate: diary.diaryDate,
+          mood: diary.mood ?? '',
+          tagsInput: loadedTagsInput,
+        }
+        /*
+         * 记录载入时的持久化快照，后续自动保存只在快照发生变化后才触发。
+         */
+        lastPersistedSnapshotRef.current = buildDiarySnapshot({
+          ...latestFieldsRef.current,
+          markdown: loadedMarkdown,
+        })
         setTitle(diary.title)
         setDiaryDate(diary.diaryDate)
         setMood(diary.mood ?? '')
-        setTagsInput(diary.tags?.join(', ') ?? '')
+        setTagsInput(loadedTagsInput)
         setSaveStatus('日记已载入')
         setIsEditorReady(true)
         setEditorVersion((version) => version + 1)
@@ -110,6 +147,19 @@ function EditorPage() {
       cancelled = true
     }
   }, [diaryId])
+
+  useEffect(() => {
+    /*
+     * 自动保存的定时器保持稳定运行，最新表单值通过 ref 读取，
+     * 避免用户连续输入时不断重建 interval 导致保存时机被推迟。
+     */
+    latestFieldsRef.current = {
+      title,
+      diaryDate,
+      mood,
+      tagsInput,
+    }
+  }, [diaryDate, mood, tagsInput, title])
 
   useEffect(() => {
     if (!isEditorReady) {
@@ -158,8 +208,17 @@ function EditorPage() {
      */
     crepe.on((listener) => {
       listener.markdownUpdated((_, markdown) => {
+        latestMarkdownRef.current = markdown
+
         if (isEditing) {
-          setSaveStatus('有未保存更改')
+          const currentSnapshot = buildDiarySnapshot({
+            ...latestFieldsRef.current,
+            markdown,
+          })
+
+          if (currentSnapshot !== lastPersistedSnapshotRef.current) {
+            setSaveStatus('有未保存更改')
+          }
         } else {
           window.localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, markdown)
           setSaveStatus('草稿已自动保存')
@@ -173,7 +232,7 @@ function EditorPage() {
       .create()
       .then(() => {
         if (!disposed) {
-          setSaveStatus('草稿已就绪')
+          setSaveStatus(isEditing ? '日记已载入' : '草稿已就绪')
         }
       })
       .catch(() => {
@@ -194,12 +253,87 @@ function EditorPage() {
     }
   }, [editorVersion, isEditorReady, isEditing])
 
+  useEffect(() => {
+    if (!isEditing || !diaryId || !isEditorReady || loadError) {
+      return
+    }
+
+    const autoSaveExistingDiary = async () => {
+      if (isAutoSavingRef.current || isManualSavingRef.current) {
+        return
+      }
+
+      const fields = latestFieldsRef.current
+      const markdown = crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
+      const snapshot = buildDiarySnapshot({
+        ...fields,
+        markdown,
+      })
+
+      if (snapshot === lastPersistedSnapshotRef.current) {
+        return
+      }
+
+      const normalizedTitle = fields.title.trim()
+
+      if (!normalizedTitle || !markdown.trim()) {
+        setSaveStatus('有未保存更改')
+        return
+      }
+
+      isAutoSavingRef.current = true
+      setSaveStatus('正在自动保存')
+
+      try {
+        if (!window.diaryAPI) {
+          /*
+           * 自动保存也必须走 Electron main process，保持和手动保存同一条持久化链路。
+           */
+          throw new Error('Electron diary API is unavailable.')
+        }
+
+        await window.diaryAPI.updateDiary({
+          id: diaryId,
+          title: normalizedTitle,
+          content: markdown,
+          diaryDate: fields.diaryDate,
+          mood: fields.mood.trim() ? fields.mood : null,
+          tags: parseTags(fields.tagsInput),
+        })
+
+        lastPersistedSnapshotRef.current = snapshot
+
+        const latestSnapshot = buildDiarySnapshot({
+          ...latestFieldsRef.current,
+          markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current,
+        })
+        setSaveStatus(latestSnapshot === snapshot ? '已自动保存' : '有未保存更改')
+      } catch (error) {
+        console.error('Failed to auto-save diary:', error)
+        setSaveStatus(`自动保存失败：${getErrorMessage(error)}`)
+      } finally {
+        isAutoSavingRef.current = false
+      }
+    }
+
+    /*
+     * 一分钟做一次变更检查；没有变化时不会调用 IPC，也不会写数据库或 Markdown 文件。
+     */
+    const intervalId = window.setInterval(() => {
+      void autoSaveExistingDiary()
+    }, AUTO_SAVE_INTERVAL_MS)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [diaryId, isEditing, isEditorReady, loadError])
+
   const handleSaveDiary = async () => {
     /*
      * 提交前从 Crepe 读取最新 Markdown。
      * 自动保存只保护新建草稿，真正创建/更新仍然通过主进程 service 校验。
      */
-    const markdown = crepeRef.current?.getMarkdown() ?? initialMarkdownRef.current
+    const markdown = crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
     const normalizedTitle = title.trim()
 
     console.info('Diary save button clicked:', {
@@ -220,6 +354,7 @@ function EditorPage() {
     }
 
     setIsSaving(true)
+    isManualSavingRef.current = true
     setSaveStatus(isEditing ? '正在更新' : '正在创建')
 
     try {
@@ -250,17 +385,76 @@ function EditorPage() {
         })
       }
 
+      const savedSnapshot = buildDiarySnapshot({
+        title: normalizedTitle,
+        diaryDate,
+        mood,
+        tagsInput,
+        markdown,
+      })
+
       window.localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY)
+      lastPersistedSnapshotRef.current = savedSnapshot
+
+      const latestSnapshot = buildDiarySnapshot({
+        ...latestFieldsRef.current,
+        markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current,
+      })
+      const isStillCurrent = latestSnapshot === savedSnapshot
       setSaveStatus('已保存')
 
       if (!diaryId) {
         navigate('/list', { replace: true })
+      } else if (!isStillCurrent) {
+        setSaveStatus('有未保存更改')
       }
     } catch (error) {
       console.error('Failed to save diary:', error)
       setSaveStatus(`保存失败：${getErrorMessage(error)}`)
     } finally {
       setIsSaving(false)
+      isManualSavingRef.current = false
+    }
+  }
+
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      const isSaveKey = event.key.toLowerCase() === 's'
+      const isApplePlatform = isAppleLikePlatform()
+      /*
+       * macOS / iPadOS 使用 Command+S，其余桌面平台使用 Ctrl+S。
+       * Shift/Alt 组合通常代表“另存为”或系统级扩展快捷键，这里不抢占。
+       */
+      const isExpectedSaveShortcut = isApplePlatform
+        ? event.metaKey && !event.ctrlKey
+        : event.ctrlKey && !event.metaKey
+
+      if (!isSaveKey || !isExpectedSaveShortcut || event.shiftKey || event.altKey) {
+        return
+      }
+
+      event.preventDefault()
+
+      if (isSaving || loadError) {
+        return
+      }
+
+      void handleSaveDiary()
+    }
+
+    window.addEventListener('keydown', handleSaveShortcut)
+
+    return () => {
+      window.removeEventListener('keydown', handleSaveShortcut)
+    }
+  }, [handleSaveDiary, isSaving, loadError])
+
+  const markExistingDiaryChanged = () => {
+    /*
+     * 标题、日期、心情和标签也参与自动保存；新建日记仍保持正文草稿本地保存。
+     */
+    if (isEditing) {
+      setSaveStatus('有未保存更改')
     }
   }
 
@@ -292,19 +486,47 @@ function EditorPage() {
       <div className="editor-page__form">
         <label className="editor-field editor-field--title">
           <span>标题</span>
-          <input value={title} placeholder="给这一天起个名字" onChange={(event) => setTitle(event.target.value)} />
+          <input
+            value={title}
+            placeholder="给这一天起个名字"
+            onChange={(event) => {
+              setTitle(event.target.value)
+              markExistingDiaryChanged()
+            }}
+          />
         </label>
         <label className="editor-field">
           <span>日期</span>
-          <input type="date" value={diaryDate} onChange={(event) => setDiaryDate(event.target.value)} />
+          <input
+            type="date"
+            value={diaryDate}
+            onChange={(event) => {
+              setDiaryDate(event.target.value)
+              markExistingDiaryChanged()
+            }}
+          />
         </label>
         <label className="editor-field">
           <span>心情</span>
-          <input value={mood} placeholder="平静、期待..." onChange={(event) => setMood(event.target.value)} />
+          <input
+            value={mood}
+            placeholder="平静、期待..."
+            onChange={(event) => {
+              setMood(event.target.value)
+              markExistingDiaryChanged()
+            }}
+          />
         </label>
         <label className="editor-field">
           <span>标签</span>
-          <input value={tagsInput} placeholder="工作, 生活" onChange={(event) => setTagsInput(event.target.value)} />
+          <input
+            value={tagsInput}
+            placeholder="工作, 生活"
+            onChange={(event) => {
+              setTagsInput(event.target.value)
+              markExistingDiaryChanged()
+            }}
+          />
         </label>
       </div>
 
@@ -334,6 +556,27 @@ function parseTags(value: string): string[] {
     .split(/[,，]/)
     .map((tag) => tag.trim())
     .filter(Boolean)
+}
+
+function buildDiarySnapshot(input: DiaryDraftFields & { markdown: string }): string {
+  /*
+   * 快照只用于前端判断“是否真的变了”，保持字段规整后再比较，
+   * 可以避免标签空格、标题首尾空格这类无效输入反复触发自动保存。
+   */
+  return JSON.stringify({
+    title: input.title.trim(),
+    diaryDate: input.diaryDate,
+    mood: input.mood.trim(),
+    tags: parseTags(input.tagsInput),
+    markdown: input.markdown,
+  })
+}
+
+function isAppleLikePlatform(): boolean {
+  /*
+   * Electron renderer 没有直接使用 Node.js process，这里通过浏览器平台信息区分快捷键习惯。
+   */
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform)
 }
 
 function getErrorMessage(error: unknown): string {
