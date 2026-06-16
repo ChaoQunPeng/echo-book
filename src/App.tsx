@@ -1,5 +1,5 @@
-import { FolderOpenOutlined, SettingOutlined } from '@ant-design/icons'
-import { Alert, Button, ConfigProvider, Form, Input, Modal } from 'antd'
+import { ExportOutlined, FolderOpenOutlined, SettingOutlined } from '@ant-design/icons'
+import { Alert, Button, ConfigProvider, Form, Input, Modal, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
@@ -21,6 +21,7 @@ function App() {
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
   const [settingsError, setSettingsError] = useState('')
   const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
+  const [isExportingBackup, setIsExportingBackup] = useState(false)
 
   useEffect(() => {
     if (!isSettingsOpen) {
@@ -92,6 +93,32 @@ function App() {
       })
   }
 
+  const handleExportBackup = () => {
+    /*
+     * 导出按钮只触发 preload 暴露的业务方法。
+     * 保存位置选择、database/notes 目录打包、SQLite checkpoint 都在 main process 内完成。
+     */
+    if (!window.settingsAPI) {
+      message.error('请通过 Electron 启动应用后导出备份')
+      return
+    }
+
+    setIsExportingBackup(true)
+    window.settingsAPI
+      .exportBackup()
+      .then(result => {
+        if (!result.canceled) {
+          message.success('导出完成')
+        }
+      })
+      .catch(() => {
+        message.error('导出备份失败')
+      })
+      .finally(() => {
+        setIsExportingBackup(false)
+      })
+  }
+
   /*
    * `App` 负责承载整站固定布局：左侧导航区域和右侧主内容区域。
    * 主内容区域内部放置 React Router 的 `<Outlet />`，这样所有子路由
@@ -118,10 +145,22 @@ function App() {
               </NavLink>
             ))}
           </nav>
-          <button className="side-settings-button" type="button" onClick={() => setIsSettingsOpen(true)}>
-            <SettingOutlined />
-            设置
-          </button>
+          <div className="side-actions" aria-label="数据操作">
+            <button
+              className="side-action-button"
+              type="button"
+              disabled={isExportingBackup}
+              aria-busy={isExportingBackup}
+              onClick={handleExportBackup}
+            >
+              <ExportOutlined />
+              {isExportingBackup ? '导出中' : '导出'}
+            </button>
+            <button className="side-action-button" type="button" onClick={() => setIsSettingsOpen(true)}>
+              <SettingOutlined />
+              设置
+            </button>
+          </div>
         </aside>
         <div className="main-container">
           <Outlet />
@@ -162,6 +201,9 @@ function App() {
             </Form.Item>
             <Form.Item label="数据目录">
               <Input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
+            </Form.Item>
+            <Form.Item label="数据库目录">
+              <Input readOnly value={storageInfo?.databaseDirectoryPath ?? '读取中...'} />
             </Form.Item>
             <Form.Item label="数据库文件">
               <Input readOnly value={storageInfo?.databasePath ?? '读取中...'} />

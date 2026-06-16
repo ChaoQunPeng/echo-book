@@ -46,6 +46,10 @@ const settingsAPI: SettingsApi = {
     return ipcRenderer.invoke("settings:getStorageInfo");
   },
 
+  exportBackup() {
+    return ipcRenderer.invoke("settings:exportBackup");
+  },
+
   /*
    * 这里不从 renderer 接收路径参数。
    * 真正要打开的目录由 main process 根据 app.getPath("userData") 计算。

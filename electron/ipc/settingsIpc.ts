@@ -1,14 +1,22 @@
-import { ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell, type SaveDialogOptions } from "electron";
 import fs from "node:fs";
 import path from "node:path";
-import type { StorageInfo } from "../../shared/settings.js";
-import { getDatabasePath } from "../db/connection.js";
+import type { ExportBackupResult, StorageInfo } from "../../shared/settings.js";
+import {
+  checkpointDatabase,
+  getDatabaseDirectoryPath,
+  getDatabasePath,
+  getNotesPath,
+  getStorageRootPath,
+} from "../db/connection.js";
+import { createStorageBackupZip } from "../services/exportService.js";
 
 /**
  * 设置 IPC 通道集中定义，避免 renderer 侧出现自由拼接的通道名。
  */
 const SETTINGS_CHANNELS = {
   getStorageInfo: "settings:getStorageInfo",
+  exportBackup: "settings:exportBackup",
   openStorageRoot: "settings:openStorageRoot",
 } as const;
 
@@ -20,18 +28,21 @@ const SETTINGS_CHANNELS = {
  */
 function getStorageInfo(): StorageInfo {
   const databasePath = getDatabasePath();
-  const storageRoot = path.dirname(databasePath);
-  const notesPath = path.join(storageRoot, "notes");
+  const storageRoot = getStorageRootPath();
+  const notesPath = getNotesPath();
+  const databaseDirectoryPath = getDatabaseDirectoryPath();
 
   /*
    * 设置页展示的是用户要去找的真实目录。
-   * 即使还没有日记，也先创建 notes 根目录，避免用户按路径查找时看到目录不存在。
+   * 即使还没有日记，也先创建 database / notes 根目录，避免用户按路径查找时看到目录不存在。
    */
+  fs.mkdirSync(databaseDirectoryPath, { recursive: true });
   fs.mkdirSync(notesPath, { recursive: true });
 
   return {
     storageRoot,
     notesPath,
+    databaseDirectoryPath,
     databasePath,
   };
 }
@@ -47,6 +58,53 @@ export function registerSettingsIpcHandlers(): void {
     return getStorageInfo();
   });
 
+  ipcMain.handle(SETTINGS_CHANNELS.exportBackup, async (event): Promise<ExportBackupResult> => {
+    const focusedWindow = BrowserWindow.fromWebContents(event.sender);
+    const defaultPath = path.join(
+      app.getPath("documents"),
+      `EchoBook-backup-${formatBackupTimestamp(new Date())}.zip`,
+    );
+    const dialogOptions: SaveDialogOptions = {
+      title: "导出 EchoBook 备份",
+      defaultPath,
+      buttonLabel: "导出",
+      filters: [{ name: "ZIP 备份文件", extensions: ["zip"] }],
+      properties: ["showOverwriteConfirmation"],
+    };
+    const result = focusedWindow
+      ? await dialog.showSaveDialog(focusedWindow, dialogOptions)
+      : await dialog.showSaveDialog(dialogOptions);
+
+    if (result.canceled || !result.filePath) {
+      return { canceled: true };
+    }
+
+    const { databaseDirectoryPath, notesPath } = getStorageInfo();
+
+    /*
+     * SQLite 开启 WAL 后，新数据可能先写在 diaries.db-wal 里。
+     * 导出前主动 checkpoint 一次，让主库文件尽量包含最新内容；随后仍然整体打包
+     * database 文件夹，保留 SQLite 自己认为需要的伴随文件。
+     */
+    checkpointDatabase();
+
+    createStorageBackupZip(result.filePath, [
+      {
+        sourcePath: databaseDirectoryPath,
+        archivePath: "database",
+      },
+      {
+        sourcePath: notesPath,
+        archivePath: "notes",
+      },
+    ]);
+
+    return {
+      canceled: false,
+      filePath: result.filePath.toLowerCase().endsWith(".zip") ? result.filePath : `${result.filePath}.zip`,
+    };
+  });
+
   ipcMain.handle(SETTINGS_CHANNELS.openStorageRoot, async (): Promise<void> => {
     const { storageRoot } = getStorageInfo();
     const errorMessage = await shell.openPath(storageRoot);
@@ -59,4 +117,15 @@ export function registerSettingsIpcHandlers(): void {
       throw new Error(errorMessage);
     }
   });
+}
+
+function formatBackupTimestamp(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}${month}${day}-${hour}${minute}${second}`;
 }

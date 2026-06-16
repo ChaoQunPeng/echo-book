@@ -41,13 +41,24 @@
 }
 
 /*
- * 设置入口临时放在侧边栏底部。
- * 使用按钮而不是链接，因为它只打开弹框，不改变当前路由。
+ * 侧边栏底部动作区放置导出、设置这类不切换路由的操作。
+ * 使用独立容器承接 auto margin，避免多个按钮时每个按钮都参与底部定位计算。
  */
-.side-settings-button {
+.side-actions {
+  width: 100%;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/*
+ * 底部动作使用按钮而不是链接，因为它们触发系统对话框或弹框，不改变当前路由。
+ * min-height 保证导出中/设置等短文本切换时按钮高度稳定。
+ */
+.side-action-button {
   width: 100%;
   min-height: 40px;
-  margin-top: auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -62,9 +73,14 @@
   transition: background-color 160ms ease, color 160ms ease;
 }
 
-.side-settings-button:hover {
+.side-action-button:hover:not(:disabled) {
   color: var(--echo-color-primary);
   background: var(--echo-color-primary-10);
+}
+
+.side-action-button:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /*
@@ -483,9 +499,14 @@
     overflow-x: auto;
   }
 
-  .side-settings-button {
+  .side-actions {
     width: auto;
     margin-top: 0;
+    flex-direction: row;
+  }
+
+  .side-action-button {
+    width: auto;
   }
 
   .main-container {

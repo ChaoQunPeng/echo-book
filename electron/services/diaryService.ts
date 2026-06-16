@@ -7,7 +7,7 @@ import type {
   GetDiaryListOptions,
   UpdateDiaryInput,
 } from "../../shared/diary.js";
-import { getDatabasePath } from "../db/connection.js";
+import { getStorageRootPath } from "../db/connection.js";
 import type { DiaryRepository } from "../repositories/diaryRepository.js";
 
 /**
@@ -284,7 +284,7 @@ function hydrateDiaryContent(diary: Diary): Diary {
 }
 
 function resolveDiaryFilePath(filepath: string): string {
-  const storageRoot = path.dirname(getDatabasePath());
+  const storageRoot = getStorageRootPath();
   const absolutePath = path.resolve(storageRoot, filepath);
   const relativePath = path.relative(storageRoot, absolutePath);
 
