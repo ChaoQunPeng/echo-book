@@ -168,6 +168,7 @@ function App() {
 
         <Modal
           title="设置"
+          centered
           open={isSettingsOpen}
           onCancel={handleCloseSettings}
           footer={[
@@ -199,7 +200,7 @@ function App() {
             <Form.Item label="日记文件目录">
               <Input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
             </Form.Item>
-            <Form.Item label="数据目录">
+            {/* <Form.Item label="数据目录">
               <Input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
             </Form.Item>
             <Form.Item label="数据库目录">
@@ -207,7 +208,7 @@ function App() {
             </Form.Item>
             <Form.Item label="数据库文件">
               <Input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
-            </Form.Item>
+            </Form.Item> */}
           </Form>
         </Modal>
       </div>

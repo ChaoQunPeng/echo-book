@@ -6,8 +6,15 @@ interface BackupSource {
   archivePath: string;
 }
 
+interface BackupTextFile {
+  archivePath: string;
+  content: string;
+  mtime?: Date;
+}
+
 interface ZipEntry {
   absolutePath: string | null;
+  content: Buffer | null;
   archivePath: string;
   isDirectory: boolean;
   size: number;
@@ -29,10 +36,14 @@ const CRC32_TABLE = createCrc32Table();
  * - 优点：依赖少、构建稳定、Electron main process 可以直接使用 Node fs 完成备份
  * - 取舍：不会压缩体积，但数据库和 Markdown 通常不大，备份可读性和可靠性更重要
  */
-export function createStorageBackupZip(outputPath: string, sources: BackupSource[]): void {
+export function createStorageBackupZip(
+  outputPath: string,
+  sources: BackupSource[],
+  textFiles: BackupTextFile[] = [],
+): void {
   const normalizedOutputPath = ensureZipExtension(outputPath);
   const temporaryOutputPath = `${normalizedOutputPath}.tmp-${Date.now()}`;
-  const entries = collectZipEntries(sources, normalizedOutputPath);
+  const entries = collectZipEntries(sources, normalizedOutputPath, textFiles);
 
   fs.mkdirSync(path.dirname(normalizedOutputPath), { recursive: true });
 
@@ -46,7 +57,9 @@ export function createStorageBackupZip(outputPath: string, sources: BackupSource
       entry.localHeaderOffset = position;
       position += writeLocalFileHeader(fileDescriptor, entry);
 
-      if (!entry.isDirectory && entry.absolutePath) {
+      if (!entry.isDirectory && entry.content) {
+        position += writeBuffers(fileDescriptor, [entry.content]);
+      } else if (!entry.isDirectory && entry.absolutePath) {
         position += writeFileData(fileDescriptor, entry.absolutePath);
       }
     }
@@ -85,10 +98,18 @@ export function createStorageBackupZip(outputPath: string, sources: BackupSource
   }
 }
 
-function collectZipEntries(sources: BackupSource[], outputPath: string): ZipEntry[] {
+function collectZipEntries(
+  sources: BackupSource[],
+  outputPath: string,
+  textFiles: BackupTextFile[],
+): ZipEntry[] {
   const entries: ZipEntry[] = [];
   const seenArchivePaths = new Set<string>();
   const excludedOutputPath = path.resolve(outputPath);
+
+  for (const textFile of textFiles) {
+    pushTextFileEntry(entries, seenArchivePaths, textFile);
+  }
 
   for (const source of sources) {
     const sourcePath = path.resolve(source.sourcePath);
@@ -163,6 +184,7 @@ function walkSourceDirectory(
   seenArchivePaths.add(normalizedArchivePath);
   entries.push({
     absolutePath,
+    content: null,
     archivePath: normalizedArchivePath,
     isDirectory: false,
     size: stat.size,
@@ -187,11 +209,41 @@ function pushDirectoryEntry(
   seenArchivePaths.add(normalizedArchivePath);
   entries.push({
     absolutePath: null,
+    content: null,
     archivePath: normalizedArchivePath,
     isDirectory: true,
     size: 0,
     mtime,
     crc32: 0,
+    localHeaderOffset: 0,
+  });
+}
+
+function pushTextFileEntry(entries: ZipEntry[], seenArchivePaths: Set<string>, textFile: BackupTextFile): void {
+  const normalizedArchivePath = normalizeArchivePath(textFile.archivePath, false);
+
+  if (seenArchivePaths.has(normalizedArchivePath)) {
+    return;
+  }
+
+  const content = Buffer.from(textFile.content, "utf8");
+  if (content.length > UINT32_MAX) {
+    throw new Error(`Text file is too large for this ZIP backup: ${normalizedArchivePath}`);
+  }
+
+  /*
+   * 说明文件不是磁盘里的业务数据，而是导出时临时生成的“虚拟文件”。
+   * 它和真实文件走同一套 ZIP header，区别只是内容直接来自内存 Buffer。
+   */
+  seenArchivePaths.add(normalizedArchivePath);
+  entries.push({
+    absolutePath: null,
+    content,
+    archivePath: normalizedArchivePath,
+    isDirectory: false,
+    size: content.length,
+    mtime: textFile.mtime ?? new Date(),
+    crc32: calculateBufferCrc32(content),
     localHeaderOffset: 0,
   });
 }
@@ -324,6 +376,16 @@ function calculateFileCrc32(absolutePath: string): number {
     }
   } finally {
     fs.closeSync(fileDescriptor);
+  }
+
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function calculateBufferCrc32(buffer: Buffer): number {
+  let crc = 0xffffffff;
+
+  for (const byte of buffer) {
+    crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
   }
 
   return (crc ^ 0xffffffff) >>> 0;
