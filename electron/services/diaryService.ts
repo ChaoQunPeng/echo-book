@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import type {
   CreateDiaryInput,
   Diary,
   GetDiaryListOptions,
   UpdateDiaryInput,
 } from "../../shared/diary.js";
+import { getDatabasePath } from "../db/connection.js";
 import type { DiaryRepository } from "../repositories/diaryRepository.js";
 
 /**
@@ -22,22 +25,33 @@ export class DiaryService {
    * 创建日记。
    *
    * id 使用 crypto.randomUUID() 生成，created_at / updated_at 使用毫秒时间戳。
+   * Markdown 文件写在 userData/notes 下，SQLite 只保存相对 filepath。
    */
   public createDiary(input: CreateDiaryInput): Diary {
     const now = Date.now();
+    const id = randomUUID();
     const title = normalizeTitle(input.title);
     const content = normalizeContent(input.content);
-    const date = input.date ? normalizeDate(input.date) : getTodayDateString();
+    const diaryDate = input.diaryDate
+      ? normalizeDate(input.diaryDate, "diaryDate")
+      : getTodayDateString();
+    const filepath = generateFilePath(now, id);
 
-    return this.diaryRepository.createDiary({
-      id: randomUUID(),
+    writeDiaryFile(filepath, content);
+
+    const diary = this.diaryRepository.createDiary({
+      id,
       title,
       content,
+      filepath,
+      diaryDate,
       createdAt: now,
       updatedAt: now,
-      date,
       tags: normalizeTags(input.tags),
+      mood: input.mood === undefined ? undefined : normalizeMood(input.mood),
     });
+
+    return hydrateDiaryContent(diary);
   }
 
   /**
@@ -48,12 +62,31 @@ export class DiaryService {
    */
   public updateDiary(input: UpdateDiaryInput): Diary {
     const id = normalizeId(input.id);
+    const existingDiary = this.diaryRepository.getDiaryById(id);
+    if (!existingDiary) {
+      throw new Error(`Diary not found: ${id}`);
+    }
+
+    const content =
+      input.content === undefined ? undefined : normalizeContent(input.content);
+
+    if (content !== undefined) {
+      writeDiaryFile(existingDiary.filepath, content);
+    }
+
     const updatedDiary = this.diaryRepository.updateDiary({
       id,
       title: input.title === undefined ? undefined : normalizeTitle(input.title),
-      content: input.content === undefined ? undefined : normalizeContent(input.content),
-      date: input.date === undefined ? undefined : normalizeDate(input.date),
+      content,
+      diaryDate:
+        input.diaryDate === undefined
+          ? undefined
+          : normalizeDate(input.diaryDate, "diaryDate"),
       tags: input.tags === undefined ? undefined : normalizeTags(input.tags),
+      mood:
+        input.mood === undefined
+          ? undefined
+          : normalizeMoodUpdateValue(input.mood),
       updatedAt: Date.now(),
     });
 
@@ -61,7 +94,7 @@ export class DiaryService {
       throw new Error(`Diary not found: ${id}`);
     }
 
-    return updatedDiary;
+    return hydrateDiaryContent(updatedDiary);
   }
 
   /**
@@ -77,7 +110,8 @@ export class DiaryService {
    * 按 id 查询单条日记。
    */
   public getDiaryById(id: string): Diary | null {
-    return this.diaryRepository.getDiaryById(normalizeId(id));
+    const diary = this.diaryRepository.getDiaryById(normalizeId(id));
+    return diary ? hydrateDiaryContent(diary) : null;
   }
 
   /**
@@ -86,8 +120,12 @@ export class DiaryService {
   public getDiaryList(options: GetDiaryListOptions = {}): Diary[] {
     return this.diaryRepository.getDiaryList({
       ...options,
-      date: options.date === undefined ? undefined : normalizeDate(options.date),
-    });
+      diaryDate:
+        options.diaryDate === undefined
+          ? undefined
+          : normalizeDate(options.diaryDate, "diaryDate"),
+      tagId: options.tagId === undefined ? undefined : normalizeId(options.tagId),
+    }).map(hydrateDiaryContent);
   }
 }
 
@@ -144,34 +182,55 @@ function normalizeId(id: string): string {
  * 这里先只做格式校验，不强行校验真实日历日期，避免时区转换带来额外复杂度。
  * 如果后续做日历视图，可以在 service 层进一步收紧规则。
  */
-function normalizeDate(date: string): string {
+function normalizeDate(date: string, fieldName = "date"): string {
+  if (typeof date !== "string") {
+    throw new Error(`${fieldName} must be a string.`);
+  }
+
   const normalized = date.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    throw new Error("date must use YYYY-MM-DD format.");
+    throw new Error(`${fieldName} must use YYYY-MM-DD format.`);
   }
 
   return normalized;
 }
 
-/**
- * 标准化 tags。
- *
- * - undefined / null：写入 NULL
- * - string[]：去掉空标签、去重
- */
-function normalizeTags(tags: string[] | null | undefined): string[] | null {
-  if (tags === undefined || tags === null) {
+function normalizeMood(mood: string): string | undefined {
+  if (typeof mood !== "string") {
+    throw new Error("mood must be a string.");
+  }
+
+  const normalized = mood.trim();
+  return normalized ? normalized : undefined;
+}
+
+function normalizeMoodUpdateValue(mood: string | null): string | null | undefined {
+  if (mood === null) {
     return null;
   }
 
+  return normalizeMood(mood);
+}
+
+/**
+ * 标准化 tags。
+ *
+ * - undefined：不写 diary_tags 关系
+ * - string[]：去掉空标签、去重
+ */
+function normalizeTags(tags: string[] | undefined): string[] {
+  if (tags === undefined) {
+    return [];
+  }
+
   if (!Array.isArray(tags)) {
-    throw new Error("tags must be an array of strings or null.");
+    throw new Error("tags must be an array of strings.");
   }
 
   const normalizedTags = tags
     .map((tag) => {
       if (typeof tag !== "string") {
-        throw new Error("tags must be an array of strings or null.");
+        throw new Error("tags must be an array of strings.");
       }
 
       return tag.trim();
@@ -184,7 +243,7 @@ function normalizeTags(tags: string[] | null | undefined): string[] | null {
 /**
  * 生成本机本地日期字符串。
  *
- * SQLite 存储 date TEXT，不存 Date 对象，这样 renderer 做日历分组时无需处理
+ * SQLite 存储 diary_date TEXT，不存 Date 对象，这样 renderer 做日历分组时无需处理
  * UTC 日期偏移问题。
  */
 function getTodayDateString(): string {
@@ -194,4 +253,43 @@ function getTodayDateString(): string {
   const day = String(now.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function generateFilePath(createdAt: number, id: string): string {
+  const date = new Date(createdAt);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `notes/${year}/${month}/${id}.md`;
+}
+
+function writeDiaryFile(filepath: string, content: string): void {
+  const absolutePath = resolveDiaryFilePath(filepath);
+  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  fs.writeFileSync(absolutePath, content, "utf8");
+}
+
+function hydrateDiaryContent(diary: Diary): Diary {
+  const absolutePath = resolveDiaryFilePath(diary.filepath);
+
+  if (!fs.existsSync(absolutePath)) {
+    return diary;
+  }
+
+  return {
+    ...diary,
+    content: fs.readFileSync(absolutePath, "utf8"),
+  };
+}
+
+function resolveDiaryFilePath(filepath: string): string {
+  const storageRoot = path.dirname(getDatabasePath());
+  const absolutePath = path.resolve(storageRoot, filepath);
+  const relativePath = path.relative(storageRoot, absolutePath);
+
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error("Invalid diary filepath.");
+  }
+
+  return absolutePath;
 }

@@ -1,40 +1,279 @@
 import type Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import { getDatabase } from "./connection.js";
+
+const DB_VERSION = "1";
 
 /**
  * 初始化 SQLite schema。
  *
- * 表结构严格按照需求定义：
- * - id TEXT PRIMARY KEY
- * - title / content / created_at / updated_at / date 为必填字段
- * - tags 为 JSON string，可为空
- * - deleted 使用 0/1 表示软删除状态
+ * Markdown 文件是内容本体，SQLite 负责索引、查询和组织结构。
+ * filepath 是数据库和文件系统之间的稳定桥梁，创建后不随标题、标签或 diaryDate
+ * 的修改而变化。
  */
 export function initializeDatabase(db: Database.Database = getDatabase()): void {
+  migrateLegacySchemaIfNeeded(db);
+  createCurrentSchema(db);
+  initializeSettings(db);
+}
+
+function createCurrentSchema(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS diaries (
       id TEXT PRIMARY KEY,
+
       title TEXT NOT NULL,
-      content TEXT NOT NULL,
+      content TEXT,
+
+      filepath TEXT NOT NULL UNIQUE,
+
+      diary_date TEXT NOT NULL,
+
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      date TEXT NOT NULL,
-      tags TEXT,
-      deleted INTEGER DEFAULT 0
+
+      mood TEXT,
+
+      deleted INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS tags (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE
+    );
+
+    CREATE TABLE IF NOT EXISTS diary_tags (
+      diary_id TEXT NOT NULL,
+      tag_id TEXT NOT NULL,
+
+      PRIMARY KEY (diary_id, tag_id),
+
+      FOREIGN KEY (diary_id)
+        REFERENCES diaries(id)
+        ON DELETE CASCADE,
+
+      FOREIGN KEY (tag_id)
+        REFERENCES tags(id)
+        ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
     );
   `);
 
-  /**
-   * 常用查询索引。
-   *
-   * getDiaryList 默认按 updated_at DESC 查询未删除数据，所以增加组合索引；
-   * date 索引用于日历视图、按天筛选等后续常见能力。
-   */
   db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_diaries_deleted_updated_at
-      ON diaries (deleted, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_diary_date
+      ON diaries(diary_date);
 
-    CREATE INDEX IF NOT EXISTS idx_diaries_date_deleted
-      ON diaries (date, deleted);
+    CREATE INDEX IF NOT EXISTS idx_created_at
+      ON diaries(created_at);
+
+    CREATE INDEX IF NOT EXISTS idx_updated_at
+      ON diaries(updated_at);
+
+    CREATE INDEX IF NOT EXISTS idx_deleted
+      ON diaries(deleted);
+
+    CREATE INDEX IF NOT EXISTS idx_diary_tags_tag_id
+      ON diary_tags(tag_id);
   `);
+}
+
+function initializeSettings(db: Database.Database): void {
+  db.prepare(
+    `
+      INSERT INTO settings (key, value)
+      VALUES ('db_version', @version)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `,
+  ).run({ version: DB_VERSION });
+}
+
+function migrateLegacySchemaIfNeeded(db: Database.Database): void {
+  const diariesTable = db
+    .prepare(
+      `
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'diaries'
+        LIMIT 1
+      `,
+    )
+    .get() as { name: string } | undefined;
+
+  if (!diariesTable) {
+    return;
+  }
+
+  const columns = db.prepare("PRAGMA table_info(diaries)").all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columnNames.has("filepath") && columnNames.has("diary_date") && !columnNames.has("tags")) {
+    return;
+  }
+
+  const legacyRows = db
+    .prepare(
+      `
+        SELECT *
+        FROM diaries
+      `,
+    )
+    .all() as LegacyDiaryRow[];
+
+  const legacyTableName = `diaries_legacy_${Date.now()}`;
+  db.exec(`ALTER TABLE diaries RENAME TO ${legacyTableName};`);
+  createCurrentSchema(db);
+
+  const insertDiary = db.prepare(
+    `
+      INSERT INTO diaries (
+        id,
+        title,
+        content,
+        filepath,
+        diary_date,
+        created_at,
+        updated_at,
+        mood,
+        deleted
+      )
+      VALUES (
+        @id,
+        @title,
+        @content,
+        @filepath,
+        @diaryDate,
+        @createdAt,
+        @updatedAt,
+        @mood,
+        @deleted
+      )
+    `,
+  );
+  const insertTag = db.prepare(
+    `
+      INSERT INTO tags (id, name)
+      VALUES (@id, @name)
+      ON CONFLICT(name) DO NOTHING
+    `,
+  );
+  const getTagId = db.prepare("SELECT id FROM tags WHERE name = @name LIMIT 1");
+  const insertDiaryTag = db.prepare(
+    `
+      INSERT OR IGNORE INTO diary_tags (diary_id, tag_id)
+      VALUES (@diaryId, @tagId)
+    `,
+  );
+
+  const migrate = db.transaction(() => {
+    for (const row of legacyRows) {
+      const createdAt = normalizeTimestamp(row.created_at);
+      const id = normalizeText(row.id) || randomUUID();
+      const filepath = normalizeText(row.filepath) || generateFilePath(createdAt, id);
+
+      insertDiary.run({
+        id,
+        title: normalizeText(row.title) || "未命名日记",
+        content: normalizeNullableText(row.content) ?? "",
+        filepath,
+        diaryDate:
+          normalizeText(row.diary_date) ||
+          normalizeText(row.date) ||
+          getLocalDateString(createdAt),
+        createdAt,
+        updatedAt: normalizeTimestamp(row.updated_at, createdAt),
+        mood: normalizeNullableText(row.mood),
+        deleted: row.deleted === 1 ? 1 : 0,
+      });
+
+      for (const tagName of parseLegacyTags(row.tags)) {
+        const tagId = randomUUID();
+        insertTag.run({ id: tagId, name: tagName });
+
+        const tag = getTagId.get({ name: tagName }) as { id: string } | undefined;
+        if (tag) {
+          insertDiaryTag.run({ diaryId: id, tagId: tag.id });
+        }
+      }
+    }
+  });
+
+  migrate();
+  db.exec(`DROP TABLE ${legacyTableName};`);
+}
+
+interface LegacyDiaryRow {
+  id?: unknown;
+  title?: unknown;
+  content?: unknown;
+  filepath?: unknown;
+  diary_date?: unknown;
+  date?: unknown;
+  created_at?: unknown;
+  updated_at?: unknown;
+  mood?: unknown;
+  tags?: unknown;
+  deleted?: unknown;
+}
+
+function normalizeText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeNullableText(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function normalizeTimestamp(value: unknown, fallback = Date.now()): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : fallback;
+}
+
+function parseLegacyTags(value: unknown): string[] {
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(
+        parsed
+          .filter((tag): tag is string => typeof tag === "string")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      ),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function generateFilePath(createdAt: number, id: string): string {
+  const date = new Date(createdAt);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `notes/${year}/${month}/${id}.md`;
+}
+
+function getLocalDateString(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }

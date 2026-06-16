@@ -9,32 +9,34 @@
 /**
  * 渲染层可见的日记实体。
  *
- * SQLite 表中使用 snake_case 字段（created_at / updated_at），这里转换成
+ * SQLite 表中使用 snake_case 字段（diary_date / created_at / updated_at），这里转换成
  * 前端更自然的 camelCase，避免把数据库字段命名泄漏到 UI 层。
  */
 export interface Diary {
   id: string;
   title: string;
   content: string;
+  filepath: string;
+  diaryDate: string;
   createdAt: number;
   updatedAt: number;
-  date: string;
-  tags: string[] | null;
+  tags?: string[];
+  mood?: string;
   deleted: boolean;
 }
 
 /**
  * 创建日记时 renderer 需要传入的数据。
  *
- * date 允许为空：为空时 service 层会按本机当前日期生成 YYYY-MM-DD。
- * tags 允许为空：为空时数据库 tags 字段写入 NULL，便于后续区分“无标签”和
- * “空数组标签”的业务语义。
+ * diaryDate 允许为空：为空时 service 层会按本机当前日期生成 YYYY-MM-DD。
+ * tags 允许为空：为空时不写 diary_tags 关系。
  */
 export interface CreateDiaryInput {
   title: string;
   content: string;
-  date?: string;
-  tags?: string[] | null;
+  diaryDate?: string;
+  tags?: string[];
+  mood?: string;
 }
 
 /**
@@ -47,8 +49,9 @@ export interface UpdateDiaryInput {
   id: string;
   title?: string;
   content?: string;
-  date?: string;
-  tags?: string[] | null;
+  diaryDate?: string;
+  tags?: string[];
+  mood?: string | null;
 }
 
 /**
@@ -60,7 +63,8 @@ export interface UpdateDiaryInput {
 export interface GetDiaryListOptions {
   limit?: number;
   offset?: number;
-  date?: string;
+  diaryDate?: string;
+  tagId?: string;
   includeDeleted?: boolean;
 }
 

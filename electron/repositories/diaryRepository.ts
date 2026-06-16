@@ -1,49 +1,59 @@
+import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import type { Diary, GetDiaryListOptions } from "../../shared/diary.js";
 
 /**
  * 数据库原始行结构。
  *
- * repository 层负责隔离 SQLite 的 snake_case 字段、0/1 布尔值和 JSON string，
+ * repository 层负责隔离 SQLite 的 snake_case 字段和 0/1 布尔值，
  * service / IPC / renderer 都不需要知道这些存储细节。
  */
 interface DiaryRow {
   id: string;
   title: string;
-  content: string;
+  content: string | null;
+  filepath: string;
+  diary_date: string;
   created_at: number;
   updated_at: number;
-  date: string;
-  tags: string | null;
+  mood: string | null;
   deleted: 0 | 1;
+}
+
+interface TagRow {
+  id: string;
+  name: string;
 }
 
 /**
  * repository 创建数据时使用的内部结构。
  *
- * id、时间戳、date 默认值都由 service 层生成，repository 只负责持久化。
+ * id、时间戳、diaryDate、filepath 默认值都由 service 层生成，repository 只负责持久化。
  */
 export interface CreateDiaryRecord {
   id: string;
   title: string;
   content: string;
+  filepath: string;
+  diaryDate: string;
   createdAt: number;
   updatedAt: number;
-  date: string;
-  tags: string[] | null;
+  tags: string[];
+  mood?: string;
 }
 
 /**
  * repository 更新数据时使用的内部结构。
  *
- * 使用 undefined 表示“不更新该字段”；使用 null 表示“明确把 tags 清空为 NULL”。
+ * 使用 undefined 表示“不更新该字段”；tags 传入空数组表示清空关系。
  */
 export interface UpdateDiaryRecord {
   id: string;
   title?: string;
   content?: string;
-  date?: string;
-  tags?: string[] | null;
+  diaryDate?: string;
+  tags?: string[];
+  mood?: string | null;
   updatedAt: number;
 }
 
@@ -59,38 +69,46 @@ export class DiaryRepository {
   /**
    * 新增日记。
    *
-   * tags 在写入前序列化为 JSON string；为空时写 NULL，符合表结构要求。
+   * tags 通过 diary_tags 关系表写入，不在 diaries 表中存 JSON。
    */
   public createDiary(record: CreateDiaryRecord): Diary {
-    this.db
-      .prepare(
-        `
-          INSERT INTO diaries (
-            id,
-            title,
-            content,
-            created_at,
-            updated_at,
-            date,
-            tags,
-            deleted
-          )
-          VALUES (
-            @id,
-            @title,
-            @content,
-            @createdAt,
-            @updatedAt,
-            @date,
-            @tags,
-            0
-          )
-        `,
-      )
-      .run({
-        ...record,
-        tags: serializeTags(record.tags),
-      });
+    const create = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `
+            INSERT INTO diaries (
+              id,
+              title,
+              content,
+              filepath,
+              diary_date,
+              created_at,
+              updated_at,
+              mood,
+              deleted
+            )
+            VALUES (
+              @id,
+              @title,
+              @content,
+              @filepath,
+              @diaryDate,
+              @createdAt,
+              @updatedAt,
+              @mood,
+              0
+            )
+          `,
+        )
+        .run({
+          ...record,
+          mood: record.mood ?? null,
+        });
+
+      this.replaceDiaryTags(record.id, record.tags);
+    });
+
+    create();
 
     const createdDiary = this.getDiaryById(record.id);
     if (!createdDiary) {
@@ -123,28 +141,40 @@ export class DiaryRepository {
       params.content = record.content;
     }
 
-    if (record.date !== undefined) {
-      sets.push("date = @date");
-      params.date = record.date;
+    if (record.diaryDate !== undefined) {
+      sets.push("diary_date = @diaryDate");
+      params.diaryDate = record.diaryDate;
     }
 
-    if (record.tags !== undefined) {
-      sets.push("tags = @tags");
-      params.tags = serializeTags(record.tags);
+    if (record.mood !== undefined) {
+      sets.push("mood = @mood");
+      params.mood = record.mood;
     }
 
-    const result = this.db
-      .prepare(
-        `
-          UPDATE diaries
-          SET ${sets.join(", ")}
-          WHERE id = @id
-            AND deleted = 0
-        `,
-      )
-      .run(params);
+    const update = this.db.transaction(() => {
+      const result = this.db
+        .prepare(
+          `
+            UPDATE diaries
+            SET ${sets.join(", ")}
+            WHERE id = @id
+              AND deleted = 0
+          `,
+        )
+        .run(params);
 
-    if (result.changes === 0) {
+      if (result.changes === 0) {
+        return false;
+      }
+
+      if (record.tags !== undefined) {
+        this.replaceDiaryTags(record.id, record.tags);
+      }
+
+      return true;
+    });
+
+    if (!update()) {
       return null;
     }
 
@@ -186,10 +216,11 @@ export class DiaryRepository {
             id,
             title,
             content,
+            filepath,
+            diary_date,
             created_at,
             updated_at,
-            date,
-            tags,
+            mood,
             deleted
           FROM diaries
           WHERE id = @id
@@ -199,13 +230,13 @@ export class DiaryRepository {
       )
       .get({ id }) as DiaryRow | undefined;
 
-    return row ? mapDiaryRow(row) : null;
+    return row ? mapDiaryRow(row, this.getTagsForDiary(row.id)) : null;
   }
 
   /**
    * 查询日记列表。
    *
-   * 默认行为满足需求：过滤 deleted = 0，并按 updated_at DESC 排序。
+   * 默认行为满足需求：过滤 deleted = 0，并按 diary_date DESC 排序。
    * limit / offset 做了边界收敛，避免 renderer 传入异常数字导致一次性读取过多数据。
    */
   public getDiaryList(options: GetDiaryListOptions = {}): Diary[] {
@@ -215,81 +246,132 @@ export class DiaryRepository {
     const params: Record<string, unknown> = { limit, offset };
 
     if (!options.includeDeleted) {
-      where.push("deleted = 0");
+      where.push("d.deleted = 0");
     }
 
-    if (options.date) {
-      where.push("date = @date");
-      params.date = options.date;
+    if (options.diaryDate) {
+      where.push("d.diary_date = @diaryDate");
+      params.diaryDate = options.diaryDate;
+    }
+
+    if (options.tagId) {
+      where.push(
+        `
+          EXISTS (
+            SELECT 1
+            FROM diary_tags dt
+            WHERE dt.diary_id = d.id
+              AND dt.tag_id = @tagId
+          )
+        `,
+      );
+      params.tagId = options.tagId;
     }
 
     const rows = this.db
       .prepare(
         `
           SELECT
-            id,
-            title,
-            content,
-            created_at,
-            updated_at,
-            date,
-            tags,
-            deleted
-          FROM diaries
+            d.id,
+            d.title,
+            d.content,
+            d.filepath,
+            d.diary_date,
+            d.created_at,
+            d.updated_at,
+            d.mood,
+            d.deleted
+          FROM diaries d
           ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
-          ORDER BY updated_at DESC
+          ORDER BY diary_date DESC, updated_at DESC
           LIMIT @limit
           OFFSET @offset
         `,
       )
       .all(params) as DiaryRow[];
 
-    return rows.map(mapDiaryRow);
+    return rows.map((row) => mapDiaryRow(row, this.getTagsForDiary(row.id)));
   }
-}
 
-/**
- * 将 tags 数组序列化为数据库中的 JSON string。
- */
-function serializeTags(tags: string[] | null): string | null {
-  return tags === null ? null : JSON.stringify(tags);
+  private replaceDiaryTags(diaryId: string, tags: string[]): void {
+    this.db.prepare("DELETE FROM diary_tags WHERE diary_id = @diaryId").run({ diaryId });
+
+    for (const tagName of tags) {
+      const tagId = this.getOrCreateTagId(tagName);
+      this.db
+        .prepare(
+          `
+            INSERT OR IGNORE INTO diary_tags (diary_id, tag_id)
+            VALUES (@diaryId, @tagId)
+          `,
+        )
+        .run({ diaryId, tagId });
+    }
+  }
+
+  private getOrCreateTagId(name: string): string {
+    const existingTag = this.db
+      .prepare(
+        `
+          SELECT id
+          FROM tags
+          WHERE name = @name
+          LIMIT 1
+        `,
+      )
+      .get({ name }) as Pick<TagRow, "id"> | undefined;
+
+    if (existingTag) {
+      return existingTag.id;
+    }
+
+    const id = randomUUID();
+    this.db
+      .prepare(
+        `
+          INSERT INTO tags (id, name)
+          VALUES (@id, @name)
+        `,
+      )
+      .run({ id, name });
+
+    return id;
+  }
+
+  private getTagsForDiary(diaryId: string): string[] {
+    const rows = this.db
+      .prepare(
+        `
+          SELECT t.id, t.name
+          FROM tags t
+          JOIN diary_tags dt
+            ON t.id = dt.tag_id
+          WHERE dt.diary_id = @diaryId
+          ORDER BY t.name COLLATE NOCASE ASC
+        `,
+      )
+      .all({ diaryId }) as TagRow[];
+
+    return rows.map((row) => row.name);
+  }
 }
 
 /**
  * 将数据库行转换为渲染层可用的 Diary。
- *
- * 如果历史数据中出现非法 tags JSON，这里返回 null，避免单条脏数据导致整个列表
- * 查询失败。新写入的数据仍然由 service 层保证 tags 为 string[] | null。
  */
-function mapDiaryRow(row: DiaryRow): Diary {
+function mapDiaryRow(row: DiaryRow, tags: string[]): Diary {
   return {
     id: row.id,
     title: row.title,
-    content: row.content,
+    content: row.content ?? "",
+    filepath: row.filepath,
+    diaryDate: row.diary_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    date: row.date,
-    tags: parseTags(row.tags),
+    tags,
+    mood: row.mood ?? undefined,
     deleted: row.deleted === 1,
   };
-}
-
-/**
- * 解析数据库中的 tags JSON string。
- */
-function parseTags(rawTags: string | null): string[] | null {
-  if (!rawTags) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(rawTags) as unknown;
-    return Array.isArray(parsed) && parsed.every((tag) => typeof tag === "string")
-      ? parsed
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 /**
