@@ -113,51 +113,6 @@
   padding: 24px;
 }
 
-/*
- * 设置弹框采用 backdrop + panel 的固定层级结构。
- * panel 使用稳定宽度和最大宽度，路径较长时通过输入框横向滚动而不是撑破布局。
- */
-.settings-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-
-.settings-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(17, 24, 39, 0.38);
-}
-
-.settings-modal__panel {
-  position: relative;
-  width: min(560px, 100%);
-  overflow: hidden;
-  border-radius: 8px;
-  border: 1px solid rgba(25, 28, 29, 0.08);
-  background: #ffffff;
-  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.22);
-}
-
-.settings-modal__header {
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 18px 0 20px;
-  border-bottom: 1px solid rgba(25, 28, 29, 0.08);
-}
-
-.settings-modal__header h2 {
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.settings-modal__close,
 .icon-button {
   width: 36px;
   height: 36px;
@@ -171,21 +126,12 @@
   transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
 }
 
-.settings-modal__close:hover,
 .icon-button:hover {
   color: var(--echo-color-primary);
   border-color: var(--echo-color-primary-10);
   background: var(--echo-color-primary-10);
 }
 
-.settings-modal__body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 20px;
-}
-
-.settings-modal__error,
 .diary-list-page__error,
 .editor-page__error {
   color: #b42318;
@@ -193,7 +139,6 @@
   line-height: 1.5;
 }
 
-.settings-field,
 .editor-field {
   min-width: 0;
   display: flex;
@@ -201,7 +146,6 @@
   gap: 8px;
 }
 
-.settings-field span,
 .editor-field span {
   color: rgba(25, 28, 29, 0.68);
   font-size: 13px;
@@ -209,7 +153,6 @@
   line-height: 1.2;
 }
 
-.settings-field input,
 .editor-field input {
   width: 100%;
   min-height: 40px;
@@ -223,15 +166,9 @@
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.settings-field input:focus,
 .editor-field input:focus {
   border-color: var(--echo-color-primary);
   box-shadow: 0 0 0 3px var(--echo-color-primary-10);
-}
-
-.settings-field input[readonly] {
-  color: rgba(25, 28, 29, 0.72);
-  background: #f6f7f7;
 }
 
 /*

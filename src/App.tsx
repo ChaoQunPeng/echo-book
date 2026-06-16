@@ -1,4 +1,5 @@
-import { CloseOutlined, SettingOutlined } from '@ant-design/icons'
+import { FolderOpenOutlined, SettingOutlined } from '@ant-design/icons'
+import { Alert, Button, Form, Input, Modal } from 'antd'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
@@ -19,6 +20,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
   const [settingsError, setSettingsError] = useState('')
+  const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
 
   useEffect(() => {
     if (!isSettingsOpen) {
@@ -62,6 +64,34 @@ function App() {
     }
   }, [isSettingsOpen])
 
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false)
+  }
+
+  const handleOpenStorageRoot = () => {
+    /*
+     * “打开目录”同样只走 preload 暴露的业务 API。
+     * 浏览器调试环境没有 Electron shell 能力，因此这里复用设置页的错误提示区域。
+     */
+    if (!window.settingsAPI) {
+      setSettingsError('请通过 Electron 启动应用后打开存储目录')
+      return
+    }
+
+    setIsOpeningStorageRoot(true)
+    window.settingsAPI
+      .openStorageRoot()
+      .then(() => {
+        setSettingsError('')
+      })
+      .catch(() => {
+        setSettingsError('打开存储目录失败')
+      })
+      .finally(() => {
+        setIsOpeningStorageRoot(false)
+      })
+  }
+
   /*
    * `App` 负责承载整站固定布局：左侧导航区域和右侧主内容区域。
    * 主内容区域内部放置 React Router 的 `<Outlet />`，这样所有子路由
@@ -99,40 +129,47 @@ function App() {
         <Outlet />
       </div>
 
-      {isSettingsOpen ? (
-        <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-          <div className="settings-modal__backdrop" onClick={() => setIsSettingsOpen(false)} />
-          <section className="settings-modal__panel">
-            <header className="settings-modal__header">
-              <h2 id="settings-title">设置</h2>
-              <button
-                className="settings-modal__close"
-                type="button"
-                aria-label="关闭设置"
-                onClick={() => setIsSettingsOpen(false)}
-              >
-                <CloseOutlined />
-              </button>
-            </header>
-
-            <div className="settings-modal__body">
-              {settingsError ? <p className="settings-modal__error">{settingsError}</p> : null}
-              <label className="settings-field">
-                <span>日记文件目录</span>
-                <input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
-              </label>
-              <label className="settings-field">
-                <span>数据目录</span>
-                <input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
-              </label>
-              <label className="settings-field">
-                <span>数据库文件</span>
-                <input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
-              </label>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <Modal
+        title="设置"
+        open={isSettingsOpen}
+        onCancel={handleCloseSettings}
+        footer={[
+          <Button
+            key="open-storage-root"
+            type="primary"
+            icon={<FolderOpenOutlined />}
+            loading={isOpeningStorageRoot}
+            disabled={!storageInfo || Boolean(settingsError)}
+            onClick={handleOpenStorageRoot}
+          >
+            打开存储目录
+          </Button>,
+          <Button key="close-settings" onClick={handleCloseSettings}>
+            关闭
+          </Button>,
+        ]}
+      >
+        {/*
+         * 设置项当前只展示 main process 计算出的真实路径。
+         * Input 使用 readOnly 而不是 disabled，让用户仍然可以选中复制路径。
+         */}
+        <Form layout="vertical">
+          {settingsError ? (
+            <Form.Item>
+              <Alert message={settingsError} type="error" showIcon />
+            </Form.Item>
+          ) : null}
+          <Form.Item label="日记文件目录">
+            <Input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
+          </Form.Item>
+          <Form.Item label="数据目录">
+            <Input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
+          </Form.Item>
+          <Form.Item label="数据库文件">
+            <Input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

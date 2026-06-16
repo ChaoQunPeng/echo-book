@@ -36,13 +36,22 @@ const diaryAPI: DiaryApi = {
 };
 
 /**
- * 设置 API 只暴露只读信息。
+ * 设置 API 暴露路径查询和受控目录打开动作。
  *
- * renderer 可以展示路径，但不能借此获得 Node.js fs 或任意 IPC 调用权限。
+ * renderer 可以展示路径、请求 main process 打开固定目录，
+ * 但不能借此获得 Node.js fs、Electron shell 或任意 IPC 调用权限。
  */
 const settingsAPI: SettingsApi = {
   getStorageInfo() {
     return ipcRenderer.invoke("settings:getStorageInfo");
+  },
+
+  /*
+   * 这里不从 renderer 接收路径参数。
+   * 真正要打开的目录由 main process 根据 app.getPath("userData") 计算。
+   */
+  openStorageRoot() {
+    return ipcRenderer.invoke("settings:openStorageRoot");
   },
 };
 

@@ -6,13 +6,13 @@
   "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "node scripts/electron-dev.mjs",
+    "dev-rebuild": "node scripts/electron-dev.mjs --rebuild",
     "web:dev": "vite",
     "build": "tsc --noEmit && npm run electron:build && vite build",
     "preview": "vite preview",
     "electron:build": "tsc -p tsconfig.electron.json && node scripts/write-electron-dist-package.mjs",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
-    "electron": "node scripts/electron-run.mjs",
-    "electron:dev": "node scripts/electron-dev.mjs"
+    "electron": "node scripts/electron-run.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",

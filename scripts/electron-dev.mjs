@@ -9,6 +9,19 @@ const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const electronCommand = process.platform === "win32" ? "electron.cmd" : "electron";
 const electronBinPath = path.join(projectRoot, "node_modules", ".bin", electronCommand);
 const viteDevServerUrl = "http://localhost:5173";
+const rebuildFlags = new Set(["--rebuild"]);
+
+/**
+ * 解析开发启动参数。
+ *
+ * 日常开发默认不执行 electron-rebuild，避免每次启动都卡在
+ * "Building modules: better-sqlite3"。只有在刚安装依赖、升级 Electron /
+ * better-sqlite3、切换 Node/Electron 架构，或者遇到 better_sqlite3.node
+ * 相关加载错误时，才通过 `npm run dev-rebuild` 传入 --rebuild 主动重建。
+ */
+const devOptions = {
+  rebuildNativeModules: process.argv.slice(2).some((arg) => rebuildFlags.has(arg)),
+};
 
 let viteProcess;
 let electronProcess;
@@ -138,16 +151,25 @@ process.on("SIGTERM", () => shutdown(0));
 
 try {
   await runCommand(npmCommand, ["run", "electron:build"]);
-  /**
-   * better-sqlite3 这类 native addon 会生成 .node 二进制文件，必须匹配实际加载它的
-   * Node ABI。开发机的 Node 版本可能和 Electron 内置 Node 版本不同：
-   * - 普通 `npm install` / `npm rebuild` 会按当前终端里的 Node 编译
-   * - Electron main process 运行时会按 Electron 自带的 Node 加载
-   *
-   * 因此每次开发启动 Electron 前都先执行 electron-rebuild，确保
-   * node_modules/better-sqlite3/build/Release/better_sqlite3.node 面向 Electron ABI。
-   */
-  await runCommand(npmCommand, ["run", "electron:rebuild"]);
+  if (devOptions.rebuildNativeModules) {
+    /**
+     * better-sqlite3 这类 native addon 会生成 .node 二进制文件，必须匹配实际加载它的
+     * Node ABI。开发机的 Node 版本可能和 Electron 内置 Node 版本不同：
+     * - 普通 `npm install` / `npm rebuild` 会按当前终端里的 Node 编译
+     * - Electron main process 运行时会按 Electron 自带的 Node 加载
+     *
+     * 因此当显式传入 --rebuild 时执行 electron-rebuild，确保
+     * node_modules/better-sqlite3/build/Release/better_sqlite3.node 面向 Electron ABI。
+     */
+    await runCommand(npmCommand, ["run", "electron:rebuild"]);
+  } else {
+    /**
+     * 默认 dev 走最快路径：直接复用本机已经存在的 better-sqlite3 Electron ABI 二进制。
+     * 如果这个二进制不存在或版本不匹配，Electron 启动后会报 native addon 加载错误；
+     * 这时改跑 `npm run dev-rebuild` 重新生成一次即可。
+     */
+    console.log("[electron-dev] Skip electron:rebuild. Run `npm run dev-rebuild` when native modules need rebuild.");
+  }
 
   viteProcess = startProcess(npmCommand, ["run", "web:dev"], {
     env: {

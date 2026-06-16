@@ -1,5 +1,5 @@
 /**
- * 设置页只需要读取路径类信息，保持为只读 API。
+ * 设置页只读取路径类信息，并提供少量受控桌面动作。
  *
  * 这些路径来自 Electron main process，renderer 不直接拼接 app.getPath，
  * 可以避免浏览器环境和桌面环境的路径规则混在一起。
@@ -15,4 +15,12 @@ export interface StorageInfo {
  */
 export interface SettingsApi {
   getStorageInfo(): Promise<StorageInfo>;
+
+  /**
+   * 打开应用自己的存储根目录。
+   *
+   * renderer 只发起“打开当前应用目录”这个明确动作，不传入任意路径；
+   * 实际路径仍由 main process 根据 Electron userData 目录计算，减少误开系统路径的风险。
+   */
+  openStorageRoot(): Promise<void>;
 }
