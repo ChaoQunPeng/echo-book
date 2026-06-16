@@ -40,6 +40,14 @@ function createWindow(): void {
   }
 
   if (!app.isPackaged) {
+    /*
+     * 开发阶段把 renderer 的 console 转发到启动终端。
+     * 保存失败这类错误常发生在 renderer catch 中，只看主进程日志会漏掉关键信息。
+     */
+    win.webContents.on("console-message", (_event, level, message) => {
+      console.log(`[renderer:${level}] ${message}`);
+    });
+
     win.webContents.openDevTools();
   }
 }

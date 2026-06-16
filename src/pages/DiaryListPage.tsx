@@ -4,10 +4,20 @@ import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../shared/diary'
 import EchoButton from '../components/EchoButton'
 
+const DEFAULT_NEW_DIARY_MARKDOWN = `# 今天的回声
+
+写下今天值得被记住的片段。
+
+- 发生了什么？
+- 我当时有什么感受？
+- 明天想带着什么继续出发？
+`
+
 function DiaryListPage() {
   const navigate = useNavigate()
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   const loadDiaries = async () => {
@@ -15,14 +25,23 @@ function DiaryListPage() {
     setErrorMessage('')
 
     try {
+      if (!window.diaryAPI) {
+        /*
+         * 日记数据依赖 Electron preload 暴露的 IPC API。
+         * 如果只用浏览器打开 Vite 页面，保存和读取都不会真正落盘。
+         */
+        throw new Error('Electron diary API is unavailable.')
+      }
+
       /*
        * 列表页先取最近 100 条，满足当前轻量日记场景。
        * 后续做无限滚动或搜索时，可以在这里继续使用 limit/offset 扩展。
        */
       const diaryList = await window.diaryAPI.getDiaryList({ limit: 100 })
       setDiaries(diaryList)
-    } catch {
-      setErrorMessage('读取日记列表失败')
+    } catch (error) {
+      console.error('Failed to load diary list:', error)
+      setErrorMessage(`读取日记列表失败：${getErrorMessage(error)}`)
     } finally {
       setIsLoading(false)
     }
@@ -31,6 +50,37 @@ function DiaryListPage() {
   useEffect(() => {
     void loadDiaries()
   }, [])
+
+  const handleCreateDiary = async () => {
+    setIsCreating(true)
+    setErrorMessage('')
+
+    try {
+      if (!window.diaryAPI) {
+        /*
+         * 新建日记会立即写数据库和 Markdown 文件，必须走 Electron preload API。
+         */
+        throw new Error('Electron diary API is unavailable.')
+      }
+
+      /*
+       * “新建日记 / 写第一篇”现在立即创建真实日记，而不是只进入本地草稿页。
+       * 这样用户点完新建后，列表数据和 notes 下的 Markdown 文件都会立刻存在。
+       */
+      const diary = await window.diaryAPI.createDiary({
+        title: '未命名日记',
+        content: DEFAULT_NEW_DIARY_MARKDOWN,
+        diaryDate: getTodayDateString(),
+      })
+
+      navigate(`/editor/${diary.id}`)
+    } catch (error) {
+      console.error('Failed to create diary from list:', error)
+      setErrorMessage(`新建日记失败：${getErrorMessage(error)}`)
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   const handleDeleteDiary = async (diary: Diary) => {
     /*
@@ -71,8 +121,8 @@ function DiaryListPage() {
           >
             刷新
           </EchoButton>
-          <EchoButton icon={<PlusOutlined />} onClick={() => navigate('/editor')}>
-            新建日记
+          <EchoButton icon={<PlusOutlined />} disabled={isCreating} onClick={handleCreateDiary}>
+            {isCreating ? '新建中' : '新建日记'}
           </EchoButton>
         </div>
       </header>
@@ -86,8 +136,8 @@ function DiaryListPage() {
           <div className="diary-list-page__empty-state">
             <h2>还没有日记</h2>
             <p>从一篇新的记录开始。</p>
-            <EchoButton icon={<PlusOutlined />} onClick={() => navigate('/editor')}>
-              写第一篇
+            <EchoButton icon={<PlusOutlined />} disabled={isCreating} onClick={handleCreateDiary}>
+              {isCreating ? '新建中' : '写第一篇'}
             </EchoButton>
           </div>
         ) : null}
@@ -149,6 +199,27 @@ function buildDiarySummary(content: string): string {
     .trim()
 
   return summary || '没有正文预览'
+}
+
+function getErrorMessage(error: unknown): string {
+  /*
+   * IPC 抛错会被 Electron 序列化成 Error；这里做最小格式化，
+   * 让页面能显示真正原因，而不是只给一个模糊失败态。
+   */
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return '请确认通过 Electron 启动应用'
+}
+
+function getTodayDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function formatUpdatedAt(timestamp: number): string {

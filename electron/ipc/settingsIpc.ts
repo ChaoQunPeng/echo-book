@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import fs from "node:fs";
 import path from "node:path";
 import type { StorageInfo } from "../../shared/settings.js";
 import { getDatabasePath } from "../db/connection.js";
@@ -19,10 +20,17 @@ export function registerSettingsIpcHandlers(): void {
   ipcMain.handle(SETTINGS_CHANNELS.getStorageInfo, (): StorageInfo => {
     const databasePath = getDatabasePath();
     const storageRoot = path.dirname(databasePath);
+    const notesPath = path.join(storageRoot, "notes");
+
+    /*
+     * 设置页展示的是用户要去找的真实目录。
+     * 即使还没有日记，也先创建 notes 根目录，避免用户按路径查找时看到目录不存在。
+     */
+    fs.mkdirSync(notesPath, { recursive: true });
 
     return {
       storageRoot,
-      notesPath: path.join(storageRoot, "notes"),
+      notesPath,
       databasePath,
     };
   });

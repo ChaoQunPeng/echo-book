@@ -202,6 +202,13 @@ function EditorPage() {
     const markdown = crepeRef.current?.getMarkdown() ?? initialMarkdownRef.current
     const normalizedTitle = title.trim()
 
+    console.info('Diary save button clicked:', {
+      isEditing,
+      hasDiaryAPI: Boolean(window.diaryAPI),
+      titleLength: normalizedTitle.length,
+      markdownLength: markdown.length,
+    })
+
     if (!normalizedTitle) {
       setSaveStatus('请填写标题')
       return
@@ -216,31 +223,42 @@ function EditorPage() {
     setSaveStatus(isEditing ? '正在更新' : '正在创建')
 
     try {
-      const savedDiary = diaryId
-        ? await window.diaryAPI.updateDiary({
-            id: diaryId,
-            title: normalizedTitle,
-            content: markdown,
-            diaryDate,
-            mood: mood.trim() ? mood : null,
-            tags: parseTags(tagsInput),
-          })
-        : await window.diaryAPI.createDiary({
-            title: normalizedTitle,
-            content: markdown,
-            diaryDate,
-            mood: mood.trim() || undefined,
-            tags: parseTags(tagsInput),
-          })
+      if (!window.diaryAPI) {
+        /*
+         * Markdown 文件写入发生在 Electron main process。
+         * 纯浏览器环境没有 diaryAPI，必须明确提示用户使用桌面入口启动。
+         */
+        throw new Error('Electron diary API is unavailable.')
+      }
+
+      if (diaryId) {
+        await window.diaryAPI.updateDiary({
+          id: diaryId,
+          title: normalizedTitle,
+          content: markdown,
+          diaryDate,
+          mood: mood.trim() ? mood : null,
+          tags: parseTags(tagsInput),
+        })
+      } else {
+        await window.diaryAPI.createDiary({
+          title: normalizedTitle,
+          content: markdown,
+          diaryDate,
+          mood: mood.trim() || undefined,
+          tags: parseTags(tagsInput),
+        })
+      }
 
       window.localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY)
       setSaveStatus('已保存')
 
       if (!diaryId) {
-        navigate(`/editor/${savedDiary.id}`, { replace: true })
+        navigate('/list', { replace: true })
       }
-    } catch {
-      setSaveStatus('保存失败')
+    } catch (error) {
+      console.error('Failed to save diary:', error)
+      setSaveStatus(`保存失败：${getErrorMessage(error)}`)
     } finally {
       setIsSaving(false)
     }
@@ -295,6 +313,15 @@ function EditorPage() {
       <div className="editor-page__workspace">
         {isEditorReady ? <div ref={editorRootRef} className="editor-page__milkdown" /> : null}
       </div>
+
+      <div className="editor-page__footer-actions">
+        <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
+          返回列表
+        </EchoButton>
+        <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
+          {isEditing ? '保存修改' : '创建日记'}
+        </EchoButton>
+      </div>
     </section>
   )
 }
@@ -307,6 +334,18 @@ function parseTags(value: string): string[] {
     .split(/[,，]/)
     .map((tag) => tag.trim())
     .filter(Boolean)
+}
+
+function getErrorMessage(error: unknown): string {
+  /*
+   * 把 IPC / 校验 / 运行环境错误压成短文本显示在保存状态中。
+   * 这样保存失败时可以直接看到是 Electron API 缺失、字段校验失败，还是主进程异常。
+   */
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return '请确认通过 Electron 启动应用'
 }
 
 function getTodayDateString(): string {

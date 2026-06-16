@@ -469,6 +469,17 @@
 }
 
 /*
+ * 底部操作区贴近正文编辑器，补充顶部工具栏。
+ * 用户写完后视线通常停在页面下方，这里再放一次保存入口可以降低漏点保存的概率。
+ */
+.editor-page__footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/*
  * Milkdown 的根节点需要占满 workspace。
  * Crepe 会在该节点下创建自己的编辑器结构，因此这里主要负责尺寸、滚动和字体继承。
  */

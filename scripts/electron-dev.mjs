@@ -51,10 +51,7 @@ function startProcess(command, args, options = {}) {
   const child = spawn(command, args, {
     cwd: projectRoot,
     stdio: "inherit",
-    env: {
-      ...process.env,
-      ...options.env,
-    },
+    env: createChildEnv(options.env, options),
   });
 
   child.on("error", (error) => {
@@ -63,6 +60,26 @@ function startProcess(command, args, options = {}) {
   });
 
   return child;
+}
+
+/**
+ * 生成子进程环境变量。
+ *
+ * 某些 IDE / 自动化环境会带着 ELECTRON_RUN_AS_NODE=1 启动脚本；这个变量适合让
+ * Electron 二进制临时充当 Node.js，但真正启动桌面主进程时必须移除，否则
+ * require("electron").app 会变成 undefined，IPC handler 也就不会注册。
+ */
+function createChildEnv(overrides = {}, options = {}) {
+  const childEnv = {
+    ...process.env,
+    ...overrides,
+  };
+
+  if (options.stripElectronRunAsNode) {
+    delete childEnv.ELECTRON_RUN_AS_NODE;
+  }
+
+  return childEnv;
 }
 
 /**
@@ -132,7 +149,7 @@ try {
    */
   await runCommand(npmCommand, ["run", "electron:rebuild"]);
 
-  viteProcess = startProcess(npmCommand, ["run", "dev"], {
+  viteProcess = startProcess(npmCommand, ["run", "web:dev"], {
     env: {
       BROWSER: "none",
     },
@@ -140,7 +157,9 @@ try {
 
   await waitForViteServer();
 
-  electronProcess = startProcess(electronBinPath, ["."]);
+  electronProcess = startProcess(electronBinPath, ["."], {
+    stripElectronRunAsNode: true,
+  });
   electronProcess.on("exit", (code) => {
     shutdown(code ?? 0);
   });

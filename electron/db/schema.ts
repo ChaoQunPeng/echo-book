@@ -1,6 +1,8 @@
 import type Database from "better-sqlite3";
+import fs from "node:fs";
 import { randomUUID } from "node:crypto";
-import { getDatabase } from "./connection.js";
+import path from "node:path";
+import { getDatabase, getDatabasePath } from "./connection.js";
 
 const DB_VERSION = "1";
 
@@ -12,9 +14,18 @@ const DB_VERSION = "1";
  * 的修改而变化。
  */
 export function initializeDatabase(db: Database.Database = getDatabase()): void {
+  ensureStorageDirectories();
   migrateLegacySchemaIfNeeded(db);
   createCurrentSchema(db);
   initializeSettings(db);
+}
+
+function ensureStorageDirectories(): void {
+  /*
+   * notes 是 Markdown 文件的根目录。
+   * 即使当前还没有日记，也在启动时创建出来，方便用户按设置路径直接找到它。
+   */
+  fs.mkdirSync(path.join(path.dirname(getDatabasePath()), "notes"), { recursive: true });
 }
 
 function createCurrentSchema(db: Database.Database): void {

@@ -31,6 +31,18 @@ function App() {
      * 设置弹框打开时再读取路径，避免应用启动阶段做不必要的 IPC。
      * 返回值只用于展示，不让 renderer 获得文件系统写入能力。
      */
+    if (!window.settingsAPI) {
+      /*
+       * 设置里的存储路径来自 Electron main process。
+       * 纯浏览器环境没有 preload API，因此直接给出可理解的启动提示。
+       */
+      setStorageInfo(null)
+      setSettingsError('请通过 Electron 启动应用后查看存放路径')
+      return () => {
+        cancelled = true
+      }
+    }
+
     window.settingsAPI
       .getStorageInfo()
       .then((info) => {
