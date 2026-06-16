@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { DiaryApi } from "../shared/diary";
+import type { SettingsApi } from "../shared/settings";
 
 /**
  * renderer 侧的 window 类型声明。
@@ -11,6 +12,7 @@ import type { DiaryApi } from "../shared/diary";
 declare global {
   interface Window {
     diaryAPI: DiaryApi;
+    settingsAPI: SettingsApi;
   }
 }
 

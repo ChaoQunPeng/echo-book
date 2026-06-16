@@ -22,9 +22,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
            * 如果浏览器、Tauri WebView 或开发服务器热更新后仍停留在这个地址，
            * React Router 会因为找不到匹配路由而不渲染页面；这里将旧地址
            * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
-           */}
+          */}
           <Route path="list" element={<DiaryListPage />} />
           <Route path="editor" element={<EditorPage />} />
+          <Route path="editor/:diaryId" element={<EditorPage />} />
           {/*
            * 兜底路由用于处理输入错误或历史遗留的未知路径。
            * 统一回到默认列表页，可以保证 App 布局和主内容区始终有内容展示。

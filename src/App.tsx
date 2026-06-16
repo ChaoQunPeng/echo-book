@@ -1,4 +1,7 @@
+import { CloseOutlined, SettingOutlined } from '@ant-design/icons'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import type { StorageInfo } from '../shared/settings'
 import './App.scss'
 
 const sidebarMenus = [
@@ -13,6 +16,40 @@ const sidebarMenus = [
 ]
 
 function App() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
+  const [settingsError, setSettingsError] = useState('')
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      return
+    }
+
+    let cancelled = false
+
+    /*
+     * 设置弹框打开时再读取路径，避免应用启动阶段做不必要的 IPC。
+     * 返回值只用于展示，不让 renderer 获得文件系统写入能力。
+     */
+    window.settingsAPI
+      .getStorageInfo()
+      .then((info) => {
+        if (!cancelled) {
+          setStorageInfo(info)
+          setSettingsError('')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSettingsError('读取存放路径失败')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isSettingsOpen])
+
   /*
    * `App` 负责承载整站固定布局：左侧导航区域和右侧主内容区域。
    * 主内容区域内部放置 React Router 的 `<Outlet />`，这样所有子路由
@@ -37,10 +74,53 @@ function App() {
             </NavLink>
           ))}
         </nav>
+        <button
+          className="side-settings-button"
+          type="button"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <SettingOutlined />
+          设置
+        </button>
       </aside>
       <div className="main-container">
         <Outlet />
       </div>
+
+      {isSettingsOpen ? (
+        <div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <div className="settings-modal__backdrop" onClick={() => setIsSettingsOpen(false)} />
+          <section className="settings-modal__panel">
+            <header className="settings-modal__header">
+              <h2 id="settings-title">设置</h2>
+              <button
+                className="settings-modal__close"
+                type="button"
+                aria-label="关闭设置"
+                onClick={() => setIsSettingsOpen(false)}
+              >
+                <CloseOutlined />
+              </button>
+            </header>
+
+            <div className="settings-modal__body">
+              {settingsError ? <p className="settings-modal__error">{settingsError}</p> : null}
+              <label className="settings-field">
+                <span>日记文件目录</span>
+                <input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
+              </label>
+              <label className="settings-field">
+                <span>数据目录</span>
+                <input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
+              </label>
+              <label className="settings-field">
+                <span>数据库文件</span>
+                <input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
+              </label>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }

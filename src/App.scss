@@ -26,6 +26,8 @@
   padding: 16px 12px;
   border-right: 1px solid var(--echo-color-primary-10);
   background: #ffffff;
+  display: flex;
+  flex-direction: column;
 }
 
 /*
@@ -36,6 +38,33 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/*
+ * 设置入口临时放在侧边栏底部。
+ * 使用按钮而不是链接，因为它只打开弹框，不改变当前路由。
+ */
+.side-settings-button {
+  width: 100%;
+  min-height: 40px;
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: rgba(25, 28, 29, 0.72);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.side-settings-button:hover {
+  color: var(--echo-color-primary);
+  background: var(--echo-color-primary-10);
 }
 
 /*
@@ -82,6 +111,269 @@
   flex: 1;
   min-width: 0;
   padding: 24px;
+}
+
+/*
+ * 设置弹框采用 backdrop + panel 的固定层级结构。
+ * panel 使用稳定宽度和最大宽度，路径较长时通过输入框横向滚动而不是撑破布局。
+ */
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.settings-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.38);
+}
+
+.settings-modal__panel {
+  position: relative;
+  width: min(560px, 100%);
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid rgba(25, 28, 29, 0.08);
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.22);
+}
+
+.settings-modal__header {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 18px 0 20px;
+  border-bottom: 1px solid rgba(25, 28, 29, 0.08);
+}
+
+.settings-modal__header h2 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.settings-modal__close,
+.icon-button {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(25, 28, 29, 0.1);
+  border-radius: 8px;
+  color: rgba(25, 28, 29, 0.76);
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.settings-modal__close:hover,
+.icon-button:hover {
+  color: var(--echo-color-primary);
+  border-color: var(--echo-color-primary-10);
+  background: var(--echo-color-primary-10);
+}
+
+.settings-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.settings-modal__error,
+.diary-list-page__error,
+.editor-page__error {
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.settings-field,
+.editor-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-field span,
+.editor-field span {
+  color: rgba(25, 28, 29, 0.68);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.settings-field input,
+.editor-field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(25, 28, 29, 0.12);
+  border-radius: 8px;
+  color: var(--echo-color-text);
+  background: #ffffff;
+  font: inherit;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.settings-field input:focus,
+.editor-field input:focus {
+  border-color: var(--echo-color-primary);
+  box-shadow: 0 0 0 3px var(--echo-color-primary-10);
+}
+
+.settings-field input[readonly] {
+  color: rgba(25, 28, 29, 0.72);
+  background: #f6f7f7;
+}
+
+/*
+ * 列表页的内容容器负责滚动和空状态，不把整个页面做成卡片。
+ * 这样顶部操作区和列表之间的层级更清楚。
+ */
+.diary-list-page {
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.diary-list-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.diary-list-page__eyebrow {
+  color: var(--echo-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.diary-list-page__header h1 {
+  margin-top: 4px;
+  color: var(--echo-color-text);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.diary-list-page__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.diary-list-page__content {
+  flex: 1;
+  min-height: 360px;
+}
+
+.diary-list-page__empty,
+.diary-list-page__empty-state {
+  color: rgba(25, 28, 29, 0.66);
+}
+
+.diary-list-page__empty-state {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  border: 1px dashed rgba(15, 82, 56, 0.24);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.diary-list-page__empty-state h2 {
+  color: var(--echo-color-text);
+  font-size: 20px;
+}
+
+.diary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.diary-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(25, 28, 29, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 82, 56, 0.06);
+}
+
+.diary-list__main {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 92px minmax(140px, 0.42fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diary-list__date {
+  color: var(--echo-color-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.diary-list__title {
+  overflow: hidden;
+  color: var(--echo-color-text);
+  font-size: 16px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diary-list__summary,
+.diary-list__meta {
+  overflow: hidden;
+  color: rgba(25, 28, 29, 0.62);
+  font-size: 13px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diary-list__meta {
+  grid-column: 2 / -1;
+}
+
+.diary-list__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button--danger:hover {
+  color: #b42318;
+  border-color: rgba(180, 35, 24, 0.14);
+  background: rgba(180, 35, 24, 0.08);
 }
 
 /*
@@ -152,6 +444,17 @@
 }
 
 /*
+ * 元信息表单保持紧凑的网格布局。
+ * 标题字段占更宽区域，日期、心情和标签维持稳定输入宽度。
+ */
+.editor-page__form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(180px, 0.8fr);
+  gap: 12px;
+  align-items: end;
+}
+
+/*
  * workspace 是 Milkdown 编辑器的视觉边界。
  * 它承担滚动和背景，不再额外把编辑器内部包成多层卡片，保证写作区域足够开阔。
  */
@@ -215,8 +518,56 @@
  * 小屏下收紧页面和编辑器内边距，保证标题、按钮和正文都不会横向溢出。
  */
 @media (max-width: 720px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .side-bar {
+    width: 100%;
+    flex: 0 0 auto;
+    gap: 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--echo-color-primary-10);
+  }
+
+  .side-menu {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .side-settings-button {
+    width: auto;
+    margin-top: 0;
+  }
+
   .main-container {
     padding: 16px;
+  }
+
+  .diary-list-page {
+    min-height: calc(100vh - 130px);
+  }
+
+  .diary-list-page__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .diary-list__item {
+    grid-template-columns: 1fr;
+  }
+
+  .diary-list__main {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .diary-list__meta {
+    grid-column: auto;
+  }
+
+  .diary-list__actions {
+    justify-content: flex-end;
   }
 
   .editor-page {
@@ -230,6 +581,10 @@
   .editor-page__actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .editor-page__form {
+    grid-template-columns: 1fr;
   }
 
   .editor-page__workspace {

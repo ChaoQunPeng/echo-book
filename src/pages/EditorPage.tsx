@@ -1,8 +1,9 @@
-import { SaveOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
 import { Crepe, CrepeFeature } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import EchoButton from '../components/EchoButton'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
@@ -34,12 +35,87 @@ function readEditorDraft() {
 }
 
 function EditorPage() {
+  const navigate = useNavigate()
+  const { diaryId } = useParams<{ diaryId: string }>()
+  const isEditing = Boolean(diaryId)
   const editorRootRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
   const initialMarkdownRef = useRef(readEditorDraft())
-  const [saveStatus, setSaveStatus] = useState('草稿已就绪')
+  const [editorVersion, setEditorVersion] = useState(0)
+  const [isEditorReady, setIsEditorReady] = useState(!isEditing)
+  const [title, setTitle] = useState('')
+  const [diaryDate, setDiaryDate] = useState(getTodayDateString())
+  const [mood, setMood] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
+  const [saveStatus, setSaveStatus] = useState(isEditing ? '正在读取日记' : '草稿已就绪')
+  const [isSaving, setIsSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
+    let cancelled = false
+
+    /*
+     * 同一个 EditorPage 负责新建和编辑。
+     * 路由 id 变化时重置表单和 Markdown 初始值，再用 editorVersion 触发 Crepe 重建。
+     */
+    if (!diaryId) {
+      initialMarkdownRef.current = readEditorDraft()
+      setTitle('')
+      setDiaryDate(getTodayDateString())
+      setMood('')
+      setTagsInput('')
+      setLoadError('')
+      setSaveStatus('草稿已就绪')
+      setIsEditorReady(true)
+      setEditorVersion((version) => version + 1)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    setIsEditorReady(false)
+    setLoadError('')
+    setSaveStatus('正在读取日记')
+
+    window.diaryAPI
+      .getDiaryById(diaryId)
+      .then((diary) => {
+        if (cancelled) {
+          return
+        }
+
+        if (!diary) {
+          setLoadError('没有找到这篇日记')
+          setSaveStatus('读取失败')
+          return
+        }
+
+        initialMarkdownRef.current = diary.content || DEFAULT_EDITOR_MARKDOWN
+        setTitle(diary.title)
+        setDiaryDate(diary.diaryDate)
+        setMood(diary.mood ?? '')
+        setTagsInput(diary.tags?.join(', ') ?? '')
+        setSaveStatus('日记已载入')
+        setIsEditorReady(true)
+        setEditorVersion((version) => version + 1)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError('读取日记失败')
+          setSaveStatus('读取失败')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [diaryId])
+
+  useEffect(() => {
+    if (!isEditorReady) {
+      return
+    }
+
     const editorRoot = editorRootRef.current
 
     if (!editorRoot) {
@@ -82,8 +158,12 @@ function EditorPage() {
      */
     crepe.on((listener) => {
       listener.markdownUpdated((_, markdown) => {
-        window.localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, markdown)
-        setSaveStatus('已自动保存')
+        if (isEditing) {
+          setSaveStatus('有未保存更改')
+        } else {
+          window.localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, markdown)
+          setSaveStatus('草稿已自动保存')
+        }
       })
     })
 
@@ -112,18 +192,58 @@ function EditorPage() {
        */
       void crepe.destroy()
     }
-  }, [])
+  }, [editorVersion, isEditorReady, isEditing])
 
-  const handleSaveDraft = () => {
+  const handleSaveDiary = async () => {
     /*
-     * 顶部按钮提供显式保存反馈。
-     * 虽然正文已经自动保存，但用户点击按钮时从 Crepe 实例读取一次最新 Markdown，
-     * 可以覆盖极短时间内还没触发 listener 的边界情况。
+     * 提交前从 Crepe 读取最新 Markdown。
+     * 自动保存只保护新建草稿，真正创建/更新仍然通过主进程 service 校验。
      */
     const markdown = crepeRef.current?.getMarkdown() ?? initialMarkdownRef.current
+    const normalizedTitle = title.trim()
 
-    window.localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, markdown)
-    setSaveStatus('已手动保存')
+    if (!normalizedTitle) {
+      setSaveStatus('请填写标题')
+      return
+    }
+
+    if (!markdown.trim()) {
+      setSaveStatus('请填写正文')
+      return
+    }
+
+    setIsSaving(true)
+    setSaveStatus(isEditing ? '正在更新' : '正在创建')
+
+    try {
+      const savedDiary = diaryId
+        ? await window.diaryAPI.updateDiary({
+            id: diaryId,
+            title: normalizedTitle,
+            content: markdown,
+            diaryDate,
+            mood: mood.trim() ? mood : null,
+            tags: parseTags(tagsInput),
+          })
+        : await window.diaryAPI.createDiary({
+            title: normalizedTitle,
+            content: markdown,
+            diaryDate,
+            mood: mood.trim() || undefined,
+            tags: parseTags(tagsInput),
+          })
+
+      window.localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY)
+      setSaveStatus('已保存')
+
+      if (!diaryId) {
+        navigate(`/editor/${savedDiary.id}`, { replace: true })
+      }
+    } catch {
+      setSaveStatus('保存失败')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   /*
@@ -136,23 +256,66 @@ function EditorPage() {
       <header className="editor-page__header">
         <div className="editor-page__title-group">
           <p className="editor-page__eyebrow">Echo Book</p>
-          <h1>编辑日记</h1>
+          <h1>{isEditing ? '编辑日记' : '新建日记'}</h1>
         </div>
         <div className="editor-page__actions">
           <span className="editor-page__status" aria-live="polite">
             {saveStatus}
           </span>
-          <EchoButton icon={<SaveOutlined />} onClick={handleSaveDraft}>
-            保存草稿
+          <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
+            返回列表
+          </EchoButton>
+          <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
+            {isEditing ? '保存修改' : '创建日记'}
           </EchoButton>
         </div>
       </header>
 
+      <div className="editor-page__form">
+        <label className="editor-field editor-field--title">
+          <span>标题</span>
+          <input value={title} placeholder="给这一天起个名字" onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label className="editor-field">
+          <span>日期</span>
+          <input type="date" value={diaryDate} onChange={(event) => setDiaryDate(event.target.value)} />
+        </label>
+        <label className="editor-field">
+          <span>心情</span>
+          <input value={mood} placeholder="平静、期待..." onChange={(event) => setMood(event.target.value)} />
+        </label>
+        <label className="editor-field">
+          <span>标签</span>
+          <input value={tagsInput} placeholder="工作, 生活" onChange={(event) => setTagsInput(event.target.value)} />
+        </label>
+      </div>
+
+      {loadError ? <p className="editor-page__error">{loadError}</p> : null}
+
       <div className="editor-page__workspace">
-        <div ref={editorRootRef} className="editor-page__milkdown" />
+        {isEditorReady ? <div ref={editorRootRef} className="editor-page__milkdown" /> : null}
       </div>
     </section>
   )
+}
+
+function parseTags(value: string): string[] {
+  /*
+   * 标签输入支持英文逗号和中文逗号，方便中文输入法场景直接录入。
+   */
+  return value
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
+
+function getTodayDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 export default EditorPage

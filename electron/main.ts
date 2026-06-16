@@ -2,6 +2,7 @@ import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { closeDatabase } from "./db/connection.js";
 import { registerDiaryIpcHandlers } from "./ipc/diaryIpc.js";
+import { registerSettingsIpcHandlers } from "./ipc/settingsIpc.js";
 
 /**
  * 编译后的 Electron main process 运行在 dist-electron/package.json 标记的
@@ -52,6 +53,7 @@ void app
   .whenReady()
   .then(() => {
     registerDiaryIpcHandlers();
+    registerSettingsIpcHandlers();
     createWindow();
 
     app.on("activate", () => {

@@ -5,6 +5,7 @@ import type {
   GetDiaryListOptions,
   UpdateDiaryInput,
 } from "../shared/diary.js";
+import type { SettingsApi } from "../shared/settings.js";
 
 /**
  * preload 是 renderer 与 main process 之间唯一被允许的桥。
@@ -35,9 +36,21 @@ const diaryAPI: DiaryApi = {
 };
 
 /**
+ * 设置 API 只暴露只读信息。
+ *
+ * renderer 可以展示路径，但不能借此获得 Node.js fs 或任意 IPC 调用权限。
+ */
+const settingsAPI: SettingsApi = {
+  getStorageInfo() {
+    return ipcRenderer.invoke("settings:getStorageInfo");
+  },
+};
+
+/**
  * 将受控 API 挂到 window.diaryAPI。
  *
  * 因为 BrowserWindow 开启了 contextIsolation，renderer 拿到的是这个对象的安全代理，
  * 而不是 preload 的真实执行上下文。
  */
 contextBridge.exposeInMainWorld("diaryAPI", diaryAPI);
+contextBridge.exposeInMainWorld("settingsAPI", settingsAPI);
