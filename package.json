@@ -19,6 +19,7 @@
     "@milkdown/crepe": "^7.21.2",
     "antd": "^6.4.4",
     "better-sqlite3": "^12.10.1",
+    "dayjs": "^1.11.21",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.17.0"

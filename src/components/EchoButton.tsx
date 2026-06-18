@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { Button } from 'antd'
+import type { ButtonProps } from 'antd'
 
 /*
  * EchoButton 目前只提供两个基础样式：
@@ -7,40 +8,32 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
  */
 type EchoButtonVariant = 'solid' | 'outline'
 
-type EchoButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type EchoButtonProps = Omit<ButtonProps, 'type' | 'variant'> & {
   /*
    * variant 控制按钮视觉，不控制业务含义。
    * 默认使用 solid，让最常见的主按钮写法保持最短。
    */
   variant?: EchoButtonVariant
-  /*
-   * icon 是预留的图标插槽。
-   * 现在不强制使用图标，但保留这个入口可以让按钮后续放进工具栏时不用改组件结构。
-   */
-  icon?: ReactNode
 }
 
 function EchoButton({
   variant = 'solid',
-  icon,
   className,
   children,
-  type = 'button',
   ...buttonProps
 }: EchoButtonProps) {
   /*
-   * 组件自己的类名负责基础样式和变体样式。
-   * 外部传入的 className 只做补充，适合添加 margin、宽度等局部布局样式。
+   * 只把项目语义 variant 映射到 antd 的按钮类型。
+   * 视觉样式完全交给 antd，外部 className 只用于必要的布局扩展。
    */
-  const buttonClassName = ['echo-button', `echo-button--${variant}`, className]
-    .filter(Boolean)
-    .join(' ')
-
   return (
-    <button className={buttonClassName} type={type} {...buttonProps}>
-      {icon}
+    <Button
+      className={className}
+      type={variant === 'solid' ? 'primary' : 'default'}
+      {...buttonProps}
+    >
       {children}
-    </button>
+    </Button>
   )
 }
 

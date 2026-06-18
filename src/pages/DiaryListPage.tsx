@@ -1,4 +1,5 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Button, Modal } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../shared/diary'
@@ -82,22 +83,25 @@ function DiaryListPage() {
     }
   }
 
-  const handleDeleteDiary = async (diary: Diary) => {
+  const handleDeleteDiary = (diary: Diary) => {
     /*
-     * 删除当前走软删除，仍然在 UI 层给二次确认，避免误点导致列表项立刻消失。
+     * 删除当前走软删除，使用 antd 确认弹窗承载二次确认和按钮样式。
      */
-    const shouldDelete = window.confirm(`确认删除「${diary.title}」吗？`)
-
-    if (!shouldDelete) {
-      return
-    }
-
-    try {
-      await window.diaryAPI.deleteDiary(diary.id)
-      await loadDiaries()
-    } catch {
-      setErrorMessage('删除日记失败')
-    }
+    Modal.confirm({
+      title: '删除日记',
+      content: `确认删除「${diary.title}」吗？`,
+      okText: '删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await window.diaryAPI.deleteDiary(diary.id)
+          await loadDiaries()
+        } catch {
+          setErrorMessage('删除日记失败')
+        }
+      }
+    })
   }
 
   /*
@@ -146,9 +150,9 @@ function DiaryListPage() {
           <ul className="diary-list">
             {diaries.map((diary) => (
               <li key={diary.id} className="diary-list__item">
-                <button
+                <Button
                   className="diary-list__main"
-                  type="button"
+                  type="text"
                   onClick={() => navigate(`/editor/${diary.id}`)}
                 >
                   <span className="diary-list__date">{diary.diaryDate}</span>
@@ -158,26 +162,23 @@ function DiaryListPage() {
                     {formatUpdatedAt(diary.updatedAt)}
                     {diary.tags?.length ? ` · ${diary.tags.join(' / ')}` : ''}
                   </span>
-                </button>
+                </Button>
                 <div className="diary-list__actions">
-                  <button
-                    className="icon-button"
-                    type="button"
+                  <Button
+                    type="default"
+                    icon={<EditOutlined />}
                     aria-label={`编辑 ${diary.title}`}
                     onClick={() => navigate(`/editor/${diary.id}`)}
-                  >
-                    <EditOutlined />
-                  </button>
-                  <button
-                    className="icon-button icon-button--danger"
-                    type="button"
+                  />
+                  <Button
+                    type="default"
+                    danger
+                    icon={<DeleteOutlined />}
                     aria-label={`删除 ${diary.title}`}
                     onClick={() => {
-                      void handleDeleteDiary(diary)
+                      handleDeleteDiary(diary)
                     }}
-                  >
-                    <DeleteOutlined />
-                  </button>
+                  />
                 </div>
               </li>
             ))}

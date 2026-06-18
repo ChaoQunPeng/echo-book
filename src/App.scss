@@ -53,37 +53,6 @@
 }
 
 /*
- * 底部动作使用按钮而不是链接，因为它们触发系统对话框或弹框，不改变当前路由。
- * min-height 保证导出中/设置等短文本切换时按钮高度稳定。
- */
-.side-action-button {
-  width: 100%;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  color: rgba(25, 28, 29, 0.72);
-  background: transparent;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
-}
-
-.side-action-button:hover:not(:disabled) {
-  color: var(--echo-color-primary);
-  background: var(--echo-color-primary-10);
-}
-
-.side-action-button:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-/*
  * 菜单项使用链接元素本身作为可点击区域。
  * 固定高度和内边距可以保证鼠标可点击面积充足，也能让选中态背景更稳定。
  */
@@ -129,25 +98,6 @@
   padding: 24px;
 }
 
-.icon-button {
-  width: 36px;
-  height: 36px;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid rgba(25, 28, 29, 0.1);
-  border-radius: 8px;
-  color: rgba(25, 28, 29, 0.76);
-  background: #ffffff;
-  cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
-}
-
-.icon-button:hover {
-  color: var(--echo-color-primary);
-  border-color: var(--echo-color-primary-10);
-  background: var(--echo-color-primary-10);
-}
-
 .diary-list-page__error,
 .editor-page__error {
   color: #b42318;
@@ -167,24 +117,6 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
-}
-
-.editor-field input {
-  width: 100%;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(25, 28, 29, 0.12);
-  border-radius: 8px;
-  color: var(--echo-color-text);
-  background: #ffffff;
-  font: inherit;
-  outline: none;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.editor-field input:focus {
-  border-color: var(--echo-color-primary);
-  box-shadow: 0 0 0 3px var(--echo-color-primary-10);
 }
 
 /*
@@ -275,17 +207,22 @@
 }
 
 .diary-list__main {
+  height: auto;
   min-width: 0;
+  min-height: 64px;
   display: grid;
   grid-template-columns: 92px minmax(140px, 0.42fr) minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  border: 0;
-  color: inherit;
-  background: transparent;
-  font: inherit;
   text-align: left;
-  cursor: pointer;
+}
+
+.diary-list__main > span {
+  /*
+   * antd Button 会给 children 包一层直接子节点。
+   * contents 让列表内部网格继续由日期、标题、摘要和元信息这些真实内容参与布局。
+   */
+  display: contents;
 }
 
 .diary-list__date {
@@ -321,12 +258,6 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.icon-button--danger:hover {
-  color: #b42318;
-  border-color: rgba(180, 35, 24, 0.14);
-  background: rgba(180, 35, 24, 0.08);
 }
 
 /*
@@ -503,10 +434,6 @@
     width: auto;
     margin-top: 0;
     flex-direction: row;
-  }
-
-  .side-action-button {
-    width: auto;
   }
 
   .main-container {

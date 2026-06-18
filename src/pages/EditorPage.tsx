@@ -2,12 +2,15 @@ import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
 import { Crepe, CrepeFeature } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
+import { DatePicker, Input } from 'antd'
+import dayjs from 'dayjs'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import EchoButton from '../components/EchoButton'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
+const DIARY_DATE_FORMAT = 'YYYY-MM-DD'
 
 type DiaryDraftFields = {
   title: string
@@ -484,7 +487,7 @@ function EditorPage() {
       <div className="editor-page__form">
         <label className="editor-field editor-field--title">
           <span>标题</span>
-          <input
+          <Input
             value={title}
             placeholder="给这一天起个名字"
             onChange={event => {
@@ -495,18 +498,23 @@ function EditorPage() {
         </label>
         <label className="editor-field">
           <span>日期</span>
-          <input
-            type="date"
-            value={diaryDate}
-            onChange={event => {
-              setDiaryDate(event.target.value)
+          <DatePicker
+            value={diaryDate ? dayjs(diaryDate) : null}
+            format={DIARY_DATE_FORMAT}
+            allowClear={false}
+            onChange={date => {
+              /*
+               * DatePicker 内部使用 dayjs 对象，业务状态继续保存为 YYYY-MM-DD 字符串。
+               * 这样数据库和 Markdown 文件命名逻辑无需感知 UI 控件实现。
+               */
+              setDiaryDate(date ? date.format(DIARY_DATE_FORMAT) : '')
               markExistingDiaryChanged()
             }}
           />
         </label>
         <label className="editor-field">
           <span>心情</span>
-          <input
+          <Input
             value={mood}
             placeholder="平静、期待..."
             onChange={event => {
@@ -517,7 +525,7 @@ function EditorPage() {
         </label>
         <label className="editor-field">
           <span>标签</span>
-          <input
+          <Input
             value={tagsInput}
             placeholder="工作, 生活"
             onChange={event => {

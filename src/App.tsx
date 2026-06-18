@@ -125,7 +125,6 @@ function App() {
    * 都会统一渲染到 `.main-container` 中，避免不同页面重复编写外层布局。
    */
   return (
-    // theme={{ token: { colorPrimary: '#00b96b' } }}
     <ConfigProvider>
       <div className="app-shell">
         <aside className="side-bar">
@@ -146,20 +145,22 @@ function App() {
             ))}
           </nav>
           <div className="side-actions" aria-label="数据操作">
-            <button
-              className="side-action-button"
-              type="button"
-              disabled={isExportingBackup}
+            <Button
+              type="text"
+              icon={<ExportOutlined />}
+              loading={isExportingBackup}
               aria-busy={isExportingBackup}
               onClick={handleExportBackup}
             >
-              <ExportOutlined />
               {isExportingBackup ? '导出中' : '导出'}
-            </button>
-            <button className="side-action-button" type="button" onClick={() => setIsSettingsOpen(true)}>
-              <SettingOutlined />
+            </Button>
+            <Button
+              type="text"
+              icon={<SettingOutlined />}
+              onClick={() => setIsSettingsOpen(true)}
+            >
               设置
-            </button>
+            </Button>
           </div>
         </aside>
         <div className="main-container">
