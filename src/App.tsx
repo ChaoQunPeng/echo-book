@@ -185,11 +185,11 @@ function App() {
             <Divider />
 
             <Button block type="primary" size="large" icon={<EditOutlined />}>
-              新日记
+              <span className="ml-4">新日记</span>
             </Button>
           </div>
 
-          {/* <div className={styles.sideActions} aria-label="数据操作">
+          <div className={styles.sideActions} aria-label="数据操作">
             <Button
               type="text"
               icon={<ExportOutlined />}
@@ -202,7 +202,7 @@ function App() {
             <Button type="text" icon={<SettingOutlined />} onClick={() => setIsSettingsOpen(true)}>
               设置
             </Button>
-          </div> */}
+          </div>
         </aside>
         <div className={styles.mainContainer}>
           <Outlet />

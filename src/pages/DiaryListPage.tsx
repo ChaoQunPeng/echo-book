@@ -1,8 +1,10 @@
-import { CalendarOutlined, DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Input, Modal } from 'antd'
 import type { MenuProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useNavigate } from 'react-router-dom'
+import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../shared/diary'
 import EchoButton from '../components/EchoButton'
 import styles from './DiaryListPage.module.scss'
@@ -291,7 +293,7 @@ function DiaryListPage() {
                 ) : (
                   groupedDiaries.map(group => (
                     <section key={group.key} className={styles.diaryListGroup}>
-                      <div>{group.label}</div>
+                      <div className={styles.groupLabel}>{group.label}</div>
                       <ul className={styles.diaryList}>
                         {group.diaries.map(diary => {
                           const isSelected = diary.id === selectedDiaryId
@@ -300,16 +302,11 @@ function DiaryListPage() {
                             <li
                               key={diary.id}
                               className={isSelected ? `${styles.diaryListItem} ${styles.diaryListItemActive}` : styles.diaryListItem}
+                              onClick={() => setSelectedDiaryId(diary.id)}
                             >
-                              <Button className={styles.diaryListMain} type="text" onClick={() => setSelectedDiaryId(diary.id)}>
-                                <span className={styles.diaryListDate}>{formatCreatedTime(diary.createdAt)}</span>
-                                <span className={styles.diaryListTitle}>{diary.title}</span>
-                                <span className={styles.diaryListSummary}>{buildDiarySummary(diary.content)}</span>
-                                <span className={styles.diaryListMeta}>
-                                  {formatUpdatedAt(diary.updatedAt)}
-                                  {diary.tags?.length ? ` · ${diary.tags.join(' / ')}` : ''}
-                                </span>
-                              </Button>
+                              <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
+                              <div className={`${styles.diaryListTitle} mb-4`}>{diary.title}</div>
+                              <div className={styles.diaryListSummary}>{buildDiarySummary(diary.content)}</div>
                               <div className={styles.diaryListActions}>
                                 <Button
                                   type="default"
@@ -350,7 +347,12 @@ function DiaryListPage() {
                       {selectedDiary.tags?.length ? <span>标签：{selectedDiary.tags.join(' / ')}</span> : null}
                     </div>
                   </div>
-                  <div className={styles.diaryPreviewContent}>{selectedDiary.content || '没有正文预览'}</div>
+                  <div className={styles.diaryPreviewContent}>
+                    {/*
+                     * 右侧预览使用 Markdown 渲染，remark-gfm 负责表格、任务列表等 GFM 扩展。
+                     */}
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedDiary.content || '没有正文预览'}</ReactMarkdown>
+                  </div>
                 </article>
               ) : (
                 <div className={styles.diaryPreviewEmpty}>
@@ -530,6 +532,8 @@ function formatCreatedDateKey(timestamp: number): string {
  * 用中文日期展示分组信息
  */
 function formatCreatedDateGroup(timestamp: number): string {
+  const date = new Date(timestamp)
+  return `${date.getFullYear()}·${date.getMonth() + 1}月`
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: 'long',
@@ -543,10 +547,16 @@ function formatCreatedDateGroup(timestamp: number): string {
  * 列表项只展示当天内的时间，节省左侧空间
  */
 function formatCreatedTime(timestamp: number): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(timestamp))
+  const date = new Date(timestamp)
+
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`
+  // return new Intl.DateTimeFormat('zh-CN', {
+  //   month: 'numeric',
+  //   day: 'numeric',
+  //   weekday: 'short'
+  // }).format(new Date(timestamp))
 }
 
 /**

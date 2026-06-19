@@ -98,13 +98,12 @@
 
 /*
  * 工具栏固定在列表顶部。
- * 只有下面的 diaryListScrollArea 参与滚动。
  */
 .diaryListToolbar {
   flex: 0 0 auto;
   display: flex;
   gap: 10px;
-  padding: 14px;
+  padding: 12px;
   border-bottom: 1px solid rgba(25, 28, 29, 0.08);
   background: #ffffff;
 }
@@ -141,7 +140,6 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 14px;
 }
 
 .diaryListNoResult,
@@ -162,8 +160,8 @@
   font-size: 18px;
 }
 
-.diaryListGroup + .diaryListGroup {
-  margin-top: 18px;
+.groupLabel {
+  padding: 16px 24px;
 }
 
 .diaryListGroup h2 {
@@ -181,22 +179,14 @@
 }
 
 .diaryListItem {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid rgba(25, 28, 29, 0.08);
-  border-radius: 8px;
+  padding: 24px;
   background: #ffffff;
-  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .diaryListItem:hover,
 .diaryListItemActive {
   border-color: rgba(15, 82, 56, 0.34);
   background: color-mix(in srgb, var(--echo-color-primary) 5%, #ffffff);
-  box-shadow: 0 8px 20px rgba(15, 82, 56, 0.08);
 }
 
 .diaryListMain {
@@ -221,15 +211,11 @@
 
 .diaryListDate {
   color: var(--echo-color-primary);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .diaryListTitle {
   overflow: hidden;
-  color: var(--echo-color-text);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -300,5 +286,97 @@
   color: rgba(25, 28, 29, 0.86);
   font-size: 16px;
   line-height: 1.9;
-  white-space: pre-wrap;
+}
+
+.diaryPreviewContent :global(h1),
+.diaryPreviewContent :global(h2),
+.diaryPreviewContent :global(h3),
+.diaryPreviewContent :global(h4) {
+  /*
+   * Markdown 标题用更清晰的层级，和预览页标题保持区分。
+   */
+  margin: 1.4em 0 0.55em;
+  color: var(--echo-color-text);
+  line-height: 1.35;
+}
+
+.diaryPreviewContent :global(h1) {
+  font-size: 24px;
+}
+
+.diaryPreviewContent :global(h2) {
+  font-size: 21px;
+}
+
+.diaryPreviewContent :global(h3) {
+  font-size: 18px;
+}
+
+.diaryPreviewContent :global(p),
+.diaryPreviewContent :global(ul),
+.diaryPreviewContent :global(ol),
+.diaryPreviewContent :global(blockquote),
+.diaryPreviewContent :global(pre),
+.diaryPreviewContent :global(table) {
+  margin: 0 0 14px;
+}
+
+.diaryPreviewContent :global(ul),
+.diaryPreviewContent :global(ol) {
+  padding-left: 24px;
+}
+
+.diaryPreviewContent :global(li + li) {
+  margin-top: 4px;
+}
+
+.diaryPreviewContent :global(blockquote) {
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid rgba(15, 82, 56, 0.28);
+  color: rgba(25, 28, 29, 0.64);
+}
+
+.diaryPreviewContent :global(code) {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(15, 82, 56, 0.08);
+  color: var(--echo-color-text);
+  font-size: 0.92em;
+}
+
+.diaryPreviewContent :global(pre) {
+  overflow: auto;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f6f8f7;
+}
+
+.diaryPreviewContent :global(pre code) {
+  padding: 0;
+  background: transparent;
+}
+
+.diaryPreviewContent :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.diaryPreviewContent :global(th),
+.diaryPreviewContent :global(td) {
+  padding: 8px 10px;
+  border: 1px solid rgba(25, 28, 29, 0.12);
+  text-align: left;
+}
+
+.diaryPreviewContent :global(th) {
+  background: rgba(15, 82, 56, 0.06);
+  color: var(--echo-color-text);
+  font-weight: 700;
+}
+
+.diaryPreviewContent :global(a) {
+  color: var(--echo-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
