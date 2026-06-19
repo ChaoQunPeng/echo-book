@@ -48,5 +48,8 @@ body,
 * {
   line-height: 1.4;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  /* color: var(--color-text-black); */
+}
+
+.ant-btn {
+  box-shadow: none !important;
 }

@@ -156,9 +156,28 @@ function App() {
 
     return {
       token: {
-        colorPrimary
+        colorPrimary,
+        borderRadius: 16,
+        boxShadow: 'none',
+        components: {
+          Button: {
+            primaryShadow: 'none',
+            borderRadius: 24
+          }
+        }
       }
     }
+
+    // return {
+    //   token: {
+    //     // Seed Token, affects wide range
+    //     colorPrimary: '#00b96b',
+    //     borderRadius: 2,
+
+    //     // Derived token, affects narrow range
+    //     colorBgContainer: '#f6ffed'
+    //   }
+    // }
   }, [])
 
   /*
@@ -195,7 +214,7 @@ function App() {
           <div className="ml-16 mr-16">
             <Divider />
 
-            <Button block type="primary" size="large" icon={<EditOutlined />}>
+            <Button shape="round" block type="primary" size="large" icon={<EditOutlined />}>
               <span className="ml-4">新日记</span>
             </Button>
           </div>
@@ -210,7 +229,11 @@ function App() {
               onClick={handleExportBackup}
               onKeyDown={event => handleSideActionKeyDown(event, handleExportBackup, isExportingBackup)}
             >
-              {isExportingBackup ? <LoadingOutlined className={styles.sideActionIcon} /> : <ExportOutlined className={styles.sideActionIcon} />}
+              {isExportingBackup ? (
+                <LoadingOutlined className={styles.sideActionIcon} />
+              ) : (
+                <ExportOutlined className={styles.sideActionIcon} />
+              )}
               {isExportingBackup ? '导出中' : '导出'}
             </div>
             <div

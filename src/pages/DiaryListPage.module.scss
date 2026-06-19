@@ -84,16 +84,14 @@
 .diaryListPanel {
   width: 320px;
   border-right: 1px solid rgba(15, 82, 56, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--echo-color-page);
 }
 
 .diaryPreviewPanel {
   flex: 1;
-}
-
-.diaryListPanel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
 /*
