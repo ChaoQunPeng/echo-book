@@ -2,12 +2,13 @@ import {
   BookOutlined,
   ClearOutlined,
   DeleteOutlined,
+  EditOutlined,
   ExportOutlined,
   FolderOpenOutlined,
   ReadOutlined,
   SettingOutlined
 } from '@ant-design/icons'
-import { Alert, Button, ConfigProvider, Form, Input, Modal, message } from 'antd'
+import { Alert, Button, ConfigProvider, Divider, Form, Input, Modal, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
@@ -16,7 +17,7 @@ import styles from './App.module.scss'
 const sidebarMenus = [
   {
     path: '/list',
-    label: '日记列表',
+    label: '我的日记',
     icon: ReadOutlined
   },
   {
@@ -155,7 +156,7 @@ function App() {
    * 都会统一渲染到 `.mainContainer` 中，避免不同页面重复编写外层布局。
    */
   return (
-    <ConfigProvider theme={appTheme}>
+    <ConfigProvider>
       <div className={styles.appShell}>
         <aside className={styles.sideBar}>
           <div className={styles.logoGroup}>
@@ -179,6 +180,15 @@ function App() {
               </NavLink>
             ))}
           </nav>
+
+          <div className="ml-16 mr-16">
+            <Divider />
+
+            <Button block type="primary" size="large" icon={<EditOutlined />}>
+              新日记
+            </Button>
+          </div>
+
           {/* <div className={styles.sideActions} aria-label="数据操作">
             <Button
               type="text"

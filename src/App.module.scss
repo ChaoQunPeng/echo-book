@@ -1,5 +1,5 @@
 .appShell {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   background: var(--echo-color-page);
   color: var(--echo-color-text);
@@ -71,11 +71,8 @@
 
 .mainContainer {
   flex: 1;
-  min-width: 0;
-  padding: 24px;
 }
 
-.diaryListPageError,
 .editorPageError {
   color: #b42318;
   font-size: 13px;
@@ -94,147 +91,6 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
-}
-
-/*
- * 列表页的内容容器负责滚动和空状态，不把整个页面做成卡片。
- * 这样顶部操作区和列表之间的层级更清楚。
- */
-.diaryListPage {
-  min-height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.diaryListPageHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.diaryListPageEyebrow {
-  color: var(--echo-color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.diaryListPageHeader h1 {
-  margin-top: 4px;
-  color: var(--echo-color-text);
-  font-size: 28px;
-  line-height: 1.2;
-}
-
-.diaryListPageActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.diaryListPageContent {
-  flex: 1;
-  min-height: 360px;
-}
-
-.diaryListPageEmpty,
-.diaryListPageEmptyState {
-  color: rgba(25, 28, 29, 0.66);
-}
-
-.diaryListPageEmptyState {
-  min-height: 360px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 12px;
-  border: 1px dashed rgba(15, 82, 56, 0.24);
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.diaryListPageEmptyState h2 {
-  color: var(--echo-color-text);
-  font-size: 20px;
-}
-
-.diaryList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  list-style: none;
-}
-
-.diaryListItem {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-  border: 1px solid rgba(25, 28, 29, 0.08);
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 8px 24px rgba(15, 82, 56, 0.06);
-}
-
-.diaryListMain {
-  height: auto;
-  min-width: 0;
-  min-height: 64px;
-  display: grid;
-  grid-template-columns: 92px minmax(140px, 0.42fr) minmax(0, 1fr);
-  gap: 12px;
-  align-items: center;
-  text-align: left;
-}
-
-.diaryListMain > span {
-  /*
-   * antd Button 会给 children 包一层直接子节点。
-   * contents 让列表内部网格继续由日期、标题、摘要和元信息这些真实内容参与布局。
-   */
-  display: contents;
-}
-
-.diaryListDate {
-  color: var(--echo-color-primary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.diaryListTitle {
-  overflow: hidden;
-  color: var(--echo-color-text);
-  font-size: 16px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.diaryListSummary,
-.diaryListMeta {
-  overflow: hidden;
-  color: rgba(25, 28, 29, 0.62);
-  font-size: 13px;
-  line-height: 1.5;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.diaryListMeta {
-  grid-column: 2 / -1;
-}
-
-.diaryListActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /*
@@ -415,32 +271,6 @@
 
   .mainContainer {
     padding: 16px;
-  }
-
-  .diaryListPage {
-    min-height: calc(100vh - 130px);
-  }
-
-  .diaryListPageActions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .diaryListItem {
-    grid-template-columns: 1fr;
-  }
-
-  .diaryListMain {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .diaryListMeta {
-    grid-column: auto;
-  }
-
-  .diaryListActions {
-    justify-content: flex-end;
   }
 
   .editorPage {
