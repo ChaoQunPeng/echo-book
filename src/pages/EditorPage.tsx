@@ -114,7 +114,7 @@ function EditorPage() {
           return
         }
 
-        const loadedMarkdown = diary.content || DEFAULT_EDITOR_MARKDOWN
+        const loadedMarkdown = diary.markdown || DEFAULT_EDITOR_MARKDOWN
         const loadedTagsInput = diary.tags?.join(', ') ?? ''
 
         initialMarkdownRef.current = loadedMarkdown
@@ -299,7 +299,7 @@ function EditorPage() {
         await window.diaryAPI.updateDiary({
           id: diaryId,
           title: normalizedTitle,
-          content: markdown,
+          markdown,
           diaryDate: fields.diaryDate,
           mood: fields.mood.trim() ? fields.mood : null,
           tags: parseTags(fields.tagsInput)
@@ -374,7 +374,7 @@ function EditorPage() {
         await window.diaryAPI.updateDiary({
           id: diaryId,
           title: normalizedTitle,
-          content: markdown,
+          markdown,
           diaryDate,
           mood: mood.trim() ? mood : null,
           tags: parseTags(tagsInput)
@@ -382,7 +382,7 @@ function EditorPage() {
       } else {
         await window.diaryAPI.createDiary({
           title: normalizedTitle,
-          content: markdown,
+          markdown,
           diaryDate,
           mood: mood.trim() || undefined,
           tags: parseTags(tagsInput)

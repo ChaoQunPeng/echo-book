@@ -15,7 +15,6 @@
 export interface Diary {
   id: string;
   title: string;
-  content: string;
   filepath: string;
   diaryDate: string;
   createdAt: number;
@@ -26,6 +25,16 @@ export interface Diary {
 }
 
 /**
+ * 带正文的日记详情。
+ *
+ * Diary 本身只表示数据库里的索引元信息；正文只从 Markdown 文件读取，
+ * 用 markdown 字段显式表达它不是 SQLite 表字段。
+ */
+export interface DiaryDetail extends Diary {
+  markdown: string;
+}
+
+/**
  * 创建日记时 renderer 需要传入的数据。
  *
  * diaryDate 允许为空：为空时 service 层会按本机当前日期生成 YYYY-MM-DD。
@@ -33,7 +42,7 @@ export interface Diary {
  */
 export interface CreateDiaryInput {
   title: string;
-  content: string;
+  markdown: string;
   diaryDate?: string;
   tags?: string[];
   mood?: string;
@@ -48,7 +57,7 @@ export interface CreateDiaryInput {
 export interface UpdateDiaryInput {
   id: string;
   title?: string;
-  content?: string;
+  markdown?: string;
   diaryDate?: string;
   tags?: string[];
   mood?: string | null;
@@ -75,9 +84,9 @@ export interface GetDiaryListOptions {
  * 数据库连接或 Node.js 文件系统能力。
  */
 export interface DiaryApi {
-  createDiary(input: CreateDiaryInput): Promise<Diary>;
-  updateDiary(input: UpdateDiaryInput): Promise<Diary>;
+  createDiary(input: CreateDiaryInput): Promise<DiaryDetail>;
+  updateDiary(input: UpdateDiaryInput): Promise<DiaryDetail>;
   deleteDiary(id: string): Promise<{ success: boolean }>;
-  getDiaryById(id: string): Promise<Diary | null>;
+  getDiaryById(id: string): Promise<DiaryDetail | null>;
   getDiaryList(options?: GetDiaryListOptions): Promise<Diary[]>;
 }

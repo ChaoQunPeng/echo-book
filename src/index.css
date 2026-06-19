@@ -23,7 +23,11 @@
   --color-primary-soft: var(--echo-color-primary-10);
   --color-page: var(--echo-color-page);
   --color-foreground: var(--echo-color-text);
+  /* 黑色文本透明度层级，用于弱化不同优先级的文字。 */
   --color-text-black: #191c1d;
+  --color-text-black-45: rgb(25 28 29 / 45%);
+  --color-text-black-65: rgb(25 28 29 / 65%);
+  --color-text-black-85: rgb(25 28 29 / 85%);
 }
 
 /* 字体大小 */

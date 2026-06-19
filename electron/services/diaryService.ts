@@ -4,6 +4,7 @@ import path from "node:path";
 import type {
   CreateDiaryInput,
   Diary,
+  DiaryDetail,
   GetDiaryListOptions,
   UpdateDiaryInput,
 } from "../../shared/diary.js";
@@ -27,22 +28,21 @@ export class DiaryService {
    * id 使用 crypto.randomUUID() 生成，created_at / updated_at 使用毫秒时间戳。
    * Markdown 文件写在 userData/notes 下，SQLite 只保存相对 filepath。
    */
-  public createDiary(input: CreateDiaryInput): Diary {
+  public createDiary(input: CreateDiaryInput): DiaryDetail {
     const now = Date.now();
     const id = randomUUID();
     const title = normalizeTitle(input.title);
-    const content = normalizeContent(input.content);
+    const markdown = normalizeMarkdown(input.markdown);
     const diaryDate = input.diaryDate
       ? normalizeDate(input.diaryDate, "diaryDate")
       : getTodayDateString();
     const filepath = generateFilePath(now, id);
 
-    writeDiaryFile(filepath, content);
+    writeDiaryFile(filepath, markdown);
 
     const diary = this.diaryRepository.createDiary({
       id,
       title,
-      content,
       filepath,
       diaryDate,
       createdAt: now,
@@ -51,7 +51,7 @@ export class DiaryService {
       mood: input.mood === undefined ? undefined : normalizeMood(input.mood),
     });
 
-    return hydrateDiaryContent(diary);
+    return attachDiaryMarkdown(diary);
   }
 
   /**
@@ -60,24 +60,23 @@ export class DiaryService {
    * 如果 id 不存在或日记已被软删除，返回 null 时会在 service 层转换成明确错误，
    * 方便 renderer 用 try/catch 呈现失败状态。
    */
-  public updateDiary(input: UpdateDiaryInput): Diary {
+  public updateDiary(input: UpdateDiaryInput): DiaryDetail {
     const id = normalizeId(input.id);
     const existingDiary = this.diaryRepository.getDiaryById(id);
     if (!existingDiary) {
       throw new Error(`Diary not found: ${id}`);
     }
 
-    const content =
-      input.content === undefined ? undefined : normalizeContent(input.content);
+    const markdown =
+      input.markdown === undefined ? undefined : normalizeMarkdown(input.markdown);
 
-    if (content !== undefined) {
-      writeDiaryFile(existingDiary.filepath, content);
+    if (markdown !== undefined) {
+      writeDiaryFile(existingDiary.filepath, markdown);
     }
 
     const updatedDiary = this.diaryRepository.updateDiary({
       id,
       title: input.title === undefined ? undefined : normalizeTitle(input.title),
-      content,
       diaryDate:
         input.diaryDate === undefined
           ? undefined
@@ -94,7 +93,7 @@ export class DiaryService {
       throw new Error(`Diary not found: ${id}`);
     }
 
-    return hydrateDiaryContent(updatedDiary);
+    return attachDiaryMarkdown(updatedDiary);
   }
 
   /**
@@ -109,9 +108,9 @@ export class DiaryService {
   /**
    * 按 id 查询单条日记。
    */
-  public getDiaryById(id: string): Diary | null {
+  public getDiaryById(id: string): DiaryDetail | null {
     const diary = this.diaryRepository.getDiaryById(normalizeId(id));
-    return diary ? hydrateDiaryContent(diary) : null;
+    return diary ? attachDiaryMarkdown(diary) : null;
   }
 
   /**
@@ -125,7 +124,7 @@ export class DiaryService {
           ? undefined
           : normalizeDate(options.diaryDate, "diaryDate"),
       tagId: options.tagId === undefined ? undefined : normalizeId(options.tagId),
-    }).map(hydrateDiaryContent);
+    });
   }
 }
 
@@ -153,13 +152,13 @@ function normalizeTitle(value: string): string {
  * 正文可能是 Markdown，首尾换行和缩进都可能是用户内容的一部分，所以这里只检查
  * trim 后不是空白文本，但返回原始字符串，避免无意修改用户写下的内容。
  */
-function normalizeContent(value: string): string {
+function normalizeMarkdown(value: string): string {
   if (typeof value !== "string") {
-    throw new Error("content must be a string.");
+    throw new Error("markdown must be a string.");
   }
 
   if (!value.trim()) {
-    throw new Error("content cannot be empty.");
+    throw new Error("markdown cannot be empty.");
   }
 
   return value;
@@ -264,22 +263,25 @@ function generateFilePath(createdAt: number, id: string): string {
   return `notes/${year}/${month}/${year}_${month}_${day}_${id}.md`;
 }
 
-function writeDiaryFile(filepath: string, content: string): void {
+function writeDiaryFile(filepath: string, markdown: string): void {
   const absolutePath = resolveDiaryFilePath(filepath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
-  fs.writeFileSync(absolutePath, content, "utf8");
+  fs.writeFileSync(absolutePath, markdown, "utf8");
 }
 
-function hydrateDiaryContent(diary: Diary): Diary {
+function attachDiaryMarkdown(diary: Diary): DiaryDetail {
   const absolutePath = resolveDiaryFilePath(diary.filepath);
 
   if (!fs.existsSync(absolutePath)) {
-    return diary;
+    return {
+      ...diary,
+      markdown: "",
+    };
   }
 
   return {
     ...diary,
-    content: fs.readFileSync(absolutePath, "utf8"),
+    markdown: fs.readFileSync(absolutePath, "utf8"),
   };
 }
 

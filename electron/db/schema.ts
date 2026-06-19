@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { getDatabase, getNotesPath } from "./connection.js";
 
-const DB_VERSION = "1";
+const DB_VERSION = "2";
 
 /**
  * 初始化 SQLite schema。
@@ -33,7 +33,6 @@ function createCurrentSchema(db: Database.Database): void {
       id TEXT PRIMARY KEY,
 
       title TEXT NOT NULL,
-      content TEXT,
 
       filepath TEXT NOT NULL UNIQUE,
 
@@ -121,7 +120,9 @@ function migrateLegacySchemaIfNeeded(db: Database.Database): void {
   const columns = db.prepare("PRAGMA table_info(diaries)").all() as Array<{ name: string }>;
   const columnNames = new Set(columns.map((column) => column.name));
 
-  if (columnNames.has("filepath") && columnNames.has("diary_date") && !columnNames.has("tags")) {
+  const isCurrentMetadataSchema = columnNames.has("filepath") && columnNames.has("diary_date") && !columnNames.has("tags");
+
+  if (isCurrentMetadataSchema) {
     return;
   }
 
@@ -143,7 +144,6 @@ function migrateLegacySchemaIfNeeded(db: Database.Database): void {
       INSERT INTO diaries (
         id,
         title,
-        content,
         filepath,
         diary_date,
         created_at,
@@ -154,7 +154,6 @@ function migrateLegacySchemaIfNeeded(db: Database.Database): void {
       VALUES (
         @id,
         @title,
-        @content,
         @filepath,
         @diaryDate,
         @createdAt,
@@ -188,7 +187,6 @@ function migrateLegacySchemaIfNeeded(db: Database.Database): void {
       insertDiary.run({
         id,
         title: normalizeText(row.title) || "未命名日记",
-        content: normalizeNullableText(row.content) ?? "",
         filepath,
         diaryDate:
           normalizeText(row.diary_date) ||
@@ -219,7 +217,6 @@ function migrateLegacySchemaIfNeeded(db: Database.Database): void {
 interface LegacyDiaryRow {
   id?: unknown;
   title?: unknown;
-  content?: unknown;
   filepath?: unknown;
   diary_date?: unknown;
   date?: unknown;

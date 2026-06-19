@@ -39,7 +39,7 @@ export function registerDiaryIpcHandlers(): void {
       console.info("Creating diary:", {
         title: input.title,
         diaryDate: input.diaryDate,
-        contentLength: input.content.length,
+        markdownLength: input.markdown.length,
       });
 
       return diaryService.createDiary(input);

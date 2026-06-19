@@ -1,14 +1,6 @@
-import {
-  BookOutlined,
-  ClearOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  ExportOutlined,
-  FolderOpenOutlined,
-  ReadOutlined,
-  SettingOutlined
-} from '@ant-design/icons'
+import { EditOutlined, ExportOutlined, FolderOpenOutlined, LoadingOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { Alert, Button, ConfigProvider, Divider, Form, Input, Modal, message } from 'antd'
+import type { KeyboardEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
@@ -109,11 +101,30 @@ function App() {
       })
   }
 
+  const handleSideActionKeyDown = (event: KeyboardEvent<HTMLDivElement>, action: () => void, disabled = false) => {
+    /*
+     * div 模拟按钮时补齐键盘触发。
+     * Enter 和空格都按原生按钮习惯执行操作。
+     */
+    if (disabled) {
+      return
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action()
+    }
+  }
+
   const handleExportBackup = () => {
     /*
      * 导出按钮只触发 preload 暴露的业务方法。
      * 保存位置选择、database/notes 目录打包、SQLite checkpoint 都在 main process 内完成。
      */
+    if (isExportingBackup) {
+      return
+    }
+
     if (!window.settingsAPI) {
       message.error('请通过 Electron 启动应用后导出备份')
       return
@@ -156,7 +167,7 @@ function App() {
    * 都会统一渲染到 `.mainContainer` 中，避免不同页面重复编写外层布局。
    */
   return (
-    <ConfigProvider>
+    <ConfigProvider theme={appTheme}>
       <div className={styles.appShell}>
         <aside className={styles.sideBar}>
           <div className={styles.logoGroup}>
@@ -190,18 +201,28 @@ function App() {
           </div>
 
           <div className={styles.sideActions} aria-label="数据操作">
-            <Button
-              type="text"
-              icon={<ExportOutlined />}
-              loading={isExportingBackup}
+            <div
+              className={`${styles.sideActionButton} ${isExportingBackup ? styles.sideActionButtonDisabled : ''}`}
+              role="button"
+              tabIndex={isExportingBackup ? -1 : 0}
               aria-busy={isExportingBackup}
+              aria-disabled={isExportingBackup}
               onClick={handleExportBackup}
+              onKeyDown={event => handleSideActionKeyDown(event, handleExportBackup, isExportingBackup)}
             >
+              {isExportingBackup ? <LoadingOutlined className={styles.sideActionIcon} /> : <ExportOutlined className={styles.sideActionIcon} />}
               {isExportingBackup ? '导出中' : '导出'}
-            </Button>
-            <Button type="text" icon={<SettingOutlined />} onClick={() => setIsSettingsOpen(true)}>
+            </div>
+            <div
+              className={styles.sideActionButton}
+              role="button"
+              tabIndex={0}
+              onClick={() => setIsSettingsOpen(true)}
+              onKeyDown={event => handleSideActionKeyDown(event, () => setIsSettingsOpen(true))}
+            >
+              <SettingOutlined className={styles.sideActionIcon} />
               设置
-            </Button>
+            </div>
           </div>
         </aside>
         <div className={styles.mainContainer}>
@@ -242,15 +263,6 @@ function App() {
             <Form.Item label="日记文件目录">
               <Input readOnly value={storageInfo?.notesPath ?? '读取中...'} />
             </Form.Item>
-            {/* <Form.Item label="数据目录">
-              <Input readOnly value={storageInfo?.storageRoot ?? '读取中...'} />
-            </Form.Item>
-            <Form.Item label="数据库目录">
-              <Input readOnly value={storageInfo?.databaseDirectoryPath ?? '读取中...'} />
-            </Form.Item>
-            <Form.Item label="数据库文件">
-              <Input readOnly value={storageInfo?.databasePath ?? '读取中...'} />
-            </Form.Item> */}
           </Form>
         </Modal>
       </div>

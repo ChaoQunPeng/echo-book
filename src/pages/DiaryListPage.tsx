@@ -41,11 +41,15 @@ function DiaryListPage() {
   const navigate = useNavigate()
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [selectedDiaryId, setSelectedDiaryId] = useState('')
+  const [selectedDiaryMarkdown, setSelectedDiaryMarkdown] = useState('')
+  const [webPreviewMarkdownById, setWebPreviewMarkdownById] = useState<Record<string, string>>({})
   const [searchKeyword, setSearchKeyword] = useState('')
   const [dateFilter, setDateFilter] = useState<DateFilterValue>('all')
   const [isLoading, setIsLoading] = useState(true)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [previewErrorMessage, setPreviewErrorMessage] = useState('')
   const currentDateFilterLabel = DATE_FILTER_OPTIONS.find(option => option.value === dateFilter)?.label ?? '全部日记'
 
   const filteredDiaries = useMemo(() => {
@@ -109,7 +113,9 @@ function DiaryListPage() {
          * 纯 Web 调试环境没有 Electron preload API。
          * 这里给一组内存示例数据，让布局、搜索和预览都能正常展示。
          */
-        setDiaries(buildWebPreviewDiaries())
+        const previewData = buildWebPreviewData()
+        setDiaries(previewData.diaries)
+        setWebPreviewMarkdownById(previewData.markdownById)
         return
       }
 
@@ -119,6 +125,7 @@ function DiaryListPage() {
        */
       const diaryList = await window.diaryAPI.getDiaryList({ limit: 100 })
       setDiaries(diaryList)
+      setWebPreviewMarkdownById({})
     } catch (error) {
       console.error('Failed to load diary list:', error)
       setErrorMessage(`读取日记列表失败：${getErrorMessage(error)}`)
@@ -145,6 +152,65 @@ function DiaryListPage() {
     })
   }, [filteredDiaries])
 
+  useEffect(() => {
+    let cancelled = false
+
+    if (!selectedDiary) {
+      setSelectedDiaryMarkdown('')
+      setPreviewErrorMessage('')
+      setIsPreviewLoading(false)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    setPreviewErrorMessage('')
+
+    if (!window.diaryAPI) {
+      /*
+       * Web 预览没有真实 Markdown 文件，正文从内存映射读取。
+       * Diary 列表对象仍然只保存元信息，不携带正文。
+       */
+      setSelectedDiaryMarkdown(webPreviewMarkdownById[selectedDiary.id] ?? '')
+      setIsPreviewLoading(false)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    setIsPreviewLoading(true)
+    setSelectedDiaryMarkdown('')
+
+    window.diaryAPI
+      .getDiaryById(selectedDiary.id)
+      .then(diary => {
+        if (cancelled) {
+          return
+        }
+
+        if (!diary) {
+          setPreviewErrorMessage('没有找到这篇日记')
+          return
+        }
+
+        setSelectedDiaryMarkdown(diary.markdown)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreviewErrorMessage('读取日记正文失败')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsPreviewLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedDiary, webPreviewMarkdownById])
+
   /**
    * 创建新日记
    * 创建默认内容的日记并跳转到编辑页面
@@ -160,16 +226,20 @@ function DiaryListPage() {
          * 这样按钮不会报错，刷新页面后仍回到示例数据。
          */
         const createdAt = Date.now()
-        const diary = createWebPreviewDiary({
+        const previewDiary = createWebPreviewDiary({
           id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-${createdAt}`,
           title: '未命名日记',
-          content: DEFAULT_NEW_DIARY_MARKDOWN,
+          markdown: DEFAULT_NEW_DIARY_MARKDOWN,
           createdAt,
           tags: ['Web 预览']
         })
 
-        setDiaries(currentDiaries => [diary, ...currentDiaries])
-        setSelectedDiaryId(diary.id)
+        setDiaries(currentDiaries => [previewDiary.diary, ...currentDiaries])
+        setWebPreviewMarkdownById(currentMarkdownById => ({
+          ...currentMarkdownById,
+          [previewDiary.diary.id]: previewDiary.markdown
+        }))
+        setSelectedDiaryId(previewDiary.diary.id)
         return
       }
 
@@ -179,7 +249,7 @@ function DiaryListPage() {
        */
       const diary = await window.diaryAPI.createDiary({
         title: '未命名日记',
-        content: DEFAULT_NEW_DIARY_MARKDOWN,
+        markdown: DEFAULT_NEW_DIARY_MARKDOWN,
         diaryDate: getTodayDateString()
       })
 
@@ -214,6 +284,11 @@ function DiaryListPage() {
              * 删除时直接从当前列表移除，避免调用 Electron IPC。
              */
             setDiaries(currentDiaries => currentDiaries.filter(currentDiary => currentDiary.id !== diary.id))
+            setWebPreviewMarkdownById(currentMarkdownById => {
+              const nextMarkdownById = { ...currentMarkdownById }
+              delete nextMarkdownById[diary.id]
+              return nextMarkdownById
+            })
             return
           }
 
@@ -351,7 +426,7 @@ function DiaryListPage() {
                               </div>
                               <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
                               <div className={`${styles.diaryListTitle}`}>{diary.title}</div>
-                              <div className={`${styles.diaryListSummary} mt-8`}>{buildDiarySummary(diary.content)}</div>
+                              <div className={`${styles.diaryListSummary} mt-8`}>{buildDiaryMetaSummary(diary)}</div>
                             </li>
                           )
                         })}
@@ -369,7 +444,7 @@ function DiaryListPage() {
                     <p>{formatFullCreatedAt(selectedDiary.createdAt)}</p>
                     <h2>{selectedDiary.title}</h2>
                     <div className={styles.diaryPreviewMeta}>
-                      <span>日记日期：{selectedDiary.diaryDate}</span>
+                      <span>{selectedDiary.diaryDate}</span>
                       <span>更新：{formatUpdatedAt(selectedDiary.updatedAt)}</span>
                       {selectedDiary.mood ? <span>心情：{selectedDiary.mood}</span> : null}
                       {selectedDiary.tags?.length ? <span>标签：{selectedDiary.tags.join(' / ')}</span> : null}
@@ -379,7 +454,11 @@ function DiaryListPage() {
                     {/*
                      * 右侧预览使用 Markdown 渲染，remark-gfm 负责表格、任务列表等 GFM 扩展。
                      */}
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedDiary.content || '没有正文预览'}</ReactMarkdown>
+                    {isPreviewLoading ? <p>正在读取正文...</p> : null}
+                    {!isPreviewLoading && previewErrorMessage ? <p>{previewErrorMessage}</p> : null}
+                    {!isPreviewLoading && !previewErrorMessage ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedDiaryMarkdown || '没有正文预览'}</ReactMarkdown>
+                    ) : null}
                   </div>
                 </article>
               ) : (
@@ -397,20 +476,17 @@ function DiaryListPage() {
 }
 
 /**
- * 构建日记摘要文本
- * 去除常见 Markdown 标记，生成列表页预览内容
+ * 构建列表元信息摘要
+ * 列表不读取 Markdown 正文，只展示可由数据库索引直接提供的信息
  */
-function buildDiarySummary(content: string): string {
-  /*
-   * 列表摘要去掉 Markdown 常见标记，让用户快速扫内容。
-   * 这里只做轻量清洗，不承担完整 Markdown 解析职责。
-   */
-  const summary = content
-    .replace(/[#>*_`[\]-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+function buildDiaryMetaSummary(diary: Diary): string {
+  const summaryParts = [
+    diary.mood ? `心情：${diary.mood}` : '',
+    diary.tags?.length ? `标签：${diary.tags.join(' / ')}` : '',
+    `更新：${formatUpdatedAt(diary.updatedAt)}`
+  ].filter(Boolean)
 
-  return summary || '没有正文预览'
+  return summaryParts.join(' · ')
 }
 
 /**
@@ -446,25 +522,23 @@ function getTodayDateString(): string {
  * 构建 Web 预览日记
  * 补齐 Diary 类型需要的固定字段
  */
-function createWebPreviewDiary(input: {
-  id: string
-  title: string
-  content: string
-  createdAt: number
-  tags?: string[]
-  mood?: string
-}): Diary {
+function createWebPreviewDiary(input: { id: string; title: string; markdown: string; createdAt: number; tags?: string[]; mood?: string }): {
+  diary: Diary
+  markdown: string
+} {
   return {
-    id: input.id,
-    title: input.title,
-    content: input.content,
-    filepath: '',
-    diaryDate: formatCreatedDateKey(input.createdAt),
-    createdAt: input.createdAt,
-    updatedAt: input.createdAt,
-    tags: input.tags,
-    mood: input.mood,
-    deleted: false
+    diary: {
+      id: input.id,
+      title: input.title,
+      filepath: '',
+      diaryDate: formatCreatedDateKey(input.createdAt),
+      createdAt: input.createdAt,
+      updatedAt: input.createdAt,
+      tags: input.tags,
+      mood: input.mood,
+      deleted: false
+    },
+    markdown: input.markdown
   }
 }
 
@@ -472,15 +546,15 @@ function createWebPreviewDiary(input: {
  * 构建 Web 预览数据
  * 只在没有 Electron API 时使用，避免开发态页面空白或报错
  */
-function buildWebPreviewDiaries(): Diary[] {
+function buildWebPreviewData(): { diaries: Diary[]; markdownById: Record<string, string> } {
   const now = Date.now()
   const dayMs = 24 * 60 * 60 * 1000
 
-  return [
+  const previewDiaries = [
     createWebPreviewDiary({
       id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-today`,
       title: '整理书桌后的下午',
-      content: `# 整理书桌后的下午
+      markdown: `# 整理书桌后的下午
 
 把桌面上散落的便签、旧笔和几张票根重新收好，空间一下子轻了很多。
 
@@ -492,7 +566,7 @@ function buildWebPreviewDiaries(): Diary[] {
     createWebPreviewDiary({
       id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-yesterday`,
       title: '雨后散步',
-      content: `# 雨后散步
+      markdown: `# 雨后散步
 
 下班后雨停了，路面还亮着。沿着小区外的小路走了一圈，没有刻意听什么播客，只是让脚步自己往前。
 
@@ -504,7 +578,7 @@ function buildWebPreviewDiaries(): Diary[] {
     createWebPreviewDiary({
       id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-last-week`,
       title: '周末读书记录',
-      content: `# 周末读书记录
+      markdown: `# 周末读书记录
 
 读完了两章，做了几条摘记。比起追求速度，今天更想把真正有触动的句子留下来。
 
@@ -515,6 +589,14 @@ function buildWebPreviewDiaries(): Diary[] {
       tags: ['阅读', '记录']
     })
   ]
+
+  /*
+   * Web 预览没有文件系统，这里用独立映射模拟“按 id 读取 Markdown 文件”的结果。
+   */
+  return {
+    diaries: previewDiaries.map(previewDiary => previewDiary.diary),
+    markdownById: Object.fromEntries(previewDiaries.map(previewDiary => [previewDiary.diary.id, previewDiary.markdown]))
+  }
 }
 
 /**

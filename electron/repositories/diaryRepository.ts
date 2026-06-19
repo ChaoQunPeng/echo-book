@@ -11,7 +11,6 @@ import type { Diary, GetDiaryListOptions } from "../../shared/diary.js";
 interface DiaryRow {
   id: string;
   title: string;
-  content: string | null;
   filepath: string;
   diary_date: string;
   created_at: number;
@@ -33,7 +32,6 @@ interface TagRow {
 export interface CreateDiaryRecord {
   id: string;
   title: string;
-  content: string;
   filepath: string;
   diaryDate: string;
   createdAt: number;
@@ -50,7 +48,6 @@ export interface CreateDiaryRecord {
 export interface UpdateDiaryRecord {
   id: string;
   title?: string;
-  content?: string;
   diaryDate?: string;
   tags?: string[];
   mood?: string | null;
@@ -79,7 +76,6 @@ export class DiaryRepository {
             INSERT INTO diaries (
               id,
               title,
-              content,
               filepath,
               diary_date,
               created_at,
@@ -90,7 +86,6 @@ export class DiaryRepository {
             VALUES (
               @id,
               @title,
-              @content,
               @filepath,
               @diaryDate,
               @createdAt,
@@ -134,11 +129,6 @@ export class DiaryRepository {
     if (record.title !== undefined) {
       sets.push("title = @title");
       params.title = record.title;
-    }
-
-    if (record.content !== undefined) {
-      sets.push("content = @content");
-      params.content = record.content;
     }
 
     if (record.diaryDate !== undefined) {
@@ -215,7 +205,6 @@ export class DiaryRepository {
           SELECT
             id,
             title,
-            content,
             filepath,
             diary_date,
             created_at,
@@ -274,7 +263,6 @@ export class DiaryRepository {
           SELECT
             d.id,
             d.title,
-            d.content,
             d.filepath,
             d.diary_date,
             d.created_at,
@@ -363,7 +351,6 @@ function mapDiaryRow(row: DiaryRow, tags: string[]): Diary {
   return {
     id: row.id,
     title: row.title,
-    content: row.content ?? "",
     filepath: row.filepath,
     diaryDate: row.diary_date,
     createdAt: row.created_at,
