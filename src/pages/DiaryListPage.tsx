@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FilterOutlined, MoreOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Input, Modal } from 'antd'
 import type { MenuProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
@@ -52,26 +52,28 @@ function DiaryListPage() {
     const keyword = searchKeyword.trim().toLocaleLowerCase()
 
     /*
-     * 列表展示统一在前端按 createdAt 倒序处理。
-     * 这样即使后端默认按 diaryDate 返回，用户看到的仍是创建时间顺序。
+     * 列表展示按日记日期倒序处理，保证同月日记聚在一起。
+     * 如果旧数据缺少 diaryDate，则回退到 createdAt 维持可排序。
      */
     return [...diaries]
       .filter(diary => {
         const matchesTitle = keyword ? diary.title.toLocaleLowerCase().includes(keyword) : true
         return matchesTitle && isDiaryInDateFilter(diary, dateFilter)
       })
-      .sort((firstDiary, secondDiary) => secondDiary.createdAt - firstDiary.createdAt)
+      .sort((firstDiary, secondDiary) => {
+        return getDiaryDateSortValue(secondDiary) - getDiaryDateSortValue(firstDiary) || secondDiary.createdAt - firstDiary.createdAt
+      })
   }, [dateFilter, diaries, searchKeyword])
 
   const groupedDiaries = useMemo(() => {
     /*
-     * 分组 key 使用本地日期，展示 label 保持中文可读。
+     * 分组 key 使用日记日期的年月，展示 label 保持中文可读。
      * filteredDiaries 已经排好序，因此这里按顺序追加即可。
      */
     const groups: Array<{ key: string; label: string; diaries: Diary[] }> = []
 
     filteredDiaries.forEach(diary => {
-      const groupKey = formatCreatedDateKey(diary.createdAt)
+      const groupKey = formatDiaryMonthKey(diary)
       const existingGroup = groups.find(group => group.key === groupKey)
 
       if (existingGroup) {
@@ -81,7 +83,7 @@ function DiaryListPage() {
 
       groups.push({
         key: groupKey,
-        label: formatCreatedDateGroup(diary.createdAt),
+        label: formatDiaryMonthGroup(diary),
         diaries: [diary]
       })
     })
@@ -304,26 +306,52 @@ function DiaryListPage() {
                               className={isSelected ? `${styles.diaryListItem} ${styles.diaryListItemActive}` : styles.diaryListItem}
                               onClick={() => setSelectedDiaryId(diary.id)}
                             >
-                              <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
-                              <div className={`${styles.diaryListTitle} mb-4`}>{diary.title}</div>
-                              <div className={styles.diaryListSummary}>{buildDiarySummary(diary.content)}</div>
                               <div className={styles.diaryListActions}>
-                                <Button
-                                  type="default"
-                                  icon={<EditOutlined />}
-                                  aria-label={`编辑 ${diary.title}`}
-                                  onClick={() => navigate(`/editor/${diary.id}`)}
-                                />
-                                <Button
-                                  type="default"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                  aria-label={`删除 ${diary.title}`}
-                                  onClick={() => {
-                                    handleDeleteDiary(diary)
+                                <Dropdown
+                                  trigger={['click']}
+                                  placement="bottomRight"
+                                  menu={{
+                                    items: [
+                                      {
+                                        key: 'edit',
+                                        label: '编辑',
+                                        icon: <EditOutlined />
+                                      },
+                                      {
+                                        key: 'delete',
+                                        label: '删除',
+                                        danger: true,
+                                        icon: <DeleteOutlined />
+                                      }
+                                    ],
+                                    onClick: ({ key, domEvent }) => {
+                                      /*
+                                       * 菜单点击不应触发 li 的选中事件，避免操作时预览区跳动。
+                                       */
+                                      domEvent.stopPropagation()
+
+                                      if (key === 'edit') {
+                                        navigate(`/editor/${diary.id}`)
+                                        return
+                                      }
+
+                                      handleDeleteDiary(diary)
+                                    }
                                   }}
-                                />
+                                >
+                                  <Button
+                                    type="text"
+                                    shape="circle"
+                                    className={styles.diaryListActionTrigger}
+                                    icon={<MoreOutlined />}
+                                    aria-label={`${diary.title} 更多操作`}
+                                    onClick={event => event.stopPropagation()}
+                                  />
+                                </Dropdown>
                               </div>
+                              <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
+                              <div className={`${styles.diaryListTitle}`}>{diary.title}</div>
+                              <div className={`${styles.diaryListSummary} mt-8`}>{buildDiarySummary(diary.content)}</div>
                             </li>
                           )
                         })}
@@ -528,18 +556,88 @@ function formatCreatedDateKey(timestamp: number): string {
 }
 
 /**
- * 格式化创建日期分组标题
- * 用中文日期展示分组信息
+ * 获取日记日期的排序值
+ * 优先使用 diaryDate，旧数据异常时回退到创建时间
+ */
+function getDiaryDateSortValue(diary: Diary): number {
+  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
+
+  if (!diaryDateParts) {
+    return diary.createdAt
+  }
+
+  return new Date(diaryDateParts.year, diaryDateParts.month - 1, diaryDateParts.day).getTime()
+}
+
+/**
+ * 格式化日记月份分组 key
+ * 返回 YYYY-MM，让同一月份的日记落入同一个分组
+ */
+function formatDiaryMonthKey(diary: Diary): string {
+  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
+
+  if (diaryDateParts) {
+    return `${diaryDateParts.year}-${String(diaryDateParts.month).padStart(2, '0')}`
+  }
+
+  return formatCreatedMonthKey(diary.createdAt)
+}
+
+/**
+ * 格式化日记月份分组标题
+ * 用 2026·6月 这样的格式展示月份
+ */
+function formatDiaryMonthGroup(diary: Diary): string {
+  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
+
+  if (diaryDateParts) {
+    return `${diaryDateParts.year}·${diaryDateParts.month}月`
+  }
+
+  return formatCreatedDateGroup(diary.createdAt)
+}
+
+/**
+ * 解析日记日期字符串
+ * 只接受 YYYY-MM-DD，避免 Date 解析时区差异影响月份
+ */
+function parseDiaryDateParts(diaryDate: string): { year: number; month: number; day: number } | null {
+  const matchedDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(diaryDate)
+
+  if (!matchedDate) {
+    return null
+  }
+
+  const year = Number(matchedDate[1])
+  const month = Number(matchedDate[2])
+  const day = Number(matchedDate[3])
+
+  if (!Number.isInteger(year) || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null
+  }
+
+  return { year, month, day }
+}
+
+/**
+ * 格式化创建月份分组 key
+ * 旧数据没有 diaryDate 时使用 createdAt 兜底
+ */
+function formatCreatedMonthKey(timestamp: number): string {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+
+  return `${year}-${month}`
+}
+
+/**
+ * 格式化创建月份分组标题
+ * 用中文月份展示兜底分组信息
  */
 function formatCreatedDateGroup(timestamp: number): string {
   const date = new Date(timestamp)
   return `${date.getFullYear()}·${date.getMonth() + 1}月`
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  }).format(new Date(timestamp))
 }
 
 /**

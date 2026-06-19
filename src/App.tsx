@@ -19,12 +19,12 @@ const sidebarMenus = [
     path: '/list',
     label: '我的日记',
     icon: ReadOutlined
-  },
-  {
-    path: '/trash',
-    label: '回收站',
-    icon: DeleteOutlined
   }
+  // {
+  //   path: '/trash',
+  //   label: '回收站',
+  //   icon: DeleteOutlined
+  // }
   // {
   //   path: '/editor',
   //   label: '编辑页面',

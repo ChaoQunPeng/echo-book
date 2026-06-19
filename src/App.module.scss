@@ -8,7 +8,7 @@
 .sideBar {
   flex: 0 0 280px;
   border-right: 1px solid var(--echo-color-primary-10);
-  background: #f3f4f5;
+  background: #f8f9fa;
   display: flex;
   flex-direction: column;
 }
@@ -240,62 +240,4 @@
 .editorPageMilkdown :global(.ProseMirror) h3 {
   color: var(--echo-color-text);
   line-height: 1.25;
-}
-
-/*
- * 小屏下收紧页面和编辑器内边距，保证标题、按钮和正文都不会横向溢出。
- */
-@media (max-width: 720px) {
-  .appShell {
-    flex-direction: column;
-  }
-
-  .sideBar {
-    width: 100%;
-    flex: 0 0 auto;
-    gap: 10px;
-    border-right: 0;
-    border-bottom: 1px solid var(--echo-color-primary-10);
-  }
-
-  .sideMenu {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-
-  .sideActions {
-    width: auto;
-    margin-top: 0;
-    flex-direction: row;
-  }
-
-  .mainContainer {
-    padding: 16px;
-  }
-
-  .editorPage {
-    min-height: calc(100vh - 32px);
-  }
-
-  .editorPageHeader {
-    align-items: flex-start;
-  }
-
-  .editorPageActions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .editorPageForm {
-    grid-template-columns: 1fr;
-  }
-
-  .editorPageWorkspace {
-    min-height: 520px;
-  }
-
-  .editorPageMilkdown :global(.ProseMirror) {
-    min-height: 440px;
-    padding: 28px 20px 52px;
-  }
 }

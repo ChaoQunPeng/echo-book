@@ -82,7 +82,7 @@
 }
 
 .diaryListPanel {
-  width: 380px;
+  width: 320px;
   border-right: 1px solid rgba(15, 82, 56, 0.12);
 }
 
@@ -174,18 +174,21 @@
 .diaryList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   list-style: none;
 }
 
 .diaryListItem {
-  padding: 24px;
+  position: relative;
+  padding: 24px 56px 24px 24px;
   background: #ffffff;
+  cursor: pointer;
+  transition: all 160ms ease, color 160ms ease;
 }
 
 .diaryListItem:hover,
 .diaryListItemActive {
-  border-color: rgba(15, 82, 56, 0.34);
+  border-left: 3px solid var(--echo-color-primary);
   background: color-mix(in srgb, var(--echo-color-primary) 5%, #ffffff);
 }
 
@@ -218,6 +221,7 @@
   font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--color-text-black);
 }
 
 .diaryListSummary,
@@ -239,9 +243,27 @@
 }
 
 .diaryListActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  /*
+   * 操作入口固定在列表项右上角，不参与标题和摘要的文本流。
+   */
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.diaryListActionTrigger {
+  /*
+   * 省略号按钮保持固定点击面积，避免 hover 或选中状态造成列表抖动。
+   */
+  width: 30px;
+  height: 30px;
+  color: rgba(25, 28, 29, 0.58);
+}
+
+.diaryListActionTrigger:hover,
+.diaryListActionTrigger:focus-visible {
+  color: var(--echo-color-primary);
+  background: rgba(15, 82, 56, 0.08);
 }
 
 .diaryPreviewPanel {

@@ -13,11 +13,6 @@
 @import 'tailwindcss';
 @import './styles/design-tokens.css';
 
-* {
-  line-height: 1.4;
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
-
 @theme {
   --spacing: 1px;
 
@@ -28,6 +23,7 @@
   --color-primary-soft: var(--echo-color-primary-10);
   --color-page: var(--echo-color-page);
   --color-foreground: var(--echo-color-text);
+  --color-text-black: #191c1d;
 }
 
 /* 字体大小 */
@@ -43,4 +39,10 @@ html,
 body,
 #root {
   min-height: 100%;
+}
+
+* {
+  line-height: 1.4;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* color: var(--color-text-black); */
 }
