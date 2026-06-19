@@ -6,6 +6,7 @@ import { DatePicker, Input } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import styles from '../App.module.scss'
 import EchoButton from '../components/EchoButton'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
@@ -465,14 +466,14 @@ function EditorPage() {
    * 可以继续扩展为 `/editor`、`/editor/:diaryId` 这类更细的路由结构。
    */
   return (
-    <section className="editor-page">
-      <header className="editor-page__header">
-        <div className="editor-page__title-group">
-          <p className="editor-page__eyebrow">Echo Book</p>
+    <section className={styles.editorPage}>
+      <header className={styles.editorPageHeader}>
+        <div className={styles.editorPageTitleGroup}>
+          <p className={styles.editorPageEyebrow}>Echo Book</p>
           <h1>{isEditing ? '编辑日记' : '新建日记'}</h1>
         </div>
-        <div className="editor-page__actions">
-          <span className="editor-page__status" aria-live="polite">
+        <div className={styles.editorPageActions}>
+          <span className={styles.editorPageStatus} aria-live="polite">
             {saveStatus}
           </span>
           <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
@@ -484,8 +485,8 @@ function EditorPage() {
         </div>
       </header>
 
-      <div className="editor-page__form">
-        <label className="editor-field editor-field--title">
+      <div className={styles.editorPageForm}>
+        <label className={styles.editorField}>
           <span>标题</span>
           <Input
             value={title}
@@ -496,7 +497,7 @@ function EditorPage() {
             }}
           />
         </label>
-        <label className="editor-field">
+        <label className={styles.editorField}>
           <span>日期</span>
           <DatePicker
             value={diaryDate ? dayjs(diaryDate) : null}
@@ -512,7 +513,7 @@ function EditorPage() {
             }}
           />
         </label>
-        <label className="editor-field">
+        <label className={styles.editorField}>
           <span>心情</span>
           <Input
             value={mood}
@@ -523,7 +524,7 @@ function EditorPage() {
             }}
           />
         </label>
-        <label className="editor-field">
+        <label className={styles.editorField}>
           <span>标签</span>
           <Input
             value={tagsInput}
@@ -536,11 +537,11 @@ function EditorPage() {
         </label>
       </div>
 
-      {loadError ? <p className="editor-page__error">{loadError}</p> : null}
+      {loadError ? <p className={styles.editorPageError}>{loadError}</p> : null}
 
-      <div className="editor-page__workspace">{isEditorReady ? <div ref={editorRootRef} className="editor-page__milkdown" /> : null}</div>
+      <div className={styles.editorPageWorkspace}>{isEditorReady ? <div ref={editorRootRef} className={styles.editorPageMilkdown} /> : null}</div>
 
-      <div className="editor-page__footer-actions">
+      <div className={styles.editorPageFooterActions}>
         <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
           返回列表
         </EchoButton>

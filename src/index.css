@@ -1,10 +1,38 @@
+/* * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  display: block;
+} */
+
 /*
  * TailwindCSS 4 的推荐接入方式是在全局 CSS 入口直接引入 `tailwindcss`。
  * Vite 插件会在构建期间处理这条导入语句，并按你实际使用到的 className
  * 生成对应样式，因此这里不再需要额外的 `tailwind.config.js` 才能开始使用。
  */
-@import "tailwindcss";
-@import "./styles/design-tokens.css";
+@import 'tailwindcss';
+@import './styles/design-tokens.css';
+
+* {
+  line-height: 1.25;
+}
+
+@theme {
+  --spacing: 1px;
+
+  /*
+   * 注册项目颜色，类名会变成 `text-primary`、`bg-primary` 这类写法。
+   */
+  --color-primary: var(--echo-color-primary);
+  --color-primary-soft: var(--echo-color-primary-10);
+  --color-page: var(--echo-color-page);
+  --color-foreground: var(--echo-color-text);
+}
+
+/* 字体大小 */
+@utility text-size-* {
+  font-size: calc(--value(integer) * 1px);
+}
 
 /*
  * 这里保留最基础的文档高度设置，确保像 `min-h-screen` 这类布局工具类

@@ -1,19 +1,34 @@
-import { ExportOutlined, FolderOpenOutlined, SettingOutlined } from '@ant-design/icons'
+import {
+  BookOutlined,
+  ClearOutlined,
+  DeleteOutlined,
+  ExportOutlined,
+  FolderOpenOutlined,
+  ReadOutlined,
+  SettingOutlined
+} from '@ant-design/icons'
 import { Alert, Button, ConfigProvider, Form, Input, Modal, message } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
-import './App.scss'
+import styles from './App.module.scss'
 
 const sidebarMenus = [
   {
     path: '/list',
-    label: '日记列表1'
+    label: '日记列表',
+    icon: ReadOutlined
   },
   {
-    path: '/editor',
-    label: '编辑页面'
+    path: '/trash',
+    label: '回收站',
+    icon: DeleteOutlined
   }
+  // {
+  //   path: '/editor',
+  //   label: '编辑页面',
+  //   icon: ReadOutlined
+  // }
 ]
 
 function App() {
@@ -119,32 +134,52 @@ function App() {
       })
   }
 
+  const appTheme = useMemo(() => {
+    /*
+     * CSS 变量定义在 :root 上，因此这里从 document.documentElement 读取。
+     * getPropertyValue 返回值可能带空格，所以需要 trim()。
+     * fallback 用于防止变量未加载或浏览器环境异常时 antd 主题为空。
+     */
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--echo-color-primary').trim() || '#0f5238'
+
+    return {
+      token: {
+        colorPrimary
+      }
+    }
+  }, [])
+
   /*
    * `App` 负责承载整站固定布局：左侧导航区域和右侧主内容区域。
    * 主内容区域内部放置 React Router 的 `<Outlet />`，这样所有子路由
-   * 都会统一渲染到 `.main-container` 中，避免不同页面重复编写外层布局。
+   * 都会统一渲染到 `.mainContainer` 中，避免不同页面重复编写外层布局。
    */
   return (
-    <ConfigProvider>
-      <div className="app-shell">
-        <aside className="side-bar">
+    <ConfigProvider theme={appTheme}>
+      <div className={styles.appShell}>
+        <aside className={styles.sideBar}>
+          <div className={styles.logoGroup}>
+            <div className={styles.title}>爱可日记</div>
+            <div className={styles.subtitle}>爱生活，可记录</div>
+          </div>
           {/*
            * 左侧菜单只负责页面级导航，不承载具体业务内容。
            * 使用 NavLink 可以直接从 React Router 获得当前路由是否激活，
            * 从而给当前菜单项添加稳定的选中态。
            */}
-          <nav className="side-menu" aria-label="主导航">
+          <nav className={styles.sideMenu} aria-label="主导航">
             {sidebarMenus.map(menu => (
               <NavLink
                 key={menu.path}
                 to={menu.path}
-                className={({ isActive }) => (isActive ? 'side-menu__item side-menu__item--active' : 'side-menu__item')}
+                className={({ isActive }) => (isActive ? `${styles.sideMenuItem} ${styles.sideMenuItemActive}` : styles.sideMenuItem)}
               >
+                {<menu.icon className="text-size-16 mr-12" />}
                 {menu.label}
               </NavLink>
             ))}
           </nav>
-          <div className="side-actions" aria-label="数据操作">
+          {/* <div className={styles.sideActions} aria-label="数据操作">
             <Button
               type="text"
               icon={<ExportOutlined />}
@@ -154,16 +189,12 @@ function App() {
             >
               {isExportingBackup ? '导出中' : '导出'}
             </Button>
-            <Button
-              type="text"
-              icon={<SettingOutlined />}
-              onClick={() => setIsSettingsOpen(true)}
-            >
+            <Button type="text" icon={<SettingOutlined />} onClick={() => setIsSettingsOpen(true)}>
               设置
             </Button>
-          </div>
+          </div> */}
         </aside>
-        <div className="main-container">
+        <div className={styles.mainContainer}>
           <Outlet />
         </div>
 

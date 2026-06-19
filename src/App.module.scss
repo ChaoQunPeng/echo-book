@@ -1,118 +1,95 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/*
- * 应用外壳采用左右分栏布局：
- * 左侧固定宽度用于放置全局菜单，右侧主内容区交给路由出口渲染页面。
- * min-height 使用视口高度，确保列表页或编辑页内容较少时侧边栏也能铺满页面。
- */
-.app-shell {
+.appShell {
   min-height: 100vh;
   display: flex;
   background: var(--echo-color-page);
   color: var(--echo-color-text);
 }
 
-/*
- * 侧边栏只承载导航入口，因此宽度保持稳定，避免页面切换时主内容区发生横向跳动。
- * 右侧边框使用主色的低透明度版本，和当前已有设计变量保持同一视觉来源。
- */
-.side-bar {
-  width: 180px;
-  flex: 0 0 180px;
-  padding: 16px 12px;
+.sideBar {
+  flex: 0 0 280px;
   border-right: 1px solid var(--echo-color-primary-10);
-  background: #ffffff;
+  background: #f3f4f5;
   display: flex;
   flex-direction: column;
 }
 
-/*
- * 菜单容器使用纵向排列，后续继续增加归档、设置等入口时，只需要扩展数据源。
- * gap 保持菜单项之间的清晰间隔，不依赖单个菜单项的外边距来拼接布局。
- */
-.side-menu {
+.logoGroup {
+  padding: 24px;
+
+  .title {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--echo-color-primary);
+  }
+
+  .subtitle {
+    margin-top: 4px;
+    font-size: 14px;
+    color: #404943;
+  }
+}
+
+.sideMenu {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  padding: 8px 16px;
+  gap: 4px;
+
+  .sideMenuItem {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    padding: 0 12px;
+    border-radius: 2px 4px 4px 2px;
+    color: var(--echo-color-text);
+    font-size: 16px;
+    line-height: 1;
+    text-decoration: none;
+    transition: all 160ms ease, color 160ms ease;
+  }
+
+  .sideMenuItem:hover {
+    color: var(--echo-color-primary);
+    background: var(--echo-color-primary-10);
+  }
+
+  .sideMenuItemActive {
+    font-weight: 600;
+    color: var(--echo-color-primary);
+    background: var(--echo-color-primary-10);
+    border-left: 3px solid var(--echo-color-primary);
+  }
+
+  .sideActions {
+    width: 100%;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 }
 
-/*
- * 侧边栏底部动作区放置导出、设置这类不切换路由的操作。
- * 使用独立容器承接 auto margin，避免多个按钮时每个按钮都参与底部定位计算。
- */
-.side-actions {
-  width: 100%;
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/*
- * 菜单项使用链接元素本身作为可点击区域。
- * 固定高度和内边距可以保证鼠标可点击面积充足，也能让选中态背景更稳定。
- */
-.side-menu__item {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  border-radius: 8px;
-  color: var(--echo-color-text);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
-  text-decoration: none;
-  transition: background-color 160ms ease, color 160ms ease;
-}
-
-/*
- * 悬停态给用户明确的可点击反馈。
- * 这里使用主色的浅色背景，不额外引入新的强调色，避免侧边栏颜色体系发散。
- */
-.side-menu__item:hover {
-  color: var(--echo-color-primary);
-  background: var(--echo-color-primary-10);
-}
-
-/*
- * 当前路由对应的菜单项使用同一套浅色背景和主色文字。
- * 选中态和 hover 态保持接近，用户在列表页与编辑页之间切换时能快速确认当前位置。
- */
-.side-menu__item--active {
-  color: var(--echo-color-primary);
-  background: var(--echo-color-primary-10);
-}
-
-/*
- * 主内容区占据侧边栏之外的全部空间。
- * padding 放在容器层，确保 list/editor 等页面组件可以专注于自身内容结构。
- */
-.main-container {
+.mainContainer {
   flex: 1;
   min-width: 0;
   padding: 24px;
 }
 
-.diary-list-page__error,
-.editor-page__error {
+.diaryListPageError,
+.editorPageError {
   color: #b42318;
   font-size: 13px;
   line-height: 1.5;
 }
 
-.editor-field {
+.editorField {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.editor-field span {
+.editorField span {
   color: rgba(25, 28, 29, 0.68);
   font-size: 13px;
   font-weight: 700;
@@ -123,14 +100,14 @@
  * 列表页的内容容器负责滚动和空状态，不把整个页面做成卡片。
  * 这样顶部操作区和列表之间的层级更清楚。
  */
-.diary-list-page {
+.diaryListPage {
   min-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.diary-list-page__header {
+.diaryListPageHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -138,7 +115,7 @@
   flex-wrap: wrap;
 }
 
-.diary-list-page__eyebrow {
+.diaryListPageEyebrow {
   color: var(--echo-color-primary);
   font-size: 12px;
   font-weight: 700;
@@ -146,14 +123,14 @@
   text-transform: uppercase;
 }
 
-.diary-list-page__header h1 {
+.diaryListPageHeader h1 {
   margin-top: 4px;
   color: var(--echo-color-text);
   font-size: 28px;
   line-height: 1.2;
 }
 
-.diary-list-page__actions {
+.diaryListPageActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -161,17 +138,17 @@
   flex-wrap: wrap;
 }
 
-.diary-list-page__content {
+.diaryListPageContent {
   flex: 1;
   min-height: 360px;
 }
 
-.diary-list-page__empty,
-.diary-list-page__empty-state {
+.diaryListPageEmpty,
+.diaryListPageEmptyState {
   color: rgba(25, 28, 29, 0.66);
 }
 
-.diary-list-page__empty-state {
+.diaryListPageEmptyState {
   min-height: 360px;
   display: grid;
   place-items: center;
@@ -182,19 +159,19 @@
   background: #ffffff;
 }
 
-.diary-list-page__empty-state h2 {
+.diaryListPageEmptyState h2 {
   color: var(--echo-color-text);
   font-size: 20px;
 }
 
-.diary-list {
+.diaryList {
   display: flex;
   flex-direction: column;
   gap: 10px;
   list-style: none;
 }
 
-.diary-list__item {
+.diaryListItem {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -206,7 +183,7 @@
   box-shadow: 0 8px 24px rgba(15, 82, 56, 0.06);
 }
 
-.diary-list__main {
+.diaryListMain {
   height: auto;
   min-width: 0;
   min-height: 64px;
@@ -217,7 +194,7 @@
   text-align: left;
 }
 
-.diary-list__main > span {
+.diaryListMain > span {
   /*
    * antd Button 会给 children 包一层直接子节点。
    * contents 让列表内部网格继续由日期、标题、摘要和元信息这些真实内容参与布局。
@@ -225,13 +202,13 @@
   display: contents;
 }
 
-.diary-list__date {
+.diaryListDate {
   color: var(--echo-color-primary);
   font-size: 13px;
   font-weight: 700;
 }
 
-.diary-list__title {
+.diaryListTitle {
   overflow: hidden;
   color: var(--echo-color-text);
   font-size: 16px;
@@ -240,8 +217,8 @@
   white-space: nowrap;
 }
 
-.diary-list__summary,
-.diary-list__meta {
+.diaryListSummary,
+.diaryListMeta {
   overflow: hidden;
   color: rgba(25, 28, 29, 0.62);
   font-size: 13px;
@@ -250,11 +227,11 @@
   white-space: nowrap;
 }
 
-.diary-list__meta {
+.diaryListMeta {
   grid-column: 2 / -1;
 }
 
-.diary-list__actions {
+.diaryListActions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -265,7 +242,7 @@
  * 顶部只保留当前页面标题、保存状态和主操作，正文编辑器占据剩余空间。
  * height 结合主内容区 padding 计算，避免编辑器内容较少时页面显得漂浮。
  */
-.editor-page {
+.editorPage {
   min-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -276,7 +253,7 @@
  * 标题栏用两端对齐，让状态和按钮始终靠近操作区域。
  * flex-wrap 保证窄屏下按钮可以自然换行，不会挤压标题文字。
  */
-.editor-page__header {
+.editorPageHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -288,13 +265,13 @@
  * 标题组只承载页面层级信息。
  * 这里不把标题放进卡片，避免编辑器页面出现多层容器套娃，阅读焦点可以直接落到正文区域。
  */
-.editor-page__title-group {
+.editorPageTitleGroup {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.editor-page__eyebrow {
+.editorPageEyebrow {
   color: var(--echo-color-primary);
   font-size: 12px;
   font-weight: 700;
@@ -302,7 +279,7 @@
   text-transform: uppercase;
 }
 
-.editor-page__title-group h1 {
+.editorPageTitleGroup h1 {
   color: var(--echo-color-text);
   font-size: 28px;
   line-height: 1.2;
@@ -312,7 +289,7 @@
  * 操作区包含保存状态和保存按钮。
  * min-width: 0 可以让状态文本在小屏中正常收缩，按钮自身仍保持稳定点击面积。
  */
-.editor-page__actions {
+.editorPageActions {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -321,7 +298,7 @@
   flex-wrap: wrap;
 }
 
-.editor-page__status {
+.editorPageStatus {
   color: rgba(25, 28, 29, 0.62);
   font-size: 13px;
   line-height: 1.4;
@@ -331,7 +308,7 @@
  * 元信息表单保持紧凑的网格布局。
  * 标题字段占更宽区域，日期、心情和标签维持稳定输入宽度。
  */
-.editor-page__form {
+.editorPageForm {
   display: grid;
   grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(180px, 0.8fr);
   gap: 12px;
@@ -342,7 +319,7 @@
  * workspace 是 Milkdown 编辑器的视觉边界。
  * 它承担滚动和背景，不再额外把编辑器内部包成多层卡片，保证写作区域足够开阔。
  */
-.editor-page__workspace {
+.editorPageWorkspace {
   flex: 1;
   min-height: 560px;
   overflow: hidden;
@@ -356,7 +333,7 @@
  * 底部操作区贴近正文编辑器，补充顶部工具栏。
  * 用户写完后视线通常停在页面下方，这里再放一次保存入口可以降低漏点保存的概率。
  */
-.editor-page__footer-actions {
+.editorPageFooterActions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -367,13 +344,13 @@
  * Milkdown 的根节点需要占满 workspace。
  * Crepe 会在该节点下创建自己的编辑器结构，因此这里主要负责尺寸、滚动和字体继承。
  */
-.editor-page__milkdown,
-.editor-page__milkdown .milkdown {
+.editorPageMilkdown,
+.editorPageMilkdown :global(.milkdown) {
   height: 100%;
   min-height: inherit;
 }
 
-.editor-page__milkdown .milkdown {
+.editorPageMilkdown :global(.milkdown) {
   overflow: auto;
   color: var(--echo-color-text);
   font-family: inherit;
@@ -383,7 +360,7 @@
  * Crepe frame 主题会生成 .milkdown-theme-frame 容器。
  * 这里仅调整和应用布局强相关的尺寸，避免大范围覆盖 Milkdown 自带交互细节。
  */
-.editor-page__milkdown .milkdown-theme-frame {
+.editorPageMilkdown :global(.milkdown-theme-frame) {
   min-height: 100%;
   border: 0;
 }
@@ -392,7 +369,7 @@
  * ProseMirror 是实际可编辑区域。
  * 使用最大宽度和水平居中，让长文行宽保持舒适；min-height 确保空文档时仍有充足可点击区域。
  */
-.editor-page__milkdown .ProseMirror {
+.editorPageMilkdown :global(.ProseMirror) {
   width: min(100%, 860px);
   min-height: 480px;
   margin: 0 auto;
@@ -402,9 +379,9 @@
   line-height: 1.8;
 }
 
-.editor-page__milkdown .ProseMirror h1,
-.editor-page__milkdown .ProseMirror h2,
-.editor-page__milkdown .ProseMirror h3 {
+.editorPageMilkdown :global(.ProseMirror) h1,
+.editorPageMilkdown :global(.ProseMirror) h2,
+.editorPageMilkdown :global(.ProseMirror) h3 {
   color: var(--echo-color-text);
   line-height: 1.25;
 }
@@ -413,11 +390,11 @@
  * 小屏下收紧页面和编辑器内边距，保证标题、按钮和正文都不会横向溢出。
  */
 @media (max-width: 720px) {
-  .app-shell {
+  .appShell {
     flex-direction: column;
   }
 
-  .side-bar {
+  .sideBar {
     width: 100%;
     flex: 0 0 auto;
     gap: 10px;
@@ -425,69 +402,69 @@
     border-bottom: 1px solid var(--echo-color-primary-10);
   }
 
-  .side-menu {
+  .sideMenu {
     flex-direction: row;
     overflow-x: auto;
   }
 
-  .side-actions {
+  .sideActions {
     width: auto;
     margin-top: 0;
     flex-direction: row;
   }
 
-  .main-container {
+  .mainContainer {
     padding: 16px;
   }
 
-  .diary-list-page {
+  .diaryListPage {
     min-height: calc(100vh - 130px);
   }
 
-  .diary-list-page__actions {
+  .diaryListPageActions {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .diary-list__item {
+  .diaryListItem {
     grid-template-columns: 1fr;
   }
 
-  .diary-list__main {
+  .diaryListMain {
     grid-template-columns: 1fr;
     gap: 6px;
   }
 
-  .diary-list__meta {
+  .diaryListMeta {
     grid-column: auto;
   }
 
-  .diary-list__actions {
+  .diaryListActions {
     justify-content: flex-end;
   }
 
-  .editor-page {
+  .editorPage {
     min-height: calc(100vh - 32px);
   }
 
-  .editor-page__header {
+  .editorPageHeader {
     align-items: flex-start;
   }
 
-  .editor-page__actions {
+  .editorPageActions {
     width: 100%;
     justify-content: space-between;
   }
 
-  .editor-page__form {
+  .editorPageForm {
     grid-template-columns: 1fr;
   }
 
-  .editor-page__workspace {
+  .editorPageWorkspace {
     min-height: 520px;
   }
 
-  .editor-page__milkdown .ProseMirror {
+  .editorPageMilkdown :global(.ProseMirror) {
     min-height: 440px;
     padding: 28px 20px 52px;
   }

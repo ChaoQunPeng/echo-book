@@ -3,6 +3,7 @@ import { Button, Modal } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../shared/diary'
+import styles from '../App.module.scss'
 import EchoButton from '../components/EchoButton'
 
 const DEFAULT_NEW_DIARY_MARKDOWN = `# 今天的回声
@@ -21,6 +22,10 @@ function DiaryListPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
+  /**
+   * 加载日记列表数据
+   * 从本地数据库读取最近的日记记录并更新页面状态
+   */
   const loadDiaries = async () => {
     setIsLoading(true)
     setErrorMessage('')
@@ -52,6 +57,10 @@ function DiaryListPage() {
     void loadDiaries()
   }, [])
 
+  /**
+   * 创建新日记
+   * 创建默认内容的日记并跳转到编辑页面
+   */
   const handleCreateDiary = async () => {
     setIsCreating(true)
     setErrorMessage('')
@@ -71,7 +80,7 @@ function DiaryListPage() {
       const diary = await window.diaryAPI.createDiary({
         title: '未命名日记',
         content: DEFAULT_NEW_DIARY_MARKDOWN,
-        diaryDate: getTodayDateString(),
+        diaryDate: getTodayDateString()
       })
 
       navigate(`/editor/${diary.id}`)
@@ -83,6 +92,10 @@ function DiaryListPage() {
     }
   }
 
+  /**
+   * 删除指定日记
+   * 弹出确认框，确认后执行软删除并刷新列表
+   */
   const handleDeleteDiary = (diary: Diary) => {
     /*
      * 删除当前走软删除，使用 antd 确认弹窗承载二次确认和按钮样式。
@@ -109,13 +122,13 @@ function DiaryListPage() {
    * 列表页只负责查询、跳转和删除，具体正文编辑留给 EditorPage 处理。
    */
   return (
-    <section className="diary-list-page">
-      <header className="diary-list-page__header">
+    <section className={styles.diaryListPage}>
+      <header className={styles.diaryListPageHeader}>
         <div>
-          <p className="diary-list-page__eyebrow">Echo Book</p>
+          <p className={styles.diaryListPageEyebrow}>Echo Book</p>
           <h1>日记列表</h1>
         </div>
-        <div className="diary-list-page__actions">
+        <div className={styles.diaryListPageActions}>
           <EchoButton
             variant="outline"
             icon={<ReloadOutlined />}
@@ -131,13 +144,13 @@ function DiaryListPage() {
         </div>
       </header>
 
-      {errorMessage ? <p className="diary-list-page__error">{errorMessage}</p> : null}
+      {errorMessage ? <p className={styles.diaryListPageError}>{errorMessage}</p> : null}
 
-      <div className="diary-list-page__content">
-        {isLoading ? <p className="diary-list-page__empty">正在读取日记...</p> : null}
+      <div className={styles.diaryListPageContent}>
+        {isLoading ? <p className={styles.diaryListPageEmpty}>正在读取日记...</p> : null}
 
         {!isLoading && diaries.length === 0 ? (
-          <div className="diary-list-page__empty-state">
+          <div className={styles.diaryListPageEmptyState}>
             <h2>还没有日记</h2>
             <p>从一篇新的记录开始。</p>
             <EchoButton icon={<PlusOutlined />} disabled={isCreating} onClick={handleCreateDiary}>
@@ -147,23 +160,19 @@ function DiaryListPage() {
         ) : null}
 
         {!isLoading && diaries.length > 0 ? (
-          <ul className="diary-list">
-            {diaries.map((diary) => (
-              <li key={diary.id} className="diary-list__item">
-                <Button
-                  className="diary-list__main"
-                  type="text"
-                  onClick={() => navigate(`/editor/${diary.id}`)}
-                >
-                  <span className="diary-list__date">{diary.diaryDate}</span>
-                  <span className="diary-list__title">{diary.title}</span>
-                  <span className="diary-list__summary">{buildDiarySummary(diary.content)}</span>
-                  <span className="diary-list__meta">
+          <ul className={styles.diaryList}>
+            {diaries.map(diary => (
+              <li key={diary.id} className={styles.diaryListItem}>
+                <Button className={styles.diaryListMain} type="text" onClick={() => navigate(`/editor/${diary.id}`)}>
+                  <span className={styles.diaryListDate}>{diary.diaryDate}</span>
+                  <span className={styles.diaryListTitle}>{diary.title}</span>
+                  <span className={styles.diaryListSummary}>{buildDiarySummary(diary.content)}</span>
+                  <span className={styles.diaryListMeta}>
                     {formatUpdatedAt(diary.updatedAt)}
                     {diary.tags?.length ? ` · ${diary.tags.join(' / ')}` : ''}
                   </span>
                 </Button>
-                <div className="diary-list__actions">
+                <div className={styles.diaryListActions}>
                   <Button
                     type="default"
                     icon={<EditOutlined />}
@@ -189,6 +198,10 @@ function DiaryListPage() {
   )
 }
 
+/**
+ * 构建日记摘要文本
+ * 去除常见 Markdown 标记，生成列表页预览内容
+ */
 function buildDiarySummary(content: string): string {
   /*
    * 列表摘要去掉 Markdown 常见标记，让用户快速扫内容。
@@ -202,6 +215,10 @@ function buildDiarySummary(content: string): string {
   return summary || '没有正文预览'
 }
 
+/**
+ * 获取错误信息文本
+ * 将未知错误对象转换为可展示的用户提示
+ */
 function getErrorMessage(error: unknown): string {
   /*
    * IPC 抛错会被 Electron 序列化成 Error；这里做最小格式化，
@@ -214,6 +231,10 @@ function getErrorMessage(error: unknown): string {
   return '请确认通过 Electron 启动应用'
 }
 
+/**
+ * 获取今天日期字符串
+ * 返回 YYYY-MM-DD 格式日期
+ */
 function getTodayDateString(): string {
   const now = new Date()
   const year = now.getFullYear()
@@ -223,12 +244,16 @@ function getTodayDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+/**
+ * 格式化更新时间
+ * 将时间戳转换为列表展示的日期时间格式
+ */
 function formatUpdatedAt(timestamp: number): string {
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit',
+    minute: '2-digit'
   }).format(new Date(timestamp))
 }
 
