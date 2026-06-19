@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
 import App from './App'
-import DiaryListPage from './pages/DiaryListPage'
+import DiaryListPage from './pages/DiaryList'
 import EditorPage from './pages/EditorPage'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

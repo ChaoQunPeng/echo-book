@@ -1,13 +1,14 @@
-import { DeleteOutlined, EditOutlined, FilterOutlined, MoreOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Input, Modal } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
+import { Modal } from 'antd'
 import type { MenuProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
 import { useNavigate } from 'react-router-dom'
-import remarkGfm from 'remark-gfm'
-import type { Diary } from '../../shared/diary'
-import EchoButton from '../components/EchoButton'
+import type { Diary } from '../../../shared/diary'
+import EchoButton from '../../components/EchoButton'
+import DiaryListPanel from './DiaryListPanel'
 import styles from './DiaryListPage.module.scss'
+import DiaryPreviewPanel from './DiaryPreviewPanel'
+import type { DateFilterValue } from './types'
 
 const DEFAULT_NEW_DIARY_MARKDOWN = `# 今天的回声
 
@@ -17,8 +18,6 @@ const DEFAULT_NEW_DIARY_MARKDOWN = `# 今天的回声
 - 我当时有什么感受？
 - 明天想带着什么继续出发？
 `
-
-type DateFilterValue = 'all' | 'last7' | 'last30' | 'thisYear'
 
 const DATE_FILTER_OPTIONS: Array<{ value: DateFilterValue; label: string }> = [
   { value: 'all', label: '全部日记' },
@@ -68,32 +67,6 @@ function DiaryListPage() {
         return getDiaryDateSortValue(secondDiary) - getDiaryDateSortValue(firstDiary) || secondDiary.createdAt - firstDiary.createdAt
       })
   }, [dateFilter, diaries, searchKeyword])
-
-  const groupedDiaries = useMemo(() => {
-    /*
-     * 分组 key 使用日记日期的年月，展示 label 保持中文可读。
-     * filteredDiaries 已经排好序，因此这里按顺序追加即可。
-     */
-    const groups: Array<{ key: string; label: string; diaries: Diary[] }> = []
-
-    filteredDiaries.forEach(diary => {
-      const groupKey = formatDiaryMonthKey(diary)
-      const existingGroup = groups.find(group => group.key === groupKey)
-
-      if (existingGroup) {
-        existingGroup.diaries.push(diary)
-        return
-      }
-
-      groups.push({
-        key: groupKey,
-        label: formatDiaryMonthGroup(diary),
-        diaries: [diary]
-      })
-    })
-
-    return groups
-  }, [filteredDiaries])
 
   const selectedDiary = useMemo(() => {
     return filteredDiaries.find(diary => diary.id === selectedDiaryId) ?? null
@@ -324,169 +297,31 @@ function DiaryListPage() {
 
         {!isLoading && diaries.length > 0 ? (
           <div className={styles.diarySplitLayout}>
-            <aside className={styles.diaryListPanel}>
-              <div className={styles.diaryListToolbar}>
-                <Input
-                  allowClear
-                  variant="borderless"
-                  prefix={<SearchOutlined />}
-                  placeholder="搜索日记标题"
-                  value={searchKeyword}
-                  onChange={event => setSearchKeyword(event.target.value)}
-                />
-                <Dropdown
-                  trigger={['click']}
-                  menu={{
-                    items: DATE_FILTER_MENU_ITEMS,
-                    selectedKeys: [dateFilter],
-                    onClick: ({ key }) => setDateFilter(key as DateFilterValue)
-                  }}
-                  placement="bottomRight"
-                >
-                  <FilterOutlined
-                    className={styles.diaryDateFilterIcon}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`按创建时间筛选，当前：${currentDateFilterLabel}`}
-                    onKeyDown={event => {
-                      /*
-                       * 图标不是原生按钮，手动补齐键盘触发能力。
-                       */
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        event.currentTarget.click()
-                      }
-                    }}
-                  />
-                </Dropdown>
-              </div>
+            <DiaryListPanel
+              dateFilter={dateFilter}
+              dateFilterMenuItems={DATE_FILTER_MENU_ITEMS}
+              diaries={filteredDiaries}
+              currentDateFilterLabel={currentDateFilterLabel}
+              searchKeyword={searchKeyword}
+              selectedDiaryId={selectedDiaryId}
+              onDateFilterChange={setDateFilter}
+              onDeleteDiary={handleDeleteDiary}
+              onEditDiary={diary => navigate(`/editor/${diary.id}`)}
+              onSearchKeywordChange={setSearchKeyword}
+              onSelectDiary={setSelectedDiaryId}
+            />
 
-              <div className={styles.diaryListScrollArea}>
-                {groupedDiaries.length === 0 ? (
-                  <div className={styles.diaryListNoResult}>
-                    <h2>没有匹配的日记</h2>
-                    <p>换个标题关键词或筛选条件试试。</p>
-                  </div>
-                ) : (
-                  groupedDiaries.map(group => (
-                    <section key={group.key} className={styles.diaryListGroup}>
-                      <div className={styles.groupLabel}>{group.label}</div>
-                      <ul className={styles.diaryList}>
-                        {group.diaries.map(diary => {
-                          const isSelected = diary.id === selectedDiaryId
-
-                          return (
-                            <li
-                              key={diary.id}
-                              className={isSelected ? `${styles.diaryListItem} ${styles.diaryListItemActive}` : styles.diaryListItem}
-                              onClick={() => setSelectedDiaryId(diary.id)}
-                            >
-                              <div className={styles.diaryListActions}>
-                                <Dropdown
-                                  trigger={['click']}
-                                  placement="bottomRight"
-                                  menu={{
-                                    items: [
-                                      {
-                                        key: 'edit',
-                                        label: '编辑',
-                                        icon: <EditOutlined />
-                                      },
-                                      {
-                                        key: 'delete',
-                                        label: '删除',
-                                        danger: true,
-                                        icon: <DeleteOutlined />
-                                      }
-                                    ],
-                                    onClick: ({ key, domEvent }) => {
-                                      /*
-                                       * 菜单点击不应触发 li 的选中事件，避免操作时预览区跳动。
-                                       */
-                                      domEvent.stopPropagation()
-
-                                      if (key === 'edit') {
-                                        navigate(`/editor/${diary.id}`)
-                                        return
-                                      }
-
-                                      handleDeleteDiary(diary)
-                                    }
-                                  }}
-                                >
-                                  <Button
-                                    type="text"
-                                    shape="circle"
-                                    className={styles.diaryListActionTrigger}
-                                    icon={<MoreOutlined />}
-                                    aria-label={`${diary.title} 更多操作`}
-                                    onClick={event => event.stopPropagation()}
-                                  />
-                                </Dropdown>
-                              </div>
-                              <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
-                              <div className={`${styles.diaryListTitle}`}>{diary.title}</div>
-                              <div className={`${styles.diaryListSummary} mt-8`}>{buildDiaryMetaSummary(diary)}</div>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </section>
-                  ))
-                )}
-              </div>
-            </aside>
-
-            <section className={styles.diaryPreviewPanel} aria-label="日记内容预览">
-              {selectedDiary ? (
-                <article className={styles.diaryPreviewArticle}>
-                  <div className={styles.diaryPreviewHeader}>
-                    <p>{formatFullCreatedAt(selectedDiary.createdAt)}</p>
-                    <h2>{selectedDiary.title}</h2>
-                    <div className={styles.diaryPreviewMeta}>
-                      <span>{selectedDiary.diaryDate}</span>
-                      <span>更新：{formatUpdatedAt(selectedDiary.updatedAt)}</span>
-                      {selectedDiary.mood ? <span>心情：{selectedDiary.mood}</span> : null}
-                      {selectedDiary.tags?.length ? <span>标签：{selectedDiary.tags.join(' / ')}</span> : null}
-                    </div>
-                  </div>
-                  <div className={styles.diaryPreviewContent}>
-                    {/*
-                     * 右侧预览使用 Markdown 渲染，remark-gfm 负责表格、任务列表等 GFM 扩展。
-                     */}
-                    {isPreviewLoading ? <p>正在读取正文...</p> : null}
-                    {!isPreviewLoading && previewErrorMessage ? <p>{previewErrorMessage}</p> : null}
-                    {!isPreviewLoading && !previewErrorMessage ? (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedDiaryMarkdown || '没有正文预览'}</ReactMarkdown>
-                    ) : null}
-                  </div>
-                </article>
-              ) : (
-                <div className={styles.diaryPreviewEmpty}>
-                  <h2>选择一篇日记</h2>
-                  <p>左侧选中后，这里会展示对应内容。</p>
-                </div>
-              )}
-            </section>
+            <DiaryPreviewPanel
+              selectedDiary={selectedDiary}
+              selectedDiaryMarkdown={selectedDiaryMarkdown}
+              isPreviewLoading={isPreviewLoading}
+              previewErrorMessage={previewErrorMessage}
+            />
           </div>
         ) : null}
       </div>
     </section>
   )
-}
-
-/**
- * 构建列表元信息摘要
- * 列表不读取 Markdown 正文，只展示可由数据库索引直接提供的信息
- */
-function buildDiaryMetaSummary(diary: Diary): string {
-  const summaryParts = [
-    diary.mood ? `心情：${diary.mood}` : '',
-    diary.tags?.length ? `标签：${diary.tags.join(' / ')}` : '',
-    `更新：${formatUpdatedAt(diary.updatedAt)}`
-  ].filter(Boolean)
-
-  return summaryParts.join(' · ')
 }
 
 /**
@@ -652,34 +487,6 @@ function getDiaryDateSortValue(diary: Diary): number {
 }
 
 /**
- * 格式化日记月份分组 key
- * 返回 YYYY-MM，让同一月份的日记落入同一个分组
- */
-function formatDiaryMonthKey(diary: Diary): string {
-  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
-
-  if (diaryDateParts) {
-    return `${diaryDateParts.year}-${String(diaryDateParts.month).padStart(2, '0')}`
-  }
-
-  return formatCreatedMonthKey(diary.createdAt)
-}
-
-/**
- * 格式化日记月份分组标题
- * 用 2026·6月 这样的格式展示月份
- */
-function formatDiaryMonthGroup(diary: Diary): string {
-  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
-
-  if (diaryDateParts) {
-    return `${diaryDateParts.year}·${diaryDateParts.month}月`
-  }
-
-  return formatCreatedDateGroup(diary.createdAt)
-}
-
-/**
  * 解析日记日期字符串
  * 只接受 YYYY-MM-DD，避免 Date 解析时区差异影响月份
  */
@@ -699,71 +506,6 @@ function parseDiaryDateParts(diaryDate: string): { year: number; month: number; 
   }
 
   return { year, month, day }
-}
-
-/**
- * 格式化创建月份分组 key
- * 旧数据没有 diaryDate 时使用 createdAt 兜底
- */
-function formatCreatedMonthKey(timestamp: number): string {
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-
-  return `${year}-${month}`
-}
-
-/**
- * 格式化创建月份分组标题
- * 用中文月份展示兜底分组信息
- */
-function formatCreatedDateGroup(timestamp: number): string {
-  const date = new Date(timestamp)
-  return `${date.getFullYear()}·${date.getMonth() + 1}月`
-}
-
-/**
- * 格式化创建时间
- * 列表项只展示当天内的时间，节省左侧空间
- */
-function formatCreatedTime(timestamp: number): string {
-  const date = new Date(timestamp)
-
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`
-  // return new Intl.DateTimeFormat('zh-CN', {
-  //   month: 'numeric',
-  //   day: 'numeric',
-  //   weekday: 'short'
-  // }).format(new Date(timestamp))
-}
-
-/**
- * 格式化完整创建时间
- * 右侧预览需要展示更完整的创建时间上下文
- */
-function formatFullCreatedAt(timestamp: number): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(timestamp))
-}
-
-/**
- * 格式化更新时间
- * 将时间戳转换为列表展示的日期时间格式
- */
-function formatUpdatedAt(timestamp: number): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(timestamp))
 }
 
 export default DiaryListPage

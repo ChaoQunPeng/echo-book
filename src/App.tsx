@@ -214,8 +214,8 @@ function App() {
           <div className="ml-16 mr-16">
             <Divider />
 
-            <Button shape="round" block type="primary" size="large" icon={<EditOutlined />}>
-              <span className="ml-4">新日记</span>
+            <Button className="!pr-26" shape="round" block type="primary" size="large" icon={<EditOutlined />}>
+              <span>新日记</span>
             </Button>
           </div>
 
