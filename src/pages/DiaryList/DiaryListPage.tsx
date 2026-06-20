@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import EchoButton from '../../components/EchoButton'
+import { createDefaultDiary } from '../../utils/diaryCreation'
 import DiaryListPanel from './DiaryListPanel'
 import styles from './DiaryListPage.module.scss'
 import DiaryPreviewPanel from './DiaryPreviewPanel'
@@ -37,6 +38,7 @@ function DiaryListPage() {
   const [dateFilter, setDateFilter] = useState<DateFilterValue>('all')
   const [isLoading, setIsLoading] = useState(true)
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [isCreatingDiary, setIsCreatingDiary] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [previewErrorMessage, setPreviewErrorMessage] = useState('')
   const currentDateFilterLabel = DATE_FILTER_OPTIONS.find(option => option.value === dateFilter)?.label ?? '全部日记'
@@ -173,13 +175,25 @@ function DiaryListPage() {
     }
   }, [selectedDiary, webPreviewMarkdownById])
 
-  const handleCreateDiary = () => {
+  const handleCreateDiary = async () => {
     /*
-     * 新建入口只进入无 id 的编辑页。
-     * 真正创建记录交给 EditorPage 的保存动作，避免空日记提前落库。
+     * 创建按钮现在直接写入一条默认日记，再跳转到该日记的编辑页。
      */
+    if (isCreatingDiary) {
+      return
+    }
+
     setErrorMessage('')
-    navigate('/editor')
+    setIsCreatingDiary(true)
+
+    try {
+      const createdDiary = await createDefaultDiary()
+      navigate(`/editor/${createdDiary.id}`)
+    } catch (error) {
+      setErrorMessage(`创建日记失败：${getErrorMessage(error)}`)
+    } finally {
+      setIsCreatingDiary(false)
+    }
   }
 
   /**
@@ -238,7 +252,7 @@ function DiaryListPage() {
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
              */}
             <Empty description="还没有日记">
-              <EchoButton icon={<PlusOutlined />} onClick={handleCreateDiary}>
+              <EchoButton icon={<PlusOutlined />} loading={isCreatingDiary} onClick={handleCreateDiary}>
                 写第一篇
               </EchoButton>
             </Empty>

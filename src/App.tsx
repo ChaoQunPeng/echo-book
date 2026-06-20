@@ -6,6 +6,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
 import styles from './App.module.scss'
 import logoUrl from './assets/logo.svg'
+import { createDefaultDiary } from './utils/diaryCreation'
 
 const sidebarMenus = [
   {
@@ -23,11 +24,6 @@ const sidebarMenus = [
   //   label: '回收站',
   //   icon: DeleteOutlined
   // }
-  // {
-  //   path: '/editor',
-  //   label: '编辑页面',
-  //   icon: ReadOutlined
-  // }
 ]
 
 function App() {
@@ -35,6 +31,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
   const [settingsError, setSettingsError] = useState('')
+  const [isCreatingDiary, setIsCreatingDiary] = useState(false)
   const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
   const [isExportingBackup, setIsExportingBackup] = useState(false)
 
@@ -82,6 +79,26 @@ function App() {
 
   const handleCloseSettings = () => {
     setIsSettingsOpen(false)
+  }
+
+  const handleCreateDiary = async () => {
+    /*
+     * 新日记按钮直接落库，然后进入带 id 的编辑页。
+     */
+    if (isCreatingDiary) {
+      return
+    }
+
+    setIsCreatingDiary(true)
+
+    try {
+      const createdDiary = await createDefaultDiary()
+      navigate(`/editor/${createdDiary.id}`)
+    } catch (error) {
+      message.error(`创建日记失败：${getErrorMessage(error)}`)
+    } finally {
+      setIsCreatingDiary(false)
+    }
   }
 
   const handleOpenStorageRoot = () => {
@@ -228,7 +245,8 @@ function App() {
               block
               size="large"
               icon={<EditOutlined />}
-              onClick={() => navigate('/editor')}
+              loading={isCreatingDiary}
+              onClick={handleCreateDiary}
             >
               <span>新日记</span>
             </Button>
@@ -306,6 +324,17 @@ function App() {
       </div>
     </ConfigProvider>
   )
+}
+
+function getErrorMessage(error: unknown): string {
+  /*
+   * 统一压缩成短提示，方便直接放进 antd message。
+   */
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return '请稍后重试'
 }
 
 export default App

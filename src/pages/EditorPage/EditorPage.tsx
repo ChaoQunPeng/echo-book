@@ -5,13 +5,13 @@ import '@milkdown/crepe/theme/frame.css'
 import { Input, Select, Tag } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { DEFAULT_DIARY_MARKDOWN } from '../../../shared/defaultDiary'
 import { MOODS } from '../../../shared/moods'
 import type { TagLibraryItem } from '../../../shared/tags'
 import EchoButton from '../../components/EchoButton'
 import styles from './EditorPage.module.scss'
 import TagManagerDialog from './TagManagerDialog'
 
-const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
 const DEFAULT_TAG_COLOR = '#237804'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
 const MOOD_SELECT_OPTIONS = MOODS.map(mood => ({
@@ -25,39 +25,12 @@ type DiaryDraftFields = {
   tagsInput: string
 }
 
-const DEFAULT_EDITOR_MARKDOWN = `# 今天的回声
-
-写下今天值得被记住的片段。
-
-- 发生了什么？
-- 我当时有什么感受？
-- 明天想带着什么继续出发？
-`
-
-function readEditorDraft() {
-  /*
-   * 编辑器页面目前只在浏览器/Tauri WebView 中运行，但这里仍然判断 window，
-   * 可以避免后续引入服务端渲染、预渲染或单元测试时因为 localStorage 不存在而崩溃。
-   */
-  if (typeof window === 'undefined') {
-    return DEFAULT_EDITOR_MARKDOWN
-  }
-
-  /*
-   * 本地草稿只存正文 Markdown。
-   * Milkdown/Crepe 会把 Markdown 渲染成富文本编辑界面，因此持久化层保持轻量，
-   * 后续接入数据库或 Tauri 文件系统时，也可以直接复用这份 Markdown 字符串。
-   */
-  return window.localStorage.getItem(EDITOR_DRAFT_STORAGE_KEY) ?? DEFAULT_EDITOR_MARKDOWN
-}
-
 function EditorPage() {
   const navigate = useNavigate()
   const { diaryId } = useParams<{ diaryId: string }>()
-  const isEditing = Boolean(diaryId)
   const editorRootRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
-  const initialMarkdownRef = useRef(readEditorDraft())
+  const initialMarkdownRef = useRef(DEFAULT_DIARY_MARKDOWN)
   const latestMarkdownRef = useRef(initialMarkdownRef.current)
   const latestFieldsRef = useRef<DiaryDraftFields>({
     title: '',
@@ -68,13 +41,13 @@ function EditorPage() {
   const isAutoSavingRef = useRef(false)
   const isManualSavingRef = useRef(false)
   const [editorVersion, setEditorVersion] = useState(0)
-  const [isEditorReady, setIsEditorReady] = useState(!isEditing)
+  const [isEditorReady, setIsEditorReady] = useState(false)
   const [title, setTitle] = useState('')
   const [mood, setMood] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
-  const [saveStatus, setSaveStatus] = useState(isEditing ? '正在读取日记' : '草稿已就绪')
+  const [saveStatus, setSaveStatus] = useState('正在读取日记')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -119,21 +92,24 @@ function EditorPage() {
     let cancelled = false
 
     /*
-     * 同一个 EditorPage 负责新建和编辑。
+     * EditorPage 只编辑已经创建好的日记。
      * 路由 id 变化时重置表单和 Markdown 初始值，再用 editorVersion 触发 Crepe 重建。
      */
     if (!diaryId) {
-      initialMarkdownRef.current = readEditorDraft()
-      latestMarkdownRef.current = initialMarkdownRef.current
+      /*
+       * 正常路由只有 /editor/:diaryId。
+       * 这里保留防御分支，避免测试或异常挂载时继续请求无效 id。
+       */
+      initialMarkdownRef.current = DEFAULT_DIARY_MARKDOWN
+      latestMarkdownRef.current = DEFAULT_DIARY_MARKDOWN
       lastPersistedSnapshotRef.current = ''
       setTitle('')
       setMood('')
       setTagsInput('')
-      setLoadError('')
-      setSaveStatus('草稿已就绪')
+      setLoadError('缺少日记 id')
+      setSaveStatus('无法读取日记')
       setLastSavedAt(null)
-      setIsEditorReady(true)
-      setEditorVersion(version => version + 1)
+      setIsEditorReady(false)
       return () => {
         cancelled = true
       }
@@ -142,6 +118,18 @@ function EditorPage() {
     setIsEditorReady(false)
     setLoadError('')
     setSaveStatus('正在读取日记')
+
+    if (!window.diaryAPI) {
+      /*
+       * 真实日记正文需要通过 Electron preload API 读取。
+       * Web 预览环境没有这条 IPC 链路，因此直接给出启动提示。
+       */
+      setLoadError('请通过 Electron 启动应用后编辑日记')
+      setSaveStatus('读取失败')
+      return () => {
+        cancelled = true
+      }
+    }
 
     window.diaryAPI
       .getDiaryById(diaryId)
@@ -156,7 +144,7 @@ function EditorPage() {
           return
         }
 
-        const loadedMarkdown = diary.markdown || DEFAULT_EDITOR_MARKDOWN
+        const loadedMarkdown = diary.markdown || DEFAULT_DIARY_MARKDOWN
         const loadedTagsInput = diary.tags?.join(', ') ?? ''
 
         initialMarkdownRef.current = loadedMarkdown
@@ -248,25 +236,19 @@ function EditorPage() {
 
     /*
      * markdownUpdated 会在文档内容变化后给出最新 Markdown。
-     * 这里先做本地自动保存，保证用户刷新页面或切换路由后还能找回未提交的正文。
+     * 创建动作已经提前落库，因此这里只负责标记已有日记是否有未保存更改。
      */
     crepe.on(listener => {
       listener.markdownUpdated((_, markdown) => {
         latestMarkdownRef.current = markdown
 
-        if (isEditing) {
-          const currentSnapshot = buildDiarySnapshot({
-            ...latestFieldsRef.current,
-            markdown
-          })
+        const currentSnapshot = buildDiarySnapshot({
+          ...latestFieldsRef.current,
+          markdown
+        })
 
-          if (currentSnapshot !== lastPersistedSnapshotRef.current) {
-            setSaveStatus('有未保存更改')
-          }
-        } else {
-          window.localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, markdown)
-          setSaveStatus('草稿已自动保存')
-          setLastSavedAt(Date.now())
+        if (currentSnapshot !== lastPersistedSnapshotRef.current) {
+          setSaveStatus('有未保存更改')
         }
       })
     })
@@ -277,7 +259,7 @@ function EditorPage() {
       .create()
       .then(() => {
         if (!disposed) {
-          setSaveStatus(isEditing ? '日记已载入' : '草稿已就绪')
+          setSaveStatus('日记已载入')
         }
       })
       .catch(() => {
@@ -296,10 +278,10 @@ function EditorPage() {
        */
       void crepe.destroy()
     }
-  }, [editorVersion, isEditorReady, isEditing])
+  }, [editorVersion, isEditorReady])
 
   useEffect(() => {
-    if (!isEditing || !diaryId || !isEditorReady || loadError) {
+    if (!diaryId || !isEditorReady || loadError) {
       return
     }
 
@@ -371,22 +353,27 @@ function EditorPage() {
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [diaryId, isEditing, isEditorReady, loadError])
+  }, [diaryId, isEditorReady, loadError])
 
   const handleSaveDiary = async () => {
     /*
      * 提交前从 Crepe 读取最新 Markdown。
-     * 自动保存只保护新建草稿，真正创建/更新仍然通过主进程 service 校验。
+     * 创建动作已经在入口完成，这里只负责更新当前日记。
      */
     const markdown = crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
     const normalizedTitle = title.trim()
 
     console.info('Diary save button clicked:', {
-      isEditing,
+      diaryId,
       hasDiaryAPI: Boolean(window.diaryAPI),
       titleLength: normalizedTitle.length,
       markdownLength: markdown.length
     })
+
+    if (!diaryId) {
+      setSaveStatus('缺少日记 id')
+      return
+    }
 
     if (!normalizedTitle) {
       setSaveStatus('请填写标题')
@@ -400,7 +387,7 @@ function EditorPage() {
 
     setIsSaving(true)
     isManualSavingRef.current = true
-    setSaveStatus(isEditing ? '正在更新' : '正在创建')
+    setSaveStatus('正在保存')
 
     try {
       if (!window.diaryAPI) {
@@ -411,28 +398,13 @@ function EditorPage() {
         throw new Error('Electron diary API is unavailable.')
       }
 
-      let savedDiaryId = diaryId
-      let savedUpdatedAt = Date.now()
-
-      if (diaryId) {
-        const updatedDiary = await window.diaryAPI.updateDiary({
-          id: diaryId,
-          title: normalizedTitle,
-          markdown,
-          mood: mood.trim() ? mood : null,
-          tags: parseTags(tagsInput)
-        })
-        savedUpdatedAt = updatedDiary.updatedAt
-      } else {
-        const createdDiary = await window.diaryAPI.createDiary({
-          title: normalizedTitle,
-          markdown,
-          mood: mood.trim() || undefined,
-          tags: parseTags(tagsInput)
-        })
-        savedDiaryId = createdDiary.id
-        savedUpdatedAt = createdDiary.updatedAt
-      }
+      const updatedDiary = await window.diaryAPI.updateDiary({
+        id: diaryId,
+        title: normalizedTitle,
+        markdown,
+        mood: mood.trim() ? mood : null,
+        tags: parseTags(tagsInput)
+      })
 
       const savedSnapshot = buildDiarySnapshot({
         title: normalizedTitle,
@@ -441,7 +413,6 @@ function EditorPage() {
         markdown
       })
 
-      window.localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY)
       lastPersistedSnapshotRef.current = savedSnapshot
 
       const latestSnapshot = buildDiarySnapshot({
@@ -450,15 +421,9 @@ function EditorPage() {
       })
       const isStillCurrent = latestSnapshot === savedSnapshot
       setSaveStatus('已保存')
-      setLastSavedAt(savedUpdatedAt)
+      setLastSavedAt(updatedDiary.updatedAt)
 
-      if (!diaryId && savedDiaryId) {
-        /*
-         * 新建保存后仍停留在编辑页，只替换成带 id 的编辑地址。
-         * 这样后续再次保存会走更新逻辑，不会重复创建日记。
-         */
-        navigate(`/editor/${savedDiaryId}`, { replace: true })
-      } else if (!isStillCurrent) {
+      if (!isStillCurrent) {
         setSaveStatus('有未保存更改')
       }
     } catch (error) {
@@ -502,25 +467,22 @@ function EditorPage() {
 
   const markExistingDiaryChanged = () => {
     /*
-     * 标题、心情和标签也参与自动保存；新建日记仍保持正文草稿本地保存。
+     * 标题、心情和标签也参与自动保存。
      * diaryDate 暂时不在界面编辑，由主进程按 createdAt 自动维护。
      */
-    if (isEditing) {
-      setSaveStatus('有未保存更改')
-    }
+    setSaveStatus('有未保存更改')
   }
 
   /*
-   * 编辑页负责承载日记正文的新增和修改体验。
-   * 这里先保持为独立路由页面，后续如果需要区分“新建”和“编辑已有日记”，
-   * 可以继续扩展为 `/editor`、`/editor/:diaryId` 这类更细的路由结构。
+   * 编辑页只承载已有日记的修改体验。
+   * 新日记由入口按钮先创建记录，再携带 id 跳转到这里。
    */
   return (
     <section className={styles.editorPage}>
       <header className={styles.editorPageHeader}>
         {/* <div className={styles.editorPageTitleGroup}>
           <p className={styles.editorPageEyebrow}>Echo Book</p>
-          <h1>{isEditing ? '编辑日记' : '新建日记'}</h1>
+          <h1>编辑日记</h1>
         </div> */}
         <div className={styles.editorPageActions}>
           <span className={styles.editorPageStatus} aria-live="polite">
@@ -531,7 +493,7 @@ function EditorPage() {
             返回列表
           </EchoButton>
           <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
-            {isEditing ? '保存修改' : '创建日记'}
+            保存
           </EchoButton>
         </div>
       </header>
@@ -620,7 +582,7 @@ function EditorPage() {
           返回列表
         </EchoButton>
         <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
-          {isEditing ? '保存修改' : '创建日记'}
+          保存
         </EchoButton>
       </div>
     </section>
