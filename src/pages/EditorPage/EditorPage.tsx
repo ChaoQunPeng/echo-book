@@ -25,9 +25,19 @@ type DiaryDraftFields = {
   tagsInput: string
 }
 
-function EditorPage() {
+type EditorPageProps = {
+  diaryId?: string
+  embedded?: boolean
+  className?: string
+}
+
+function EditorPage({ diaryId: providedDiaryId, embedded = false, className = '' }: EditorPageProps) {
   const navigate = useNavigate()
-  const { diaryId } = useParams<{ diaryId: string }>()
+  const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
+  /*
+   * 路由页面从 URL 读取 id；列表页内嵌时由父组件直接传入 id。
+   */
+  const diaryId = providedDiaryId ?? routeDiaryId
   const editorRootRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
   const initialMarkdownRef = useRef(DEFAULT_DIARY_MARKDOWN)
@@ -499,7 +509,7 @@ function EditorPage() {
    * 新日记由入口按钮先创建记录，再携带 id 跳转到这里。
    */
   return (
-    <section className={styles.editorPage}>
+    <section className={className ? `${styles.editorPage} ${className}` : styles.editorPage}>
       <header className={styles.editorPageHeader}>
         {/* <div className={styles.editorPageTitleGroup}>
           <p className={styles.editorPageEyebrow}>Echo Book</p>
@@ -510,9 +520,14 @@ function EditorPage() {
             {saveStatus}
             {lastSavedAt ? ` · 更新：${formatLastSavedAt(lastSavedAt)}` : ''}
           </span>
-          <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
-            返回列表
-          </EchoButton>
+          {/*
+           * 内嵌在列表页时不显示返回入口，避免右侧编辑器影响左侧列表导航。
+           */}
+          {!embedded ? (
+            <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+              返回列表
+            </EchoButton>
+          ) : null}
           <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
             保存
           </EchoButton>
@@ -598,14 +613,19 @@ function EditorPage() {
         {isEditorReady ? <div ref={editorRootRef} className={styles.editorPageMilkdown} /> : null}
       </div>
 
-      <div className={styles.editorPageFooterActions}>
-        <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
-          返回列表
-        </EchoButton>
-        <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
-          保存
-        </EchoButton>
-      </div>
+      {/*
+       * 独立路由保留底部操作区，列表内嵌场景只保留顶部保存按钮。
+       */}
+      {!embedded ? (
+        <div className={styles.editorPageFooterActions}>
+          <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
+            返回列表
+          </EchoButton>
+          <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
+            保存
+          </EchoButton>
+        </div>
+      ) : null}
     </section>
   )
 }

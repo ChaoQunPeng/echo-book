@@ -1,10 +1,10 @@
-import { ClockCircleOutlined } from '@ant-design/icons'
 import { Card, Empty, Tag, Timeline } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import { formatMoodLabel } from '../../../shared/moods'
+import PageHeader from '../../components/PageHeader'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import styles from './TimelinePage.module.scss'
 
@@ -118,18 +118,12 @@ function TimelinePage() {
   }, [])
 
   const handleOpenDiary = (diaryId: string) => {
-    navigate(`/editor/${diaryId}`)
+    navigate(`/preview/${diaryId}`)
   }
 
   return (
     <section className={styles.timelinePage}>
-      <div className={styles.timelineHeader}>
-        <div>
-          <p>Timeline</p>
-          <h1>时光</h1>
-        </div>
-        <span>{diaries.length} 篇</span>
-      </div>
+      <PageHeader eyebrow="Timeline" title="时光" extra={`${diaries.length} 篇`} />
 
       {errorMessage ? <p className={styles.timelineError}>{errorMessage}</p> : null}
 
@@ -206,8 +200,8 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       {diary.tags?.length ? (
         <div className={styles.timelineTags}>
           {diary.tags.map(tag => (
-            <Tag key={tag} bordered={false} color="green">
-              {tag}
+            <Tag key={tag} variant="outlined" color="green">
+              #{tag}
             </Tag>
           ))}
         </div>

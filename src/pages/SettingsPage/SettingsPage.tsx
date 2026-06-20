@@ -2,6 +2,7 @@ import { CopyOutlined, DatabaseOutlined, ExportOutlined, FolderOpenOutlined } fr
 import { Alert, App as AntdApp, Button, Card, Form, Input, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import type { StorageInfo } from '../../../shared/settings'
+import PageHeader from '../../components/PageHeader'
 import styles from './SettingsPage.module.scss'
 
 function SettingsPage() {
@@ -128,70 +129,74 @@ function SettingsPage() {
 
   return (
     <section className={styles.settingsPage}>
-      <div className={styles.settingsContent}>
-        <Card
-          title={
-            <Space size={8}>
-              <FolderOpenOutlined />
-              存储位置
-            </Space>
-          }
-          extra={
-            <Button
-              type="primary"
-              icon={<FolderOpenOutlined />}
-              loading={isOpeningStorageRoot}
-              disabled={!storageInfo || Boolean(settingsError)}
-              onClick={handleOpenStorageRoot}
-            >
-              打开存储目录
-            </Button>
-          }
-        >
-          {settingsError ? <Alert className={styles.settingsAlert} message={settingsError} type="error" showIcon /> : null}
-          <Form layout="vertical">
-            {/*
-             * Input 保持 readOnly，便于用户选中复制路径。
-             */}
-            <Form.Item label="日记文件目录">
-              <Space.Compact style={{ width: '100%' }}>
-                <Input readOnly value={storageInfo?.notesPath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
-                <Button
-                  icon={<CopyOutlined />}
-                  disabled={!storageInfo?.notesPath}
-                  onClick={() => handleCopyPath(storageInfo?.notesPath, '日记文件目录')}
-                >
-                  复制
-                </Button>
-              </Space.Compact>
-            </Form.Item>
-            <Form.Item label="数据库文件">
-              <Space.Compact style={{ width: '100%' }}>
-                <Input readOnly value={storageInfo?.databasePath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
-                <Button
-                  icon={<CopyOutlined />}
-                  disabled={!storageInfo?.databasePath}
-                  onClick={() => handleCopyPath(storageInfo?.databasePath, '数据库文件')}
-                >
-                  复制
-                </Button>
-              </Space.Compact>
-            </Form.Item>
-          </Form>
-        </Card>
+      <PageHeader eyebrow="Settings" title="设置" />
 
-        <Card
-          title={
-            <Space size={8}>
-              <DatabaseOutlined />
-              数据管理
-            </Space>
-          }
-        >
-          <Button type="primary" icon={<ExportOutlined />} loading={isExportingBackup} onClick={handleExportBackup}>
-            导出备份
-          </Button>
-        </Card>
+      <div className={styles.settingsScrollArea}>
+        <div className={styles.settingsContent}>
+          <Card
+            title={
+              <Space size={8}>
+                <FolderOpenOutlined />
+                存储位置
+              </Space>
+            }
+            extra={
+              <Button
+                type="primary"
+                icon={<FolderOpenOutlined />}
+                loading={isOpeningStorageRoot}
+                disabled={!storageInfo || Boolean(settingsError)}
+                onClick={handleOpenStorageRoot}
+              >
+                打开存储目录
+              </Button>
+            }
+          >
+            {settingsError ? <Alert className={styles.settingsAlert} message={settingsError} type="error" showIcon /> : null}
+            <Form layout="vertical">
+              {/*
+               * Input 保持 readOnly，便于用户选中复制路径。
+               */}
+              <Form.Item label="日记文件目录">
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input readOnly value={storageInfo?.notesPath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
+                  <Button
+                    icon={<CopyOutlined />}
+                    disabled={!storageInfo?.notesPath}
+                    onClick={() => handleCopyPath(storageInfo?.notesPath, '日记文件目录')}
+                  >
+                    复制
+                  </Button>
+                </Space.Compact>
+              </Form.Item>
+              <Form.Item label="数据库文件">
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input readOnly value={storageInfo?.databasePath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
+                  <Button
+                    icon={<CopyOutlined />}
+                    disabled={!storageInfo?.databasePath}
+                    onClick={() => handleCopyPath(storageInfo?.databasePath, '数据库文件')}
+                  >
+                    复制
+                  </Button>
+                </Space.Compact>
+              </Form.Item>
+            </Form>
+          </Card>
+
+          <Card
+            title={
+              <Space size={8}>
+                <DatabaseOutlined />
+                数据管理
+              </Space>
+            }
+          >
+            <Button type="primary" icon={<ExportOutlined />} loading={isExportingBackup} onClick={handleExportBackup}>
+              导出备份
+            </Button>
+          </Card>
+        </div>
       </div>
     </section>
   )

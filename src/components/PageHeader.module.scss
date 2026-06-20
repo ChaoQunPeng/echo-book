@@ -1,0 +1,33 @@
+/*
+ * 通用页面标题栏，和时光页原有视觉保持一致。
+ */
+.pageHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 30px 48px 18px;
+  border-bottom: 1px solid rgba(15, 82, 56, 0.08);
+}
+
+.pageHeader p {
+  margin: 0 0 4px;
+  color: var(--echo-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  color: var(--echo-color-text);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.pageHeader span {
+  color: rgba(25, 28, 29, 0.52);
+  font-size: 13px;
+}

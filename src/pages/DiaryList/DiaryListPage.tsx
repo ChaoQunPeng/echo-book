@@ -7,9 +7,9 @@ import type { Diary } from '../../../shared/diary'
 import EchoButton from '../../components/EchoButton'
 import { createDefaultDiary } from '../../utils/diaryCreation'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
+import EditorPage from '../EditorPage'
 import DiaryListPanel from './DiaryListPanel'
 import styles from './DiaryListPage.module.scss'
-import DiaryPreviewPanel from './DiaryPreviewPanel'
 import type { DateFilterValue } from './types'
 
 const DATE_FILTER_OPTIONS: Array<{ value: DateFilterValue; label: string }> = [
@@ -32,15 +32,11 @@ function DiaryListPage() {
   const { modal } = AntdApp.useApp()
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [selectedDiaryId, setSelectedDiaryId] = useState('')
-  const [selectedDiaryMarkdown, setSelectedDiaryMarkdown] = useState('')
-  const [webPreviewMarkdownById, setWebPreviewMarkdownById] = useState<Record<string, string>>({})
   const [searchKeyword, setSearchKeyword] = useState('')
   const [dateFilter, setDateFilter] = useState<DateFilterValue>('all')
   const [isLoading, setIsLoading] = useState(true)
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isCreatingDiary, setIsCreatingDiary] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [previewErrorMessage, setPreviewErrorMessage] = useState('')
   const currentDateFilterLabel = DATE_FILTER_OPTIONS.find(option => option.value === dateFilter)?.label ?? '全部日记'
 
   const filteredDiaries = useMemo(() => {
@@ -75,11 +71,10 @@ function DiaryListPage() {
       if (!window.diaryAPI) {
         /*
          * 纯 Web 调试环境没有 Electron preload API。
-         * 这里给一组内存示例数据，让布局、搜索和预览都能正常展示。
+         * 这里给一组内存示例数据，让布局和搜索都能正常展示。
          */
         const previewData = buildWebPreviewData()
         setDiaries(previewData.diaries)
-        setWebPreviewMarkdownById(previewData.markdownById)
         return
       }
 
@@ -89,7 +84,6 @@ function DiaryListPage() {
        */
       const diaryList = await window.diaryAPI.getDiaryList({ limit: 100 })
       setDiaries(diaryList)
-      setWebPreviewMarkdownById({})
     } catch (error) {
       console.error('Failed to load diary list:', error)
       setErrorMessage(`读取日记列表失败：${getErrorMessage(error)}`)
@@ -105,7 +99,7 @@ function DiaryListPage() {
   useEffect(() => {
     /*
      * 搜索或筛选后如果当前选中项不可见，自动选中第一条结果。
-     * 没有结果时清空右侧预览，避免展示和左侧列表不一致的内容。
+     * 没有结果时清空右侧编辑器，避免展示和左侧列表不一致的内容。
      */
     setSelectedDiaryId(currentDiaryId => {
       if (filteredDiaries.length === 0) {
@@ -115,65 +109,6 @@ function DiaryListPage() {
       return filteredDiaries.some(diary => diary.id === currentDiaryId) ? currentDiaryId : filteredDiaries[0].id
     })
   }, [filteredDiaries])
-
-  useEffect(() => {
-    let cancelled = false
-
-    if (!selectedDiary) {
-      setSelectedDiaryMarkdown('')
-      setPreviewErrorMessage('')
-      setIsPreviewLoading(false)
-      return () => {
-        cancelled = true
-      }
-    }
-
-    setPreviewErrorMessage('')
-
-    if (!window.diaryAPI) {
-      /*
-       * Web 预览没有真实 Markdown 文件，正文从内存映射读取。
-       * Diary 列表对象仍然只保存元信息，不携带正文。
-       */
-      setSelectedDiaryMarkdown(webPreviewMarkdownById[selectedDiary.id] ?? '')
-      setIsPreviewLoading(false)
-      return () => {
-        cancelled = true
-      }
-    }
-
-    setIsPreviewLoading(true)
-    setSelectedDiaryMarkdown('')
-
-    window.diaryAPI
-      .getDiaryById(selectedDiary.id)
-      .then(diary => {
-        if (cancelled) {
-          return
-        }
-
-        if (!diary) {
-          setPreviewErrorMessage('没有找到这篇日记')
-          return
-        }
-
-        setSelectedDiaryMarkdown(diary.markdown)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPreviewErrorMessage('读取日记正文失败')
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsPreviewLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedDiary, webPreviewMarkdownById])
 
   const handleCreateDiary = async () => {
     /*
@@ -214,15 +149,10 @@ function DiaryListPage() {
         try {
           if (!window.diaryAPI) {
             /*
-             * Web 预览数据只存在于 React state。
+             * Web 示例数据只存在于 React state。
              * 删除时直接从当前列表移除，避免调用 Electron IPC。
              */
             setDiaries(currentDiaries => currentDiaries.filter(currentDiary => currentDiary.id !== diary.id))
-            setWebPreviewMarkdownById(currentMarkdownById => {
-              const nextMarkdownById = { ...currentMarkdownById }
-              delete nextMarkdownById[diary.id]
-              return nextMarkdownById
-            })
             return
           }
 
@@ -275,12 +205,16 @@ function DiaryListPage() {
               onSelectDiary={setSelectedDiaryId}
             />
 
-            <DiaryPreviewPanel
-              selectedDiary={selectedDiary}
-              selectedDiaryMarkdown={selectedDiaryMarkdown}
-              isPreviewLoading={isPreviewLoading}
-              previewErrorMessage={previewErrorMessage}
-            />
+            {selectedDiary ? (
+              /*
+               * 右侧直接渲染 EditorPage，选中左侧条目后即可编辑当前日记。
+               */
+              <EditorPage className={styles.diaryEditorPanel} diaryId={selectedDiary.id} embedded />
+            ) : (
+              <div className={styles.diaryEditorEmpty}>
+                <Empty description="左侧选中后，这里会展示编辑器。" />
+              </div>
+            )}
           </div>
         ) : null}
       </div>

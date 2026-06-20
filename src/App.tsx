@@ -1,4 +1,4 @@
-import { ClockCircleOutlined, EditOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
+import { EditOutlined, FieldTimeOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button, ConfigProvider, Divider } from 'antd'
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -15,7 +15,7 @@ const sidebarMenus = [
   {
     path: '/timeline',
     label: '时光',
-    icon: ClockCircleOutlined
+    icon: FieldTimeOutlined
   },
   {
     path: '/settings',
