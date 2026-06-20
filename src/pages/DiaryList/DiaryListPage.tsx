@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Empty, Modal } from 'antd'
+import { App as AntdApp, Empty } from 'antd'
 import type { MenuProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -30,6 +30,7 @@ const WEB_PREVIEW_DIARY_ID_PREFIX = 'web-preview-diary'
 
 function DiaryListPage() {
   const navigate = useNavigate()
+  const { modal } = AntdApp.useApp()
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [selectedDiaryId, setSelectedDiaryId] = useState('')
   const [selectedDiaryMarkdown, setSelectedDiaryMarkdown] = useState('')
@@ -202,9 +203,9 @@ function DiaryListPage() {
    */
   const handleDeleteDiary = (diary: Diary) => {
     /*
-     * 删除当前走软删除，使用 antd 确认弹窗承载二次确认和按钮样式。
+     * 删除当前走软删除，使用 App 上下文里的 modal 承载主题和二次确认。
      */
-    Modal.confirm({
+    modal.confirm({
       title: '删除日记',
       content: `确认删除「${diary.title}」吗？`,
       okText: '删除',
