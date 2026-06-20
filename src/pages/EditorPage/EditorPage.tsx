@@ -2,10 +2,11 @@ import { ArrowLeftOutlined, SaveOutlined, TagsOutlined } from '@ant-design/icons
 import { Crepe, CrepeFeature } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
-import { Input, Select, Tag } from 'antd'
+import { Button, Input, Select, Tag } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DEFAULT_DIARY_MARKDOWN } from '../../../shared/defaultDiary'
+import type { Diary } from '../../../shared/diary'
 import { MOODS } from '../../../shared/moods'
 import type { TagLibraryItem } from '../../../shared/tags'
 import EchoButton from '../../components/EchoButton'
@@ -29,9 +30,10 @@ type EditorPageProps = {
   diaryId?: string
   embedded?: boolean
   className?: string
+  onDiarySaved?: (diary: Diary) => void
 }
 
-function EditorPage({ diaryId: providedDiaryId, embedded = false, className = '' }: EditorPageProps) {
+function EditorPage({ diaryId: providedDiaryId, embedded = false, className = '', onDiarySaved }: EditorPageProps) {
   const navigate = useNavigate()
   const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
   /*
@@ -349,6 +351,10 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         })
 
         lastPersistedSnapshotRef.current = snapshot
+        /*
+         * 通知父级刷新列表元数据，标题、心情、标签和更新时间会立即同步到左侧列表。
+         */
+        onDiarySaved?.(updatedDiary)
 
         const latestSnapshot = buildDiarySnapshot({
           ...latestFieldsRef.current,
@@ -445,6 +451,10 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       })
 
       lastPersistedSnapshotRef.current = savedSnapshot
+      /*
+       * 手动保存成功后同步外层列表，避免左侧仍显示旧标题。
+       */
+      onDiarySaved?.(updatedDiary)
 
       const latestSnapshot = buildDiarySnapshot({
         ...latestFieldsRef.current,
@@ -524,9 +534,9 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
            * 内嵌在列表页时不显示返回入口，避免右侧编辑器影响左侧列表导航。
            */}
           {!embedded ? (
-            <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-              返回列表
-            </EchoButton>
+            <Button type="text" onClick={() => navigate(-1)}>
+              <ArrowLeftOutlined /> 返回
+            </Button>
           ) : null}
           <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
             保存

@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import DiaryListPage from './pages/DiaryList'
+import DiaryPreviewPage from './pages/DiaryPreviewPage'
 import EditorPage from './pages/EditorPage'
 import SettingsPage from './pages/SettingsPage'
 import TimelinePage from './pages/TimelinePage'
@@ -26,7 +27,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
            * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
           */}
           <Route path="list" element={<DiaryListPage />} />
-          {/* 时光页只负责浏览和回顾历史记录，打开日记时进入编辑页。 */}
+          {/* 时光页只负责浏览和回顾历史记录，打开日记时进入内容页。 */}
           <Route path="timeline" element={<TimelinePage />} />
           {/*
            * 设置页独立成路由，便于后续继续加入更多设置分组。
@@ -37,8 +38,8 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
            * 新建入口会先创建日记，再使用返回的 id 进入这里。
            */}
           <Route path="editor/:diaryId" element={<EditorPage />} />
-          {/* 历史预览入口直接展示 EditorPage，避免再进入只读 DiaryPreview。 */}
-          <Route path="preview/:diaryId" element={<EditorPage />} />
+          {/* 内容页复用 DiaryPreviewPage，按 id 展示单篇日记。 */}
+          <Route path="preview/:diaryId" element={<DiaryPreviewPage />} />
           {/*
            * 兜底路由用于处理输入错误或历史遗留的未知路径。
            * 统一回到默认列表页，可以保证 App 布局和主内容区始终有内容展示。

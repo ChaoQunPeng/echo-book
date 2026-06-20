@@ -1,7 +1,7 @@
 import { PlusOutlined } from '@ant-design/icons'
 import { App as AntdApp, Empty } from 'antd'
 import type { MenuProps } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import EchoButton from '../../components/EchoButton'
@@ -165,6 +165,13 @@ function DiaryListPage() {
     })
   }
 
+  const handleDiarySaved = useCallback((updatedDiary: Diary) => {
+    /*
+     * 右侧编辑器保存成功后，直接替换左侧列表中的同一条日记元数据。
+     */
+    setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
+  }, [])
+
   /*
    * 日记列表页是应用打开后的默认页面。
    * 列表页只负责查询、跳转和删除，具体正文编辑留给 EditorPage 处理。
@@ -209,7 +216,7 @@ function DiaryListPage() {
               /*
                * 右侧直接渲染 EditorPage，选中左侧条目后即可编辑当前日记。
                */
-              <EditorPage className={styles.diaryEditorPanel} diaryId={selectedDiary.id} embedded />
+              <EditorPage className={styles.diaryEditorPanel} diaryId={selectedDiary.id} embedded onDiarySaved={handleDiarySaved} />
             ) : (
               <div className={styles.diaryEditorEmpty}>
                 <Empty description="左侧选中后，这里会展示编辑器。" />

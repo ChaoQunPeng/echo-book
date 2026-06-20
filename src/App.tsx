@@ -8,14 +8,14 @@ import { createDefaultDiary } from './utils/diaryCreation'
 
 const sidebarMenus = [
   {
-    path: '/list',
-    label: '我的日记',
-    icon: ReadOutlined
-  },
-  {
     path: '/timeline',
     label: '时光',
     icon: FieldTimeOutlined
+  },
+  {
+    path: '/list',
+    label: '日记',
+    icon: ReadOutlined
   },
   {
     path: '/settings',
