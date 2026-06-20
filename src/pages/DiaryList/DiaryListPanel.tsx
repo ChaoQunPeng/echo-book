@@ -4,6 +4,7 @@ import type { MenuProps } from 'antd'
 import type { KeyboardEvent } from 'react'
 import { useMemo } from 'react'
 import type { Diary } from '../../../shared/diary'
+import { formatMoodLabel } from '../../../shared/moods'
 import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
 
@@ -183,7 +184,7 @@ function DiaryListPanel({
  */
 function buildDiaryMetaSummary(diary: Diary): string {
   const summaryParts = [
-    diary.mood ? `心情：${diary.mood}` : '',
+    diary.mood ? `心情：${formatMoodLabel(diary.mood)}` : '',
     diary.tags?.length ? `标签：${diary.tags.join(' / ')}` : '',
     `更新：${formatUpdatedAt(diary.updatedAt)}`
   ].filter(Boolean)
@@ -196,12 +197,9 @@ function buildDiaryMetaSummary(diary: Diary): string {
  * 返回 YYYY-MM，让同一月份的日记落入同一个分组
  */
 function formatDiaryMonthKey(diary: Diary): string {
-  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
-
-  if (diaryDateParts) {
-    return `${diaryDateParts.year}-${String(diaryDateParts.month).padStart(2, '0')}`
-  }
-
+  /*
+   * diaryDate 暂时不在界面使用，列表分组直接跟随创建时间。
+   */
   return formatCreatedMonthKey(diary.createdAt)
 }
 
@@ -210,40 +208,15 @@ function formatDiaryMonthKey(diary: Diary): string {
  * 用 2026·6月 这样的格式展示月份
  */
 function formatDiaryMonthGroup(diary: Diary): string {
-  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
-
-  if (diaryDateParts) {
-    return `${diaryDateParts.year}·${diaryDateParts.month}月`
-  }
-
+  /*
+   * 分组标题和分组 key 使用同一时间口径，避免同一条日记被显示到不同月份。
+   */
   return formatCreatedDateGroup(diary.createdAt)
 }
 
 /**
- * 解析日记日期字符串
- * 只接受 YYYY-MM-DD，避免 Date 解析时区差异影响月份
- */
-function parseDiaryDateParts(diaryDate: string): { year: number; month: number; day: number } | null {
-  const matchedDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(diaryDate)
-
-  if (!matchedDate) {
-    return null
-  }
-
-  const year = Number(matchedDate[1])
-  const month = Number(matchedDate[2])
-  const day = Number(matchedDate[3])
-
-  if (!Number.isInteger(year) || month < 1 || month > 12 || day < 1 || day > 31) {
-    return null
-  }
-
-  return { year, month, day }
-}
-
-/**
  * 格式化创建月份分组 key
- * 旧数据没有 diaryDate 时使用 createdAt 兜底
+ * 使用 createdAt 生成稳定分组 key
  */
 function formatCreatedMonthKey(timestamp: number): string {
   const date = new Date(timestamp)

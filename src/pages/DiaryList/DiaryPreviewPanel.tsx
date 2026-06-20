@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../../shared/diary'
+import { formatMoodLabel } from '../../../shared/moods'
 import styles from './DiaryListPage.module.scss'
 
 type DiaryPreviewPanelProps = {
@@ -24,9 +25,8 @@ function DiaryPreviewPanel({
             <p>{formatFullCreatedAt(selectedDiary.createdAt)}</p>
             <h2>{selectedDiary.title}</h2>
             <div className={styles.diaryPreviewMeta}>
-              <span>{selectedDiary.diaryDate}</span>
               <span>更新：{formatUpdatedAt(selectedDiary.updatedAt)}</span>
-              {selectedDiary.mood ? <span>心情：{selectedDiary.mood}</span> : null}
+              {selectedDiary.mood ? <span>心情：{formatMoodLabel(selectedDiary.mood)}</span> : null}
               {selectedDiary.tags?.length ? <span>标签：{selectedDiary.tags.join(' / ')}</span> : null}
             </div>
           </div>

@@ -33,9 +33,11 @@ export class DiaryService {
     const id = randomUUID();
     const title = normalizeTitle(input.title);
     const markdown = normalizeMarkdown(input.markdown);
-    const diaryDate = input.diaryDate
-      ? normalizeDate(input.diaryDate, "diaryDate")
-      : getTodayDateString();
+    /*
+     * diaryDate 暂时不由界面填写，统一取 createdAt 的本地日期。
+     * 这样数据库里的日期字段始终和创建时间保持一致。
+     */
+    const diaryDate = formatTimestampDate(now);
     const filepath = generateFilePath(now, id);
 
     writeDiaryFile(filepath, markdown);
@@ -77,10 +79,10 @@ export class DiaryService {
     const updatedDiary = this.diaryRepository.updateDiary({
       id,
       title: input.title === undefined ? undefined : normalizeTitle(input.title),
-      diaryDate:
-        input.diaryDate === undefined
-          ? undefined
-          : normalizeDate(input.diaryDate, "diaryDate"),
+      /*
+       * 更新旧日记时也按 createdAt 回填 diaryDate，避免历史入口传入不同日期。
+       */
+      diaryDate: formatTimestampDate(existingDiary.createdAt),
       tags: input.tags === undefined ? undefined : normalizeTags(input.tags),
       mood:
         input.mood === undefined
@@ -245,11 +247,11 @@ function normalizeTags(tags: string[] | undefined): string[] {
  * SQLite 存储 diary_date TEXT，不存 Date 对象，这样 renderer 做日历分组时无需处理
  * UTC 日期偏移问题。
  */
-function getTodayDateString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+function formatTimestampDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }

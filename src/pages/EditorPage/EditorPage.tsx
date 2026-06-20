@@ -2,20 +2,22 @@ import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
 import { Crepe, CrepeFeature } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
-import { DatePicker, Input } from 'antd'
-import dayjs from 'dayjs'
+import { Input, Select } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { MOODS } from '../../../shared/moods'
 import EchoButton from '../../components/EchoButton'
 import styles from './EditorPage.module.scss'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
-const DIARY_DATE_FORMAT = 'YYYY-MM-DD'
+const MOOD_SELECT_OPTIONS = MOODS.map(mood => ({
+  value: mood.name,
+  label: `${mood.emoji} ${mood.name}`
+}))
 
 type DiaryDraftFields = {
   title: string
-  diaryDate: string
   mood: string
   tagsInput: string
 }
@@ -56,7 +58,6 @@ function EditorPage() {
   const latestMarkdownRef = useRef(initialMarkdownRef.current)
   const latestFieldsRef = useRef<DiaryDraftFields>({
     title: '',
-    diaryDate: getTodayDateString(),
     mood: '',
     tagsInput: ''
   })
@@ -66,10 +67,10 @@ function EditorPage() {
   const [editorVersion, setEditorVersion] = useState(0)
   const [isEditorReady, setIsEditorReady] = useState(!isEditing)
   const [title, setTitle] = useState('')
-  const [diaryDate, setDiaryDate] = useState(getTodayDateString())
   const [mood, setMood] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [saveStatus, setSaveStatus] = useState(isEditing ? '正在读取日记' : '草稿已就绪')
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
 
@@ -85,11 +86,11 @@ function EditorPage() {
       latestMarkdownRef.current = initialMarkdownRef.current
       lastPersistedSnapshotRef.current = ''
       setTitle('')
-      setDiaryDate(getTodayDateString())
       setMood('')
       setTagsInput('')
       setLoadError('')
       setSaveStatus('草稿已就绪')
+      setLastSavedAt(null)
       setIsEditorReady(true)
       setEditorVersion(version => version + 1)
       return () => {
@@ -121,7 +122,6 @@ function EditorPage() {
         latestMarkdownRef.current = loadedMarkdown
         latestFieldsRef.current = {
           title: diary.title,
-          diaryDate: diary.diaryDate,
           mood: diary.mood ?? '',
           tagsInput: loadedTagsInput
         }
@@ -133,10 +133,10 @@ function EditorPage() {
           markdown: loadedMarkdown
         })
         setTitle(diary.title)
-        setDiaryDate(diary.diaryDate)
         setMood(diary.mood ?? '')
         setTagsInput(loadedTagsInput)
         setSaveStatus('日记已载入')
+        setLastSavedAt(diary.updatedAt)
         setIsEditorReady(true)
         setEditorVersion(version => version + 1)
       })
@@ -159,11 +159,10 @@ function EditorPage() {
      */
     latestFieldsRef.current = {
       title,
-      diaryDate,
       mood,
       tagsInput
     }
-  }, [diaryDate, mood, tagsInput, title])
+  }, [mood, tagsInput, title])
 
   useEffect(() => {
     if (!isEditorReady) {
@@ -226,6 +225,7 @@ function EditorPage() {
         } else {
           window.localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, markdown)
           setSaveStatus('草稿已自动保存')
+          setLastSavedAt(Date.now())
         }
       })
     })
@@ -296,11 +296,10 @@ function EditorPage() {
           throw new Error('Electron diary API is unavailable.')
         }
 
-        await window.diaryAPI.updateDiary({
+        const updatedDiary = await window.diaryAPI.updateDiary({
           id: diaryId,
           title: normalizedTitle,
           markdown,
-          diaryDate: fields.diaryDate,
           mood: fields.mood.trim() ? fields.mood : null,
           tags: parseTags(fields.tagsInput)
         })
@@ -312,6 +311,7 @@ function EditorPage() {
           markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
         })
         setSaveStatus(latestSnapshot === snapshot ? '已自动保存' : '有未保存更改')
+        setLastSavedAt(updatedDiary.updatedAt)
       } catch (error) {
         console.error('Failed to auto-save diary:', error)
         setSaveStatus(`自动保存失败：${getErrorMessage(error)}`)
@@ -370,28 +370,31 @@ function EditorPage() {
         throw new Error('Electron diary API is unavailable.')
       }
 
+      let savedDiaryId = diaryId
+      let savedUpdatedAt = Date.now()
+
       if (diaryId) {
-        await window.diaryAPI.updateDiary({
+        const updatedDiary = await window.diaryAPI.updateDiary({
           id: diaryId,
           title: normalizedTitle,
           markdown,
-          diaryDate,
           mood: mood.trim() ? mood : null,
           tags: parseTags(tagsInput)
         })
+        savedUpdatedAt = updatedDiary.updatedAt
       } else {
-        await window.diaryAPI.createDiary({
+        const createdDiary = await window.diaryAPI.createDiary({
           title: normalizedTitle,
           markdown,
-          diaryDate,
           mood: mood.trim() || undefined,
           tags: parseTags(tagsInput)
         })
+        savedDiaryId = createdDiary.id
+        savedUpdatedAt = createdDiary.updatedAt
       }
 
       const savedSnapshot = buildDiarySnapshot({
         title: normalizedTitle,
-        diaryDate,
         mood,
         tagsInput,
         markdown
@@ -406,9 +409,14 @@ function EditorPage() {
       })
       const isStillCurrent = latestSnapshot === savedSnapshot
       setSaveStatus('已保存')
+      setLastSavedAt(savedUpdatedAt)
 
-      if (!diaryId) {
-        navigate('/list', { replace: true })
+      if (!diaryId && savedDiaryId) {
+        /*
+         * 新建保存后仍停留在编辑页，只替换成带 id 的编辑地址。
+         * 这样后续再次保存会走更新逻辑，不会重复创建日记。
+         */
+        navigate(`/editor/${savedDiaryId}`, { replace: true })
       } else if (!isStillCurrent) {
         setSaveStatus('有未保存更改')
       }
@@ -453,7 +461,8 @@ function EditorPage() {
 
   const markExistingDiaryChanged = () => {
     /*
-     * 标题、日期、心情和标签也参与自动保存；新建日记仍保持正文草稿本地保存。
+     * 标题、心情和标签也参与自动保存；新建日记仍保持正文草稿本地保存。
+     * diaryDate 暂时不在界面编辑，由主进程按 createdAt 自动维护。
      */
     if (isEditing) {
       setSaveStatus('有未保存更改')
@@ -475,6 +484,7 @@ function EditorPage() {
         <div className={styles.editorPageActions}>
           <span className={styles.editorPageStatus} aria-live="polite">
             {saveStatus}
+            {lastSavedAt ? ` · 更新：${formatLastSavedAt(lastSavedAt)}` : ''}
           </span>
           <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
             返回列表
@@ -498,28 +508,17 @@ function EditorPage() {
           />
         </label>
         <label className={styles.editorField}>
-          <span>日期</span>
-          <DatePicker
-            value={diaryDate ? dayjs(diaryDate) : null}
-            format={DIARY_DATE_FORMAT}
-            allowClear={false}
-            onChange={date => {
-              /*
-               * DatePicker 内部使用 dayjs 对象，业务状态继续保存为 YYYY-MM-DD 字符串。
-               * 这样数据库和 Markdown 文件命名逻辑无需感知 UI 控件实现。
-               */
-              setDiaryDate(date ? date.format(DIARY_DATE_FORMAT) : '')
-              markExistingDiaryChanged()
-            }}
-          />
-        </label>
-        <label className={styles.editorField}>
           <span>心情</span>
-          <Input
-            value={mood}
-            placeholder="平静、期待..."
-            onChange={event => {
-              setMood(event.target.value)
+          <Select
+            allowClear
+            value={mood || undefined}
+            placeholder="选择今天的心情"
+            options={MOOD_SELECT_OPTIONS}
+            onChange={value => {
+              /*
+               * 下拉值只保存心情名称，emoji 由展示层统一补充。
+               */
+              setMood(value ?? '')
               markExistingDiaryChanged()
             }}
           />
@@ -572,7 +571,6 @@ function buildDiarySnapshot(input: DiaryDraftFields & { markdown: string }): str
    */
   return JSON.stringify({
     title: input.title.trim(),
-    diaryDate: input.diaryDate,
     mood: input.mood.trim(),
     tags: parseTags(input.tagsInput),
     markdown: input.markdown
@@ -586,6 +584,18 @@ function isAppleLikePlatform(): boolean {
   return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform)
 }
 
+function formatLastSavedAt(timestamp: number): string {
+  /*
+   * 顶部状态只需要简短时间，帮助用户确认最近一次成功保存发生在什么时候。
+   */
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(timestamp))
+}
+
 function getErrorMessage(error: unknown): string {
   /*
    * 把 IPC / 校验 / 运行环境错误压成短文本显示在保存状态中。
@@ -596,15 +606,6 @@ function getErrorMessage(error: unknown): string {
   }
 
   return '请确认通过 Electron 启动应用'
-}
-
-function getTodayDateString(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
 }
 
 export default EditorPage

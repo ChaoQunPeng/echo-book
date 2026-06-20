@@ -225,7 +225,7 @@ export class DiaryRepository {
   /**
    * 查询日记列表。
    *
-   * 默认行为满足需求：过滤 deleted = 0，并按 diary_date DESC 排序。
+   * 默认行为满足需求：过滤 deleted = 0，并按创建时间倒序排序。
    * limit / offset 做了边界收敛，避免 renderer 传入异常数字导致一次性读取过多数据。
    */
   public getDiaryList(options: GetDiaryListOptions = {}): Diary[] {
@@ -271,7 +271,7 @@ export class DiaryRepository {
             d.deleted
           FROM diaries d
           ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
-          ORDER BY diary_date DESC, updated_at DESC
+          ORDER BY created_at DESC, updated_at DESC
           LIMIT @limit
           OFFSET @offset
         `,

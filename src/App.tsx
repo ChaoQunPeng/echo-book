@@ -2,7 +2,7 @@ import { EditOutlined, ExportOutlined, FolderOpenOutlined, LoadingOutlined, Read
 import { Alert, Button, ConfigProvider, Divider, Form, Input, Modal, message } from 'antd'
 import type { KeyboardEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
 import styles from './App.module.scss'
 import logoUrl from './assets/logo.svg'
@@ -31,6 +31,7 @@ const sidebarMenus = [
 ]
 
 function App() {
+  const navigate = useNavigate()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
   const [settingsError, setSettingsError] = useState('')
@@ -220,7 +221,7 @@ function App() {
 
           <div className="ml-16 mr-16">
             <Divider />
-            <Button className="!pr-26" shape="round" type="primary" block size="large" icon={<EditOutlined />}>
+            <Button className="!pr-26" shape="round" type="primary" block size="large" icon={<EditOutlined />} onClick={() => navigate('/editor')}>
               <span>新日记</span>
             </Button>
           </div>

@@ -11,3 +11,4 @@ This template should help get you started developing with Tauri, React and Types
 - [] 时间轴展示日记
 - [] 主页样式布局优化
 - [] 主题
+- [] 日记增加天气字段？

@@ -10,15 +10,6 @@ import styles from './DiaryListPage.module.scss'
 import DiaryPreviewPanel from './DiaryPreviewPanel'
 import type { DateFilterValue } from './types'
 
-const DEFAULT_NEW_DIARY_MARKDOWN = `# 今天的回声
-
-写下今天值得被记住的片段。
-
-- 发生了什么？
-- 我当时有什么感受？
-- 明天想带着什么继续出发？
-`
-
 const DATE_FILTER_OPTIONS: Array<{ value: DateFilterValue; label: string }> = [
   { value: 'all', label: '全部日记' },
   { value: 'last7', label: '最近 7 天' },
@@ -46,7 +37,6 @@ function DiaryListPage() {
   const [dateFilter, setDateFilter] = useState<DateFilterValue>('all')
   const [isLoading, setIsLoading] = useState(true)
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [previewErrorMessage, setPreviewErrorMessage] = useState('')
   const currentDateFilterLabel = DATE_FILTER_OPTIONS.find(option => option.value === dateFilter)?.label ?? '全部日记'
@@ -55,8 +45,7 @@ function DiaryListPage() {
     const keyword = searchKeyword.trim().toLocaleLowerCase()
 
     /*
-     * 列表展示按日记日期倒序处理，保证同月日记聚在一起。
-     * 如果旧数据缺少 diaryDate，则回退到 createdAt 维持可排序。
+     * diaryDate 暂时不在界面使用，列表展示统一按 createdAt 倒序处理。
      */
     return [...diaries]
       .filter(diary => {
@@ -64,7 +53,7 @@ function DiaryListPage() {
         return matchesTitle && isDiaryInDateFilter(diary, dateFilter)
       })
       .sort((firstDiary, secondDiary) => {
-        return getDiaryDateSortValue(secondDiary) - getDiaryDateSortValue(firstDiary) || secondDiary.createdAt - firstDiary.createdAt
+        return secondDiary.createdAt - firstDiary.createdAt || secondDiary.updatedAt - firstDiary.updatedAt
       })
   }, [dateFilter, diaries, searchKeyword])
 
@@ -184,55 +173,13 @@ function DiaryListPage() {
     }
   }, [selectedDiary, webPreviewMarkdownById])
 
-  /**
-   * 创建新日记
-   * 创建默认内容的日记并跳转到编辑页面
-   */
-  const handleCreateDiary = async () => {
-    setIsCreating(true)
+  const handleCreateDiary = () => {
+    /*
+     * 新建入口只进入无 id 的编辑页。
+     * 真正创建记录交给 EditorPage 的保存动作，避免空日记提前落库。
+     */
     setErrorMessage('')
-
-    try {
-      if (!window.diaryAPI) {
-        /*
-         * Web 预览下没有数据库，新增日记只写入当前页面内存。
-         * 这样按钮不会报错，刷新页面后仍回到示例数据。
-         */
-        const createdAt = Date.now()
-        const previewDiary = createWebPreviewDiary({
-          id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-${createdAt}`,
-          title: '未命名日记',
-          markdown: DEFAULT_NEW_DIARY_MARKDOWN,
-          createdAt,
-          tags: ['Web 预览']
-        })
-
-        setDiaries(currentDiaries => [previewDiary.diary, ...currentDiaries])
-        setWebPreviewMarkdownById(currentMarkdownById => ({
-          ...currentMarkdownById,
-          [previewDiary.diary.id]: previewDiary.markdown
-        }))
-        setSelectedDiaryId(previewDiary.diary.id)
-        return
-      }
-
-      /*
-       * “新建日记 / 写第一篇”现在立即创建真实日记，而不是只进入本地草稿页。
-       * 这样用户点完新建后，列表数据和 notes 下的 Markdown 文件都会立刻存在。
-       */
-      const diary = await window.diaryAPI.createDiary({
-        title: '未命名日记',
-        markdown: DEFAULT_NEW_DIARY_MARKDOWN,
-        diaryDate: getTodayDateString()
-      })
-
-      navigate(`/editor/${diary.id}`)
-    } catch (error) {
-      console.error('Failed to create diary from list:', error)
-      setErrorMessage(`新建日记失败：${getErrorMessage(error)}`)
-    } finally {
-      setIsCreating(false)
-    }
+    navigate('/editor')
   }
 
   /**
@@ -289,8 +236,8 @@ function DiaryListPage() {
           <div className={styles.diaryListPageEmptyState}>
             <h2>还没有日记</h2>
             <p>从一篇新的记录开始。</p>
-            <EchoButton icon={<PlusOutlined />} disabled={isCreating} onClick={handleCreateDiary}>
-              {isCreating ? '新建中' : '写第一篇'}
+            <EchoButton icon={<PlusOutlined />} onClick={handleCreateDiary}>
+              写第一篇
             </EchoButton>
           </div>
         ) : null}
@@ -338,19 +285,6 @@ function getErrorMessage(error: unknown): string {
   }
 
   return '请确认通过 Electron 启动应用'
-}
-
-/**
- * 获取今天日期字符串
- * 返回 YYYY-MM-DD 格式日期
- */
-function getTodayDateString(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
 }
 
 /**
@@ -470,42 +404,6 @@ function formatCreatedDateKey(timestamp: number): string {
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
-}
-
-/**
- * 获取日记日期的排序值
- * 优先使用 diaryDate，旧数据异常时回退到创建时间
- */
-function getDiaryDateSortValue(diary: Diary): number {
-  const diaryDateParts = parseDiaryDateParts(diary.diaryDate)
-
-  if (!diaryDateParts) {
-    return diary.createdAt
-  }
-
-  return new Date(diaryDateParts.year, diaryDateParts.month - 1, diaryDateParts.day).getTime()
-}
-
-/**
- * 解析日记日期字符串
- * 只接受 YYYY-MM-DD，避免 Date 解析时区差异影响月份
- */
-function parseDiaryDateParts(diaryDate: string): { year: number; month: number; day: number } | null {
-  const matchedDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(diaryDate)
-
-  if (!matchedDate) {
-    return null
-  }
-
-  const year = Number(matchedDate[1])
-  const month = Number(matchedDate[2])
-  const day = Number(matchedDate[3])
-
-  if (!Number.isInteger(year) || month < 1 || month > 12 || day < 1 || day > 31) {
-    return null
-  }
-
-  return { year, month, day }
 }
 
 export default DiaryListPage
