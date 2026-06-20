@@ -5,6 +5,7 @@ import './index.css'
 import App from './App'
 import DiaryListPage from './pages/DiaryList'
 import EditorPage from './pages/EditorPage'
+import SettingsPage from './pages/SettingsPage'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
@@ -24,6 +25,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
            * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
           */}
           <Route path="list" element={<DiaryListPage />} />
+          {/*
+           * 设置页独立成路由，便于后续继续加入更多设置分组。
+           */}
+          <Route path="settings" element={<SettingsPage />} />
           {/*
            * 编辑页只接收已创建日记的 id。
            * 新建入口会先创建日记，再使用返回的 id 进入这里。

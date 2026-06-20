@@ -1,0 +1,53 @@
+.settingsPage {
+  height: 100%;
+  overflow: auto;
+  padding: 32px;
+  background: var(--echo-color-page);
+}
+
+.settingsHeader {
+  max-width: 960px;
+  margin: 0 auto 24px;
+}
+
+.settingsHeaderIcon {
+  /*
+   * 图标尺寸固定，避免标题行在加载状态下跳动。
+   */
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--echo-color-primary-10);
+  color: var(--echo-color-primary);
+  font-size: 20px;
+}
+
+.settingsHeader :global(.ant-typography) {
+  margin: 0;
+}
+
+.settingsHeader h1:global(.ant-typography) {
+  margin-bottom: 4px;
+  color: var(--echo-color-text);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.settingsContent {
+  max-width: 960px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 0 auto;
+}
+
+.settingsContent :global(.ant-card) {
+  border-radius: 8px;
+}
+
+.settingsAlert {
+  margin-bottom: 16px;
+}
