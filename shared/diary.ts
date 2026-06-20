@@ -38,7 +38,7 @@ export interface DiaryDetail extends Diary {
  * 创建日记时 renderer 需要传入的数据。
  *
  * diaryDate 允许为空：为空时 service 层会按本机当前日期生成 YYYY-MM-DD。
- * tags 允许为空：为空时不写 diary_tags 关系。
+ * tags 允许为空：为空时日记保存为空标签数组。
  */
 export interface CreateDiaryInput {
   title: string;

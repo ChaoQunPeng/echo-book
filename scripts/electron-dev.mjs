@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
@@ -26,6 +27,7 @@ const devOptions = {
 let viteProcess;
 let electronProcess;
 let isShuttingDown = false;
+let viteExitedEarly = false;
 
 /**
  * 运行一次性命令，并在命令失败时把退出码传递给当前脚本。
@@ -75,6 +77,42 @@ function startProcess(command, args, options = {}) {
   return child;
 }
 
+function trackViteProcess(child) {
+  /*
+   * 如果 5173 已经被旧进程占用，Vite 会立刻退出；这时不能继续复用旧服务。
+   */
+  child.on("exit", (code, signal) => {
+    if (!isShuttingDown && !electronProcess) {
+      viteExitedEarly = true;
+      console.error(`[electron-dev] Vite dev server exited before Electron started (${signal ?? `exit code ${code}`}).`);
+    }
+  });
+}
+
+function isPortInUse(port, host) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host });
+
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.once("error", () => {
+      resolve(false);
+    });
+  });
+}
+
+async function assertVitePortAvailable() {
+  /*
+   * Electron 固定加载 5173；如果端口已被旧 Vite 占用，继续启动会读到旧页面代码。
+   */
+  if (await isPortInUse(5173, "localhost")) {
+    throw new Error("Port 5173 is already in use. Please stop the old dev server and run `npm run dev` again.");
+  }
+}
+
 /**
  * 生成子进程环境变量。
  *
@@ -107,6 +145,10 @@ async function waitForViteServer() {
   const timeoutMs = 30_000;
 
   while (Date.now() - startedAt < timeoutMs) {
+    if (viteExitedEarly) {
+      throw new Error("Vite dev server exited early. Please free port 5173 and run `npm run dev` again.");
+    }
+
     try {
       const response = await fetch(viteDevServerUrl);
       if (response.ok) {
@@ -171,11 +213,14 @@ try {
     console.log("[electron-dev] Skip electron:rebuild. Run `npm run dev-rebuild` when native modules need rebuild.");
   }
 
+  await assertVitePortAvailable();
+
   viteProcess = startProcess(npmCommand, ["run", "web:dev"], {
     env: {
       BROWSER: "none",
     },
   });
+  trackViteProcess(viteProcess);
 
   await waitForViteServer();
 

@@ -64,7 +64,6 @@ export function getDatabasePath(): string {
  *
  * 这里会确保 userData 目录存在，并设置基础 PRAGMA：
  * - journal_mode=WAL：提升桌面应用读写并发和崩溃恢复表现
- * - foreign_keys=ON：为后续扩展关联表预留一致性保障
  */
 export function getDatabase(): Database.Database {
   if (database) {
@@ -76,7 +75,6 @@ export function getDatabase(): Database.Database {
 
   database = new Database(databasePath);
   database.pragma("journal_mode = WAL");
-  database.pragma("foreign_keys = ON");
 
   return database;
 }

@@ -1,9 +1,12 @@
 import { ipcMain } from "electron";
 import type { CreateDiaryInput, GetDiaryListOptions, UpdateDiaryInput } from "../../shared/diary.js";
+import type { CreateTagInput, UpdateTagInput } from "../../shared/tags.js";
 import { getDatabase } from "../db/connection.js";
 import { initializeDatabase } from "../db/schema.js";
 import { DiaryRepository } from "../repositories/diaryRepository.js";
+import { TagRepository } from "../repositories/tagRepository.js";
 import { DiaryService } from "../services/diaryService.js";
+import { TagService } from "../services/tagService.js";
 
 /**
  * 日记 IPC 通道名称。
@@ -18,6 +21,13 @@ const DIARY_CHANNELS = {
   list: "diary:list",
 } as const;
 
+const TAG_CHANNELS = {
+  list: "tag:list",
+  create: "tag:create",
+  update: "tag:update",
+  delete: "tag:delete",
+} as const;
+
 /**
  * 注册日记相关 IPC handlers。
  *
@@ -27,8 +37,11 @@ const DIARY_CHANNELS = {
 export function registerDiaryIpcHandlers(): void {
   initializeDatabase();
 
-  const diaryRepository = new DiaryRepository(getDatabase());
-  const diaryService = new DiaryService(diaryRepository);
+  const db = getDatabase();
+  const diaryRepository = new DiaryRepository(db);
+  const tagRepository = new TagRepository(db);
+  const diaryService = new DiaryService(diaryRepository, tagRepository);
+  const tagService = new TagService(tagRepository);
 
   ipcMain.handle(DIARY_CHANNELS.create, (_event, input: CreateDiaryInput) => {
     try {
@@ -75,5 +88,21 @@ export function registerDiaryIpcHandlers(): void {
 
   ipcMain.handle(DIARY_CHANNELS.list, (_event, options?: GetDiaryListOptions) => {
     return diaryService.getDiaryList(options);
+  });
+
+  ipcMain.handle(TAG_CHANNELS.list, () => {
+    return tagService.getTagLibrary();
+  });
+
+  ipcMain.handle(TAG_CHANNELS.create, (_event, input: CreateTagInput) => {
+    return tagService.createTag(input);
+  });
+
+  ipcMain.handle(TAG_CHANNELS.update, (_event, input: UpdateTagInput) => {
+    return tagService.updateTag(input);
+  });
+
+  ipcMain.handle(TAG_CHANNELS.delete, (_event, name: string) => {
+    return tagService.deleteTag(name);
   });
 }

@@ -221,7 +221,15 @@ function App() {
 
           <div className="ml-16 mr-16">
             <Divider />
-            <Button className="!pr-26" shape="round" type="primary" block size="large" icon={<EditOutlined />} onClick={() => navigate('/editor')}>
+            <Button
+              className="!pr-26"
+              shape="round"
+              type="primary"
+              block
+              size="large"
+              icon={<EditOutlined />}
+              onClick={() => navigate('/editor')}
+            >
               <span>新日记</span>
             </Button>
           </div>

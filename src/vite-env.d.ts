@@ -2,6 +2,7 @@
 
 import type { DiaryApi } from "../shared/diary";
 import type { SettingsApi } from "../shared/settings";
+import type { TagApi } from "../shared/tags";
 
 /**
  * renderer 侧的 window 类型声明。
@@ -13,6 +14,7 @@ declare global {
   interface Window {
     diaryAPI: DiaryApi;
     settingsAPI: SettingsApi;
+    tagAPI: TagApi;
   }
 }
 

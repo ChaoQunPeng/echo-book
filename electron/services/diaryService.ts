@@ -10,6 +10,8 @@ import type {
 } from "../../shared/diary.js";
 import { getStorageRootPath } from "../db/connection.js";
 import type { DiaryRepository } from "../repositories/diaryRepository.js";
+import type { TagRepository } from "../repositories/tagRepository.js";
+import { normalizeTagNames } from "./tagService.js";
 
 /**
  * 日记 service：承载轻量业务规则和输入校验。
@@ -20,7 +22,10 @@ import type { DiaryRepository } from "../repositories/diaryRepository.js";
  * - 后续增加全文搜索、标签归一化、自动摘要时可以自然放在这里
  */
 export class DiaryService {
-  public constructor(private readonly diaryRepository: DiaryRepository) { }
+  public constructor(
+    private readonly diaryRepository: DiaryRepository,
+    private readonly tagRepository: TagRepository,
+  ) {}
 
   /**
    * 创建日记。
@@ -39,8 +44,10 @@ export class DiaryService {
      */
     const diaryDate = formatTimestampDate(now);
     const filepath = generateFilePath(now, id);
+    const tags = normalizeTagNames(input.tags);
 
     writeDiaryFile(filepath, markdown);
+    this.tagRepository.ensureTagsExist(tags);
 
     const diary = this.diaryRepository.createDiary({
       id,
@@ -49,7 +56,7 @@ export class DiaryService {
       diaryDate,
       createdAt: now,
       updatedAt: now,
-      tags: normalizeTags(input.tags),
+      tags,
       mood: input.mood === undefined ? undefined : normalizeMood(input.mood),
     });
 
@@ -76,6 +83,11 @@ export class DiaryService {
       writeDiaryFile(existingDiary.filepath, markdown);
     }
 
+    const tags = input.tags === undefined ? undefined : normalizeTagNames(input.tags);
+    if (tags !== undefined) {
+      this.tagRepository.ensureTagsExist(tags);
+    }
+
     const updatedDiary = this.diaryRepository.updateDiary({
       id,
       title: input.title === undefined ? undefined : normalizeTitle(input.title),
@@ -83,7 +95,7 @@ export class DiaryService {
        * 更新旧日记时也按 createdAt 回填 diaryDate，避免历史入口传入不同日期。
        */
       diaryDate: formatTimestampDate(existingDiary.createdAt),
-      tags: input.tags === undefined ? undefined : normalizeTags(input.tags),
+      tags,
       mood:
         input.mood === undefined
           ? undefined
@@ -211,34 +223,6 @@ function normalizeMoodUpdateValue(mood: string | null): string | null | undefine
   }
 
   return normalizeMood(mood);
-}
-
-/**
- * 标准化 tags。
- *
- * - undefined：不写 diary_tags 关系
- * - string[]：去掉空标签、去重
- */
-function normalizeTags(tags: string[] | undefined): string[] {
-  if (tags === undefined) {
-    return [];
-  }
-
-  if (!Array.isArray(tags)) {
-    throw new Error("tags must be an array of strings.");
-  }
-
-  const normalizedTags = tags
-    .map((tag) => {
-      if (typeof tag !== "string") {
-        throw new Error("tags must be an array of strings.");
-      }
-
-      return tag.trim();
-    })
-    .filter(Boolean);
-
-  return Array.from(new Set(normalizedTags));
 }
 
 /**

@@ -1,0 +1,145 @@
+.tagChipText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagColorDot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.dialogBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 18px;
+}
+
+.tagListPanel,
+.tagEditorPanel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panelTitle {
+  margin: 0;
+  color: rgba(25, 28, 29, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.emptyText,
+.formError {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.emptyText {
+  color: rgba(25, 28, 29, 0.45);
+}
+
+.formError {
+  color: #b42318;
+}
+
+.tagList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tagRow {
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(25, 28, 29, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.tagCheckLabel {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tagActions {
+  display: flex;
+  gap: 4px;
+}
+
+.tagForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.formLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(25, 28, 29, 0.68);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.colorInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorInput {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.colorValue {
+  color: rgba(25, 28, 29, 0.55);
+  font-size: 13px;
+}
+
+.colorSwatches {
+  display: grid;
+  grid-template-columns: repeat(6, 24px);
+  gap: 7px;
+}
+
+.colorSwatch {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(25, 28, 29, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.colorSwatchActive {
+  outline: 2px solid var(--echo-color-primary);
+  outline-offset: 2px;
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .dialogBody {
+    grid-template-columns: 1fr;
+  }
+}

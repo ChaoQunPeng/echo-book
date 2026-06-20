@@ -6,6 +6,7 @@ import type {
   UpdateDiaryInput,
 } from "../shared/diary.js";
 import type { SettingsApi } from "../shared/settings.js";
+import type { CreateTagInput, TagApi, UpdateTagInput } from "../shared/tags.js";
 
 /**
  * preload 是 renderer 与 main process 之间唯一被允许的桥。
@@ -60,6 +61,27 @@ const settingsAPI: SettingsApi = {
 };
 
 /**
+ * 标签库 API 只管理 tags 表，不直接修改任何日记。
+ */
+const tagAPI: TagApi = {
+  getTagLibrary() {
+    return ipcRenderer.invoke("tag:list");
+  },
+
+  createTag(input: CreateTagInput) {
+    return ipcRenderer.invoke("tag:create", input);
+  },
+
+  updateTag(input: UpdateTagInput) {
+    return ipcRenderer.invoke("tag:update", input);
+  },
+
+  deleteTag(name: string) {
+    return ipcRenderer.invoke("tag:delete", name);
+  },
+};
+
+/**
  * 将受控 API 挂到 window.diaryAPI。
  *
  * 因为 BrowserWindow 开启了 contextIsolation，renderer 拿到的是这个对象的安全代理，
@@ -67,3 +89,4 @@ const settingsAPI: SettingsApi = {
  */
 contextBridge.exposeInMainWorld("diaryAPI", diaryAPI);
 contextBridge.exposeInMainWorld("settingsAPI", settingsAPI);
+contextBridge.exposeInMainWorld("tagAPI", tagAPI);

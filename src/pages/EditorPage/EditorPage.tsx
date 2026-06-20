@@ -1,15 +1,18 @@
-import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, SaveOutlined, TagsOutlined } from '@ant-design/icons'
 import { Crepe, CrepeFeature } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
-import { Input, Select } from 'antd'
-import { useEffect, useRef, useState } from 'react'
+import { Input, Select, Tag } from 'antd'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MOODS } from '../../../shared/moods'
+import type { TagLibraryItem } from '../../../shared/tags'
 import EchoButton from '../../components/EchoButton'
 import styles from './EditorPage.module.scss'
+import TagManagerDialog from './TagManagerDialog'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
+const DEFAULT_TAG_COLOR = '#237804'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
 const MOOD_SELECT_OPTIONS = MOODS.map(mood => ({
   value: mood.name,
@@ -69,10 +72,48 @@ function EditorPage() {
   const [title, setTitle] = useState('')
   const [mood, setMood] = useState('')
   const [tagsInput, setTagsInput] = useState('')
+  const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState(isEditing ? '正在读取日记' : '草稿已就绪')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
+
+  async function loadTagLibrary() {
+    if (!window.tagAPI) {
+      setTagLibrary([])
+      return
+    }
+
+    try {
+      setTagLibrary(await window.tagAPI.getTagLibrary())
+    } catch (error) {
+      console.error('Failed to load tag library:', error)
+      setTagLibrary([])
+    }
+  }
+
+  useEffect(() => {
+    /*
+     * 标签库属于用户数据，启动编辑页时从 SQLite 读取。
+     */
+    void loadTagLibrary()
+  }, [])
+
+  const tagSelectOptions = useMemo(() => {
+    return tagLibrary.map(tag => ({
+      value: tag.name,
+      label: (
+        <span className={styles.tagSelectOption}>
+          <span className={styles.tagSelectOptionDot} style={{ backgroundColor: tag.color }} />
+          <span>{tag.name}</span>
+        </span>
+      )
+    }))
+  }, [tagLibrary])
+  const tagColorMap = useMemo(() => {
+    return new Map(tagLibrary.map(tag => [tag.name, tag.color]))
+  }, [tagLibrary])
 
   useEffect(() => {
     let cancelled = false
@@ -507,8 +548,11 @@ function EditorPage() {
             }}
           />
         </label>
+
         <label className={styles.editorField}>
           <span>心情</span>
+          {/* icon={<SearchOutlined />} */}
+
           <Select
             allowClear
             value={mood || undefined}
@@ -523,18 +567,47 @@ function EditorPage() {
             }}
           />
         </label>
-        <label className={styles.editorField}>
+        <div className={styles.editorField}>
           <span>标签</span>
-          <Input
-            value={tagsInput}
-            placeholder="工作, 生活"
-            onChange={event => {
-              setTagsInput(event.target.value)
-              markExistingDiaryChanged()
-            }}
-          />
-        </label>
+          <div className={styles.tagSelectRow}>
+            <Select
+              mode="tags"
+              allowClear
+              className={styles.tagSelect}
+              value={parseTags(tagsInput)}
+              placeholder="选择或输入标签"
+              options={tagSelectOptions}
+              optionFilterProp="value"
+              tagRender={tag => {
+                /*
+                 * 已选标签展示标签库颜色；新输入但未保存入库的标签使用默认颜色兜底。
+                 */
+                const tagName = String(tag.value)
+                const tagColor = tagColorMap.get(tagName) ?? DEFAULT_TAG_COLOR
+
+                return (
+                  <Tag className={styles.tagSelectTag} closable={tag.closable} onClose={tag.onClose}>
+                    <span className={styles.tagSelectTagDot} style={{ backgroundColor: tagColor }} />
+                    <span className={styles.tagSelectTagText}>{tag.label}</span>
+                  </Tag>
+                )
+              }}
+              onChange={(nextTags: string[]) => {
+                /*
+                 * Select 支持输入新标签；保存日记时主进程会自动写入标签库。
+                 */
+                setTagsInput(normalizeTagList(nextTags).join(', '))
+                markExistingDiaryChanged()
+              }}
+            />
+            <EchoButton variant="outline" icon={<TagsOutlined />} onClick={() => setIsTagManagerOpen(true)}>
+              管理
+            </EchoButton>
+          </div>
+        </div>
       </div>
+
+      <TagManagerDialog open={isTagManagerOpen} onOpenChange={setIsTagManagerOpen} onTagsChanged={loadTagLibrary} />
 
       {loadError ? <p className={styles.editorPageError}>{loadError}</p> : null}
 
@@ -558,10 +631,14 @@ function parseTags(value: string): string[] {
   /*
    * 标签输入支持英文逗号和中文逗号，方便中文输入法场景直接录入。
    */
-  return value
-    .split(/[,，]/)
-    .map(tag => tag.trim())
-    .filter(Boolean)
+  return normalizeTagList(value.split(/[,，]/))
+}
+
+function normalizeTagList(tags: string[]): string[] {
+  /*
+   * Select tags 模式可能产生重复文本，这里统一 trim 和去重。
+   */
+  return Array.from(new Set(tags.map(tag => tag.trim()).filter(Boolean)))
 }
 
 function buildDiarySnapshot(input: DiaryDraftFields & { markdown: string }): string {

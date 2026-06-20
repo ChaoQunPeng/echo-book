@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Modal } from 'antd'
+import { Empty, Modal } from 'antd'
 import type { MenuProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -234,11 +234,14 @@ function DiaryListPage() {
 
         {!isLoading && diaries.length === 0 ? (
           <div className={styles.diaryListPageEmptyState}>
-            <h2>还没有日记</h2>
-            <p>从一篇新的记录开始。</p>
-            <EchoButton icon={<PlusOutlined />} onClick={handleCreateDiary}>
-              写第一篇
-            </EchoButton>
+            {/*
+             * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
+             */}
+            <Empty description="还没有日记">
+              <EchoButton icon={<PlusOutlined />} onClick={handleCreateDiary}>
+                写第一篇
+              </EchoButton>
+            </Empty>
           </div>
         ) : null}
 
