@@ -1,4 +1,4 @@
-import { EditOutlined, FieldTimeOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
+import { EditOutlined, FieldTimeOutlined, QuestionCircleOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button, ConfigProvider, Divider } from 'antd'
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -8,25 +8,37 @@ import { createDefaultDiary } from './utils/diaryCreation'
 
 const sidebarMenus = [
   {
+    type: 'route',
     path: '/timeline',
     label: '时光',
     icon: FieldTimeOutlined
   },
   {
+    type: 'route',
     path: '/list',
     label: '日记',
     icon: ReadOutlined
-  },
-  {
-    path: '/settings',
-    label: '设置',
-    icon: SettingOutlined
   }
   // {
   //   path: '/trash',
   //   label: '回收站',
   //   icon: DeleteOutlined
   // }
+]
+
+const sidebarFooterMenus = [
+  {
+    type: 'route',
+    path: '/settings',
+    label: '设置',
+    icon: SettingOutlined
+  },
+  {
+    type: 'action',
+    label: '帮助',
+    icon: QuestionCircleOutlined,
+    onClick: () => {}
+  }
 ]
 
 function App() {
@@ -111,7 +123,7 @@ function AppLayout() {
         <div className={styles.logoGroup}>
           {/* 使用独立 logo 资源，避免品牌字样在组件中重复维护。 */}
           <img className={styles.logoImage} src={logoUrl} alt="爱可日记" />
-          <div className={styles.subtitle}>爱生活，可记录</div>
+          <div className={`${styles.subtitle} text-black-65`}>echo book</div>
         </div>
         {/*
          * 左侧菜单只负责页面级导航，不承载具体业务内容。
@@ -131,10 +143,10 @@ function AppLayout() {
           ))}
         </nav>
 
-        <div className="ml-16 mr-16">
-          <Divider />
+        <div className="ml-24 mr-24">
+          <Divider className="mt-12! mb-32!" />
           <Button
-            className="!pr-26"
+            className="pr-26!"
             shape="round"
             type="primary"
             block
@@ -145,6 +157,36 @@ function AppLayout() {
           >
             <span>新日记</span>
           </Button>
+        </div>
+
+        <div className="mt-auto pb-12">
+          <nav className={styles.sideMenu} aria-label="主导航">
+            {sidebarFooterMenus.map((menu, index) => {
+              const Icon = menu.icon
+
+              // 👉 route 类型
+              if (menu.type === 'route') {
+                return (
+                  <NavLink
+                    key={menu.path!}
+                    to={menu.path!}
+                    className={({ isActive }) => (isActive ? `${styles.sideMenuItem} ${styles.sideMenuItemActive}` : styles.sideMenuItem)}
+                  >
+                    <Icon className="text-size-14 mr-12" />
+                    <span className="text-size-14">{menu.label}</span>
+                  </NavLink>
+                )
+              }
+
+              // 👉 action 类型
+              return (
+                <div key={menu.label} className={`${styles.sideMenuItem} cursor-pointer`} onClick={menu.onClick} role="button">
+                  <Icon className="text-size-14 mr-12" />
+                  <span className="text-size-14">{menu.label}</span>
+                </div>
+              )
+            })}
+          </nav>
         </div>
       </aside>
       <div className={styles.mainContainer}>
