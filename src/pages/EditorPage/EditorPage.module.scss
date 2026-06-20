@@ -1,0 +1,158 @@
+.editorPageError {
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.editorField {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editorField span {
+  color: rgba(25, 28, 29, 0.68);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/*
+ * 编辑页采用纵向工作台布局：
+ * 顶部只保留保存状态和主操作，正文编辑器占据剩余空间。
+ */
+.editorPage {
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/*
+ * 标题栏用两端对齐，让状态和按钮始终靠近操作区域。
+ */
+.editorPageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/*
+ * 标题组只承载页面层级信息，预留给后续恢复页面标题时使用。
+ */
+.editorPageTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editorPageEyebrow {
+  color: var(--echo-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.editorPageTitleGroup h1 {
+  color: var(--echo-color-text);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+/*
+ * 操作区包含保存状态和保存按钮，窄屏下允许自然换行。
+ */
+.editorPageActions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.editorPageStatus {
+  color: rgba(25, 28, 29, 0.62);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/*
+ * 元信息表单保持紧凑的网格布局。
+ */
+.editorPageForm {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(180px, 0.8fr);
+  gap: 12px;
+  align-items: end;
+}
+
+/*
+ * workspace 是 Milkdown 编辑器的视觉边界。
+ */
+.editorPageWorkspace {
+  flex: 1;
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 82, 56, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15, 82, 56, 0.08);
+}
+
+/*
+ * 底部操作区贴近正文编辑器，补充顶部保存入口。
+ */
+.editorPageFooterActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/*
+ * Milkdown 的根节点需要占满 workspace。
+ */
+.editorPageMilkdown,
+.editorPageMilkdown :global(.milkdown) {
+  height: 100%;
+  min-height: inherit;
+}
+
+.editorPageMilkdown :global(.milkdown) {
+  overflow: auto;
+  color: var(--echo-color-text);
+  font-family: inherit;
+}
+
+/*
+ * Crepe frame 主题会生成 .milkdown-theme-frame 容器。
+ */
+.editorPageMilkdown :global(.milkdown-theme-frame) {
+  min-height: 100%;
+  border: 0;
+}
+
+/*
+ * ProseMirror 是实际可编辑区域。
+ */
+.editorPageMilkdown :global(.ProseMirror) {
+  width: min(100%, 860px);
+  min-height: 480px;
+  margin: 0 auto;
+  padding: 40px 48px 64px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.editorPageMilkdown :global(.ProseMirror) h1,
+.editorPageMilkdown :global(.ProseMirror) h2,
+.editorPageMilkdown :global(.ProseMirror) h3 {
+  color: var(--echo-color-text);
+  line-height: 1.25;
+}

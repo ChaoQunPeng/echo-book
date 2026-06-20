@@ -15,16 +15,16 @@
 }
 
 .logoGroup {
-  padding: 24px;
+  padding: 32px 24px 24px 24px;
 
-  .title {
-    font-size: 32px;
-    font-weight: bold;
-    color: var(--echo-color-primary);
+  .logoImage {
+    width: 170px;
+    height: auto;
+    display: block;
   }
 
   .subtitle {
-    margin-top: 4px;
+    margin-top: 12px;
     font-size: 14px;
     color: #404943;
   }
@@ -41,7 +41,7 @@
     align-items: center;
     height: 42px;
     padding: 0 12px;
-    border-radius: 6px;
+    border-radius: 50px;
     color: var(--echo-color-text);
     font-size: 16px;
     line-height: 1;
@@ -56,7 +56,8 @@
 
   .sideMenuItemActive {
     color: var(--echo-color-primary);
-    background: var(--echo-color-primary-10);
+    font-weight: 700;
+    // background: var(--echo-color-primary-10);
   }
 }
 
@@ -77,8 +78,8 @@
   height: 42px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  border-radius: 6px;
+  padding: 0 16px;
+  border-radius: 50px;
   color: var(--echo-color-text);
   cursor: pointer;
   font-size: 14px;
@@ -116,173 +117,4 @@
 
 .mainContainer {
   flex: 1;
-}
-
-.editorPageError {
-  color: #b42318;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.editorField {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.editorField span {
-  color: rgba(25, 28, 29, 0.68);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-/*
- * 编辑页采用纵向工作台布局：
- * 顶部只保留当前页面标题、保存状态和主操作，正文编辑器占据剩余空间。
- * height 结合主内容区 padding 计算，避免编辑器内容较少时页面显得漂浮。
- */
-.editorPage {
-  min-height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/*
- * 标题栏用两端对齐，让状态和按钮始终靠近操作区域。
- * flex-wrap 保证窄屏下按钮可以自然换行，不会挤压标题文字。
- */
-.editorPageHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/*
- * 标题组只承载页面层级信息。
- * 这里不把标题放进卡片，避免编辑器页面出现多层容器套娃，阅读焦点可以直接落到正文区域。
- */
-.editorPageTitleGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.editorPageEyebrow {
-  color: var(--echo-color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.editorPageTitleGroup h1 {
-  color: var(--echo-color-text);
-  font-size: 28px;
-  line-height: 1.2;
-}
-
-/*
- * 操作区包含保存状态和保存按钮。
- * min-width: 0 可以让状态文本在小屏中正常收缩，按钮自身仍保持稳定点击面积。
- */
-.editorPageActions {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.editorPageStatus {
-  color: rgba(25, 28, 29, 0.62);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-/*
- * 元信息表单保持紧凑的网格布局。
- * 标题字段占更宽区域，日期、心情和标签维持稳定输入宽度。
- */
-.editorPageForm {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(180px, 0.8fr);
-  gap: 12px;
-  align-items: end;
-}
-
-/*
- * workspace 是 Milkdown 编辑器的视觉边界。
- * 它承担滚动和背景，不再额外把编辑器内部包成多层卡片，保证写作区域足够开阔。
- */
-.editorPageWorkspace {
-  flex: 1;
-  min-height: 560px;
-  overflow: hidden;
-  border: 1px solid rgba(15, 82, 56, 0.14);
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 16px 40px rgba(15, 82, 56, 0.08);
-}
-
-/*
- * 底部操作区贴近正文编辑器，补充顶部工具栏。
- * 用户写完后视线通常停在页面下方，这里再放一次保存入口可以降低漏点保存的概率。
- */
-.editorPageFooterActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/*
- * Milkdown 的根节点需要占满 workspace。
- * Crepe 会在该节点下创建自己的编辑器结构，因此这里主要负责尺寸、滚动和字体继承。
- */
-.editorPageMilkdown,
-.editorPageMilkdown :global(.milkdown) {
-  height: 100%;
-  min-height: inherit;
-}
-
-.editorPageMilkdown :global(.milkdown) {
-  overflow: auto;
-  color: var(--echo-color-text);
-  font-family: inherit;
-}
-
-/*
- * Crepe frame 主题会生成 .milkdown-theme-frame 容器。
- * 这里仅调整和应用布局强相关的尺寸，避免大范围覆盖 Milkdown 自带交互细节。
- */
-.editorPageMilkdown :global(.milkdown-theme-frame) {
-  min-height: 100%;
-  border: 0;
-}
-
-/*
- * ProseMirror 是实际可编辑区域。
- * 使用最大宽度和水平居中，让长文行宽保持舒适；min-height 确保空文档时仍有充足可点击区域。
- */
-.editorPageMilkdown :global(.ProseMirror) {
-  width: min(100%, 860px);
-  min-height: 480px;
-  margin: 0 auto;
-  padding: 40px 48px 64px;
-  outline: none;
-  font-size: 16px;
-  line-height: 1.8;
-}
-
-.editorPageMilkdown :global(.ProseMirror) h1,
-.editorPageMilkdown :global(.ProseMirror) h2,
-.editorPageMilkdown :global(.ProseMirror) h3 {
-  color: var(--echo-color-text);
-  line-height: 1.25;
 }

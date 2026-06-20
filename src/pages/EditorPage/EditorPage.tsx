@@ -6,8 +6,8 @@ import { DatePicker, Input } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import styles from '../App.module.scss'
-import EchoButton from '../components/EchoButton'
+import EchoButton from '../../components/EchoButton'
+import styles from './EditorPage.module.scss'
 
 const EDITOR_DRAFT_STORAGE_KEY = 'echo-book:editor-draft'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
@@ -468,10 +468,10 @@ function EditorPage() {
   return (
     <section className={styles.editorPage}>
       <header className={styles.editorPageHeader}>
-        <div className={styles.editorPageTitleGroup}>
+        {/* <div className={styles.editorPageTitleGroup}>
           <p className={styles.editorPageEyebrow}>Echo Book</p>
           <h1>{isEditing ? '编辑日记' : '新建日记'}</h1>
-        </div>
+        </div> */}
         <div className={styles.editorPageActions}>
           <span className={styles.editorPageStatus} aria-live="polite">
             {saveStatus}
@@ -539,7 +539,9 @@ function EditorPage() {
 
       {loadError ? <p className={styles.editorPageError}>{loadError}</p> : null}
 
-      <div className={styles.editorPageWorkspace}>{isEditorReady ? <div ref={editorRootRef} className={styles.editorPageMilkdown} /> : null}</div>
+      <div className={styles.editorPageWorkspace}>
+        {isEditorReady ? <div ref={editorRootRef} className={styles.editorPageMilkdown} /> : null}
+      </div>
 
       <div className={styles.editorPageFooterActions}>
         <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>

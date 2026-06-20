@@ -5,11 +5,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { StorageInfo } from '../shared/settings'
 import styles from './App.module.scss'
+import logoUrl from './assets/logo.svg'
 
 const sidebarMenus = [
   {
     path: '/list',
     label: '我的日记',
+    icon: ReadOutlined
+  },
+  {
+    path: '/',
+    label: '设置',
     icon: ReadOutlined
   }
   // {
@@ -157,7 +163,7 @@ function App() {
     return {
       token: {
         colorPrimary,
-        borderRadius: 16,
+        // borderRadius: 16,
         boxShadow: 'none',
         components: {
           Button: {
@@ -190,7 +196,8 @@ function App() {
       <div className={styles.appShell}>
         <aside className={styles.sideBar}>
           <div className={styles.logoGroup}>
-            <div className={styles.title}>爱可日记</div>
+            {/* 使用独立 logo 资源，避免品牌字样在组件中重复维护。 */}
+            <img className={styles.logoImage} src={logoUrl} alt="爱可日记" />
             <div className={styles.subtitle}>爱生活，可记录</div>
           </div>
           {/*
@@ -213,8 +220,7 @@ function App() {
 
           <div className="ml-16 mr-16">
             <Divider />
-
-            <Button className="!pr-26" shape="round" block type="primary" size="large" icon={<EditOutlined />}>
+            <Button className="!pr-26" shape="round" type="primary" block size="large" icon={<EditOutlined />}>
               <span>新日记</span>
             </Button>
           </div>
