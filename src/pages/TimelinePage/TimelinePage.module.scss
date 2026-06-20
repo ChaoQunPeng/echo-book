@@ -1,0 +1,157 @@
+/*
+ * 时光页外层独立滚动，避免时间轴滚动影响左侧主导航。
+ */
+.timelinePage {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--echo-color-page);
+}
+
+.timelineHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 30px 48px 18px;
+  border-bottom: 1px solid rgba(15, 82, 56, 0.08);
+}
+
+.timelineHeader p {
+  margin: 0 0 4px;
+  color: var(--echo-color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.timelineHeader h1 {
+  margin: 0;
+  color: var(--echo-color-text);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.timelineHeader span {
+  color: rgba(25, 28, 29, 0.52);
+  font-size: 13px;
+}
+
+.timelineError {
+  margin: 14px 48px 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.timelineScrollArea {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 26px 48px 56px;
+}
+
+.timelineLoading,
+.timelineEmpty {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  color: rgba(25, 28, 29, 0.62);
+}
+
+.timelineEmpty :global(.ant-empty-description) {
+  /*
+   * antd Empty 保留组件结构，这里只同步项目正文色。
+   */
+  color: rgba(25, 28, 29, 0.62);
+}
+
+.timelineGroups {
+  max-width: 880px;
+}
+
+.timelineGroup + .timelineGroup {
+  margin-top: 34px;
+}
+
+.timelineGroup h2 {
+  margin: 0 0 18px 0;
+  color: var(--color-text-black-65);
+  font-size: 24px;
+}
+
+.timeline {
+  padding-left: 4px;
+
+  :global(.ant-steps-item-wrapper.ant-timeline-item-wrapper) {
+    column-gap: 32px;
+  }
+
+  :global(.ant-timeline-item-content) {
+    padding-top: 6px;
+  }
+}
+
+.timeline :global(.ant-timeline-item-tail) {
+  border-inline-start-color: rgba(15, 82, 56, 0.18);
+}
+
+.timelineCard {
+  max-width: 720px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(15, 82, 56, 0.1);
+  border-radius: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.timelineCard:hover,
+.timelineCard:focus-visible {
+  h3 {
+    color: var(--echo-color-primary);
+  }
+}
+
+.timelineCard :global(.ant-card-body) {
+  padding: 20px 22px;
+}
+
+.timelineCardMood {
+  color: var(--echo-color-primary);
+  font-size: 12px;
+}
+
+.timelineCard h3 {
+  margin: 8px 0 8px;
+  font-size: 20px;
+  line-height: 1.35;
+  color: var(--echo-color-text);
+  transition: all 160ms ease, border-color 160ms ease;
+}
+
+.timelineCard time {
+  display: block;
+  color: rgba(25, 28, 29, 0.5);
+  font-size: 12px;
+}
+
+.timelineCard p {
+  margin: 14px 0 0;
+  color: rgba(25, 28, 29, 0.72);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.timelineTags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.timelineTags :global(.ant-tag) {
+  margin-inline-end: 0;
+  border-radius: 999px;
+}

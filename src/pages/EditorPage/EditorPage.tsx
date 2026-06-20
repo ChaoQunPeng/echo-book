@@ -270,6 +270,10 @@ function EditorPage() {
 
     return () => {
       disposed = true
+      /*
+       * 离开页面时先同步缓存一次当前正文，避免 Crepe 销毁后取不到最新内容。
+       */
+      latestMarkdownRef.current = crepe.getMarkdown()
       crepeRef.current = null
 
       /*
@@ -285,7 +289,9 @@ function EditorPage() {
       return
     }
 
-    const autoSaveExistingDiary = async () => {
+    const saveExistingDiaryDraft = async (reason: 'auto' | 'leave') => {
+      const shouldUpdateStatus = reason === 'auto'
+
       if (isAutoSavingRef.current || isManualSavingRef.current) {
         return
       }
@@ -304,12 +310,17 @@ function EditorPage() {
       const normalizedTitle = fields.title.trim()
 
       if (!normalizedTitle || !markdown.trim()) {
-        setSaveStatus('有未保存更改')
+        if (shouldUpdateStatus) {
+          setSaveStatus('有未保存更改')
+        }
         return
       }
 
       isAutoSavingRef.current = true
-      setSaveStatus('正在自动保存')
+
+      if (shouldUpdateStatus) {
+        setSaveStatus('正在自动保存')
+      }
 
       try {
         if (!window.diaryAPI) {
@@ -333,11 +344,17 @@ function EditorPage() {
           ...latestFieldsRef.current,
           markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
         })
-        setSaveStatus(latestSnapshot === snapshot ? '已自动保存' : '有未保存更改')
-        setLastSavedAt(updatedDiary.updatedAt)
+
+        if (shouldUpdateStatus) {
+          setSaveStatus(latestSnapshot === snapshot ? '已自动保存' : '有未保存更改')
+          setLastSavedAt(updatedDiary.updatedAt)
+        }
       } catch (error) {
         console.error('Failed to auto-save diary:', error)
-        setSaveStatus(`自动保存失败：${getErrorMessage(error)}`)
+
+        if (shouldUpdateStatus) {
+          setSaveStatus(`自动保存失败：${getErrorMessage(error)}`)
+        }
       } finally {
         isAutoSavingRef.current = false
       }
@@ -347,10 +364,14 @@ function EditorPage() {
      * 一分钟做一次变更检查；没有变化时不会调用 IPC，也不会写数据库或 Markdown 文件。
      */
     const intervalId = window.setInterval(() => {
-      void autoSaveExistingDiary()
+      void saveExistingDiaryDraft('auto')
     }, AUTO_SAVE_INTERVAL_MS)
 
     return () => {
+      /*
+       * 路由切走或组件卸载时静默保存一次，保证返回列表、切换页面等离开动作不会丢掉最后修改。
+       */
+      void saveExistingDiaryDraft('leave')
       window.clearInterval(intervalId)
     }
   }, [diaryId, isEditorReady, loadError])

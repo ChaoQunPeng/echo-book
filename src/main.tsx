@@ -6,6 +6,7 @@ import App from './App'
 import DiaryListPage from './pages/DiaryList'
 import EditorPage from './pages/EditorPage'
 import SettingsPage from './pages/SettingsPage'
+import TimelinePage from './pages/TimelinePage'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
@@ -25,6 +26,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
            * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
           */}
           <Route path="list" element={<DiaryListPage />} />
+          {/*
+           * 时光页只负责浏览和回顾历史记录，编辑仍统一进入 EditorPage。
+           */}
+          <Route path="timeline" element={<TimelinePage />} />
           {/*
            * 设置页独立成路由，便于后续继续加入更多设置分组。
            */}

@@ -1,10 +1,8 @@
-import { CopyOutlined, DatabaseOutlined, ExportOutlined, FolderOpenOutlined, SettingOutlined } from '@ant-design/icons'
-import { Alert, App as AntdApp, Button, Card, Form, Input, Space, Typography } from 'antd'
+import { CopyOutlined, DatabaseOutlined, ExportOutlined, FolderOpenOutlined } from '@ant-design/icons'
+import { Alert, App as AntdApp, Button, Card, Form, Input, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import type { StorageInfo } from '../../../shared/settings'
 import styles from './SettingsPage.module.scss'
-
-const { Paragraph, Title } = Typography
 
 function SettingsPage() {
   const { message } = AntdApp.useApp()

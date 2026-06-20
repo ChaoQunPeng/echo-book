@@ -1,4 +1,4 @@
-import { EditOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
+import { ClockCircleOutlined, EditOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button, ConfigProvider, Divider } from 'antd'
 import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -11,6 +11,11 @@ const sidebarMenus = [
     path: '/list',
     label: '我的日记',
     icon: ReadOutlined
+  },
+  {
+    path: '/timeline',
+    label: '时光',
+    icon: ClockCircleOutlined
   },
   {
     path: '/settings',
@@ -37,10 +42,8 @@ function App() {
       token: {
         colorPrimary,
         // borderRadius: 16,
-        boxShadow: 'none',
         components: {
           Button: {
-            primaryShadow: 'none',
             borderRadius: 24
           }
         }
@@ -111,10 +114,10 @@ function AppLayout() {
           <div className={styles.subtitle}>爱生活，可记录</div>
         </div>
         {/*
-           * 左侧菜单只负责页面级导航，不承载具体业务内容。
-           * 使用 NavLink 可以直接从 React Router 获得当前路由是否激活，
-           * 从而给当前菜单项添加稳定的选中态。
-           */}
+         * 左侧菜单只负责页面级导航，不承载具体业务内容。
+         * 使用 NavLink 可以直接从 React Router 获得当前路由是否激活，
+         * 从而给当前菜单项添加稳定的选中态。
+         */}
         <nav className={styles.sideMenu} aria-label="主导航">
           {sidebarMenus.map(menu => (
             <NavLink
