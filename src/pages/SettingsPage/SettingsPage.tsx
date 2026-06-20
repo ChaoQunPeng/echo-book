@@ -1,12 +1,17 @@
-import { CopyOutlined, DatabaseOutlined, ExportOutlined, FolderOpenOutlined } from '@ant-design/icons'
+import { BgColorsOutlined, CheckOutlined, CopyOutlined, DatabaseOutlined, ExportOutlined, FolderOpenOutlined } from '@ant-design/icons'
 import { Alert, App as AntdApp, Button, Card, Form, Input, Space } from 'antd'
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { StorageInfo } from '../../../shared/settings'
 import PageHeader from '../../components/PageHeader'
+import { useEchoTheme } from '../../contexts/EchoThemeContext'
+import { ECHO_THEMES } from '../../utils/theme'
+import type { EchoThemeId } from '../../utils/theme'
 import styles from './SettingsPage.module.scss'
 
 function SettingsPage() {
   const { message } = AntdApp.useApp()
+  const { themeId, setThemeId } = useEchoTheme()
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
   const [settingsError, setSettingsError] = useState('')
   const [isLoadingStorageInfo, setIsLoadingStorageInfo] = useState(true)
@@ -127,12 +132,53 @@ function SettingsPage() {
       })
   }
 
+  const handleThemeChange = (nextThemeId: EchoThemeId) => {
+    /*
+     * 设置页只负责选择主题，真正的全局 CSS 变量同步在 App Provider 中完成。
+     */
+    setThemeId(nextThemeId)
+    message.success('主题已更新')
+  }
+
   return (
     <section className={styles.settingsPage}>
       <PageHeader eyebrow="Settings" title="设置" />
 
       <div className={styles.settingsScrollArea}>
         <div className={styles.settingsContent}>
+          <Card
+            title={
+              <Space size={8}>
+                <BgColorsOutlined />
+                外观主题
+              </Space>
+            }
+          >
+            <div className={styles.themeGrid}>
+              {ECHO_THEMES.map(theme => {
+                const isActive = theme.id === themeId
+
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    className={isActive ? `${styles.themeOption} ${styles.themeOptionActive}` : styles.themeOption}
+                    aria-pressed={isActive}
+                    onClick={() => handleThemeChange(theme.id)}
+                  >
+                    <span className={styles.themePreview} style={{ '--theme-primary': theme.colors.primary, '--theme-page': theme.colors.page } as CSSProperties}>
+                      {isActive ? <CheckOutlined /> : null}
+                    </span>
+                    <span className={styles.themeText}>
+                      <span className={styles.themeName}>{theme.label}</span>
+                      <span className={styles.themeDescription}>{theme.description}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+
           <Card
             title={
               <Space size={8}>

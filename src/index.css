@@ -25,9 +25,9 @@
   --color-foreground: var(--echo-color-text);
   /* 黑色文本透明度层级，用于弱化不同优先级的文字。 */
   --color-black: var(--echo-color-text);
-  --color-black-45: rgb(25 28 29 / 45%);
-  --color-black-65: rgb(25 28 29 / 65%);
-  --color-black-85: rgb(25 28 29 / 85%);
+  --color-black-45: var(--echo-color-text-black-45);
+  --color-black-65: var(--echo-color-text-black-65);
+  --color-black-85: var(--echo-color-text-black-85);
 }
 
 /* 字体大小 */

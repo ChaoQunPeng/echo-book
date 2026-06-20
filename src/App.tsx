@@ -1,10 +1,12 @@
 import { EditOutlined, FieldTimeOutlined, QuestionCircleOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button, ConfigProvider, Divider } from 'antd'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import styles from './App.module.scss'
 import logoUrl from './assets/logo.svg'
+import { EchoThemeContext } from './contexts/EchoThemeContext'
 import { createDefaultDiary } from './utils/diaryCreation'
+import { applyEchoTheme, getEchoTheme, persistEchoThemeId, readStoredEchoThemeId } from './utils/theme'
 
 const sidebarMenus = [
   {
@@ -42,48 +44,52 @@ const sidebarFooterMenus = [
 ]
 
 function App() {
-  const appTheme = useMemo(() => {
-    /*
-     * CSS 变量定义在 :root 上，因此这里从 document.documentElement 读取。
-     * getPropertyValue 返回值可能带空格，所以需要 trim()。
-     * fallback 用于防止变量未加载或浏览器环境异常时 antd 主题为空。
-     */
-    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--echo-color-primary').trim() || '#0f5238'
+  const [themeId, setThemeId] = useState(readStoredEchoThemeId)
+  const activeTheme = getEchoTheme(themeId)
 
+  useEffect(() => {
+    /*
+     * 每次主题变化都同步写入根 CSS 变量，保证侧边栏和页面背景立即跟随。
+     */
+    applyEchoTheme(themeId)
+    persistEchoThemeId(themeId)
+  }, [themeId])
+
+  const appTheme = useMemo(() => {
     return {
       token: {
-        colorPrimary,
-        // borderRadius: 16,
-        components: {
-          Button: {
-            borderRadius: 24
-          }
+        colorPrimary: activeTheme.colors.primary,
+        colorTextBase: activeTheme.colors.text,
+        colorBgLayout: activeTheme.colors.page
+      },
+      components: {
+        Button: {
+          borderRadius: 24
         }
       }
     }
+  }, [activeTheme])
 
-    // return {
-    //   token: {
-    //     // Seed Token, affects wide range
-    //     colorPrimary: '#00b96b',
-    //     borderRadius: 2,
-
-    //     // Derived token, affects narrow range
-    //     colorBgContainer: '#f6ffed'
-    //   }
-    // }
-  }, [])
+  const themeContextValue = useMemo(
+    () => ({
+      themeId,
+      setThemeId: (nextThemeId: typeof themeId) => setThemeId(nextThemeId)
+    }),
+    [themeId]
+  )
 
   /*
    * AntdApp 提供 message/modal 等反馈 API 的上下文。
    * 这样动态主题能被弹框和提示消费，避免静态 API 的 context 警告。
    */
   return (
-    <ConfigProvider theme={appTheme}>
-      <AntdApp>
-        <AppLayout />
-      </AntdApp>
-    </ConfigProvider>
+    <EchoThemeContext.Provider value={themeContextValue}>
+      <ConfigProvider theme={appTheme}>
+        <AntdApp>
+          <AppLayout />
+        </AntdApp>
+      </ConfigProvider>
+    </EchoThemeContext.Provider>
   )
 }
 
@@ -161,7 +167,7 @@ function AppLayout() {
 
         <div className="mt-auto pb-12">
           <nav className={styles.sideMenu} aria-label="主导航">
-            {sidebarFooterMenus.map((menu, index) => {
+            {sidebarFooterMenus.map(menu => {
               const Icon = menu.icon
 
               // 👉 route 类型
