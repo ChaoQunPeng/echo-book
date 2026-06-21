@@ -93,7 +93,7 @@ function AppLayout() {
     },
     {
       type: 'action',
-      label: '帮助',
+      label: '关于爱可日记',
       icon: QuestionCircleOutlined,
       onClick: () => setIsAboutOpen(true)
     }

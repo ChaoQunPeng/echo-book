@@ -14,8 +14,8 @@
 
 .dialogBody {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 32px;
 }
 
 .tagListPanel,
@@ -30,7 +30,6 @@
   margin: 0;
   color: rgba(25, 28, 29, 0.7);
   font-size: 13px;
-  font-weight: 700;
 }
 
 .emptyText,
@@ -51,7 +50,7 @@
 .tagList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .tagRow {
@@ -81,7 +80,7 @@
 .tagForm {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
 }
 
 .formLabel {
@@ -90,22 +89,12 @@
   gap: 6px;
   color: rgba(25, 28, 29, 0.68);
   font-size: 13px;
-  font-weight: 700;
 }
 
 .colorInputRow {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.colorInput {
-  width: 40px;
-  height: 32px;
-  padding: 2px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  background: #ffffff;
 }
 
 .colorValue {
@@ -116,7 +105,7 @@
 .colorSwatches {
   display: grid;
   grid-template-columns: repeat(6, 24px);
-  gap: 7px;
+  gap: 18px;
 }
 
 .colorSwatch {

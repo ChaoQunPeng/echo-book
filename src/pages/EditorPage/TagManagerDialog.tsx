@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Input, Modal, Popconfirm, Tooltip } from 'antd'
+import { Button, ColorPicker, Input, Modal, Popconfirm, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
 import type { TagLibraryItem } from '../../../shared/tags'
 import styles from './TagManagerDialog.module.scss'
@@ -110,11 +110,12 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
       title="管理标签"
       open={open}
       onCancel={() => onOpenChange(false)}
-      footer={
-        <Button variant="outlined" onClick={() => onOpenChange(false)}>
-          关闭
-        </Button>
-      }
+      footer=""
+      // footer={
+      //   <Button variant="outlined" onClick={() => onOpenChange(false)}>
+      //     关闭
+      //   </Button>
+      // }
       width={640}
     >
       <div className={styles.dialogBody}>
@@ -155,24 +156,23 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
         <div className={styles.tagEditorPanel}>
           <p className={styles.panelTitle}>{isEditingTag ? '编辑标签' : '创建标签'}</p>
           <div className={styles.tagForm}>
-            <label className={styles.formLabel}>
+            <div className={styles.formLabel}>
               标签文本
               <Input value={draftName} placeholder="例如：阅读" onChange={event => setDraftName(event.target.value)} />
-            </label>
+            </div>
 
-            <label className={styles.formLabel}>
+            <div className={`${styles.formLabel} mb-8`}>
               标签颜色
               <span className={styles.colorInputRow}>
-                <input
-                  className={styles.colorInput}
-                  type="color"
+                <ColorPicker
                   value={draftColor}
-                  onChange={event => setDraftColor(event.target.value)}
+                  // 统一保存为十六进制字符串，便于标签库持久化和回显。
+                  onChange={color => setDraftColor(color.toHexString())}
                   aria-label="选择标签颜色"
                 />
                 <span className={styles.colorValue}>{draftColor.toUpperCase()}</span>
               </span>
-            </label>
+            </div>
 
             <div className={styles.colorSwatches} aria-label="常用标签颜色">
               {TAG_COLOR_OPTIONS.map(color => (
@@ -190,8 +190,8 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
             {formError ? <p className={styles.formError}>{formError}</p> : null}
 
             <div className={styles.formActions}>
-              <Button type="primary" icon={<PlusOutlined />} loading={isSubmitting} onClick={handleSubmitTag}>
-                {isEditingTag ? '保存标签' : '创建标签'}
+              <Button className="mt-24 ml-auto" type="primary" icon={<PlusOutlined />} loading={isSubmitting} onClick={handleSubmitTag}>
+                {isEditingTag ? '保存' : '创建'}
               </Button>
               {isEditingTag ? <Button onClick={resetForm}>取消编辑</Button> : null}
             </div>
