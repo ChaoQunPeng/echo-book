@@ -1,4 +1,4 @@
-import { Flex, Modal, Typography, theme as antdTheme } from 'antd'
+import { Modal, Typography, theme as antdTheme } from 'antd'
 import type { CSSProperties } from 'react'
 import styles from './AboutDialog.module.scss'
 

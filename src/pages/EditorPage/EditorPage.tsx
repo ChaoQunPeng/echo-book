@@ -1,11 +1,36 @@
-import { ArrowLeftOutlined, EditOutlined, SaveOutlined, SettingOutlined, SmileOutlined, TagsOutlined } from '@ant-design/icons'
-import { Crepe, CrepeFeature } from '@milkdown/crepe'
-import '@milkdown/crepe/theme/common/style.css'
-import '@milkdown/crepe/theme/frame.css'
-import { Button, Checkbox, Input, Popover, Space, Tag } from 'antd'
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowLeftOutlined,
+  BoldOutlined,
+  CheckSquareOutlined,
+  CommentOutlined,
+  EditOutlined,
+  FontSizeOutlined,
+  ItalicOutlined,
+  LinkOutlined,
+  OrderedListOutlined,
+  PictureOutlined,
+  RedoOutlined,
+  SaveOutlined,
+  SettingOutlined,
+  SmileOutlined,
+  TagsOutlined,
+  UndoOutlined,
+  UnorderedListOutlined
+} from '@ant-design/icons'
+import { mergeAttributes, type NodeViewRendererProps } from '@tiptap/core'
+import Image from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
+import Placeholder from '@tiptap/extension-placeholder'
+import TaskItem from '@tiptap/extension-task-item'
+import TaskList from '@tiptap/extension-task-list'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import { Button, Checkbox, Input, Popover, Space, Tag, Tooltip } from 'antd'
+import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Markdown, type MarkdownStorage } from 'tiptap-markdown'
 import type { Diary } from '../../../shared/diary'
 import { formatMood, MOODS } from '../../../shared/moods'
 import type { TagLibraryItem } from '../../../shared/tags'
@@ -30,6 +55,84 @@ type EditorPageProps = {
   onDiarySaved?: (diary: Diary) => void
 }
 
+type DiaryImageUrlResolver = (url: string) => Promise<string>
+
+function createDiaryImageExtension(resolveImageUrl: DiaryImageUrlResolver) {
+  return Image.extend({
+    addNodeView() {
+      if (typeof document === 'undefined') {
+        return null
+      }
+
+      /*
+       * 图片节点里保存 assets 相对路径，node view 只负责把它换成可预览的 data URL。
+       */
+      return props => createDiaryImageNodeView(props, resolveImageUrl)
+    }
+  })
+}
+
+function createDiaryImageNodeView({ node, extension }: NodeViewRendererProps, resolveImageUrl: DiaryImageUrlResolver) {
+  let currentNode = node
+  let isDestroyed = false
+  let renderToken = 0
+  const imageElement = document.createElement('img')
+
+  const renderImage = () => {
+    const token = renderToken + 1
+    renderToken = token
+    const rawSrc = typeof currentNode.attrs.src === 'string' ? currentNode.attrs.src : ''
+    const attributes = mergeAttributes(extension.options.HTMLAttributes, currentNode.attrs)
+
+    /*
+     * 重新应用属性，避免更新图片时残留旧的 alt/title/尺寸。
+     */
+    Array.from(imageElement.attributes).forEach(attribute => {
+      imageElement.removeAttribute(attribute.name)
+    })
+
+    Object.entries(attributes).forEach(([key, value]) => {
+      if (value === null || value === undefined) {
+        return
+      }
+
+      imageElement.setAttribute(key, String(value))
+    })
+
+    if (!rawSrc) {
+      return
+    }
+
+    void resolveImageUrl(rawSrc).then(resolvedSrc => {
+      /*
+       * 异步读取图片时可能已切换日记或更新节点，过期结果直接丢弃。
+       */
+      if (!isDestroyed && renderToken === token) {
+        imageElement.src = resolvedSrc
+      }
+    })
+  }
+
+  renderImage()
+
+  return {
+    dom: imageElement,
+    update(updatedNode: ProseMirrorNode) {
+      if (updatedNode.type !== currentNode.type) {
+        return false
+      }
+
+      currentNode = updatedNode
+      renderImage()
+
+      return true
+    },
+    destroy() {
+      isDestroyed = true
+    }
+  }
+}
+
 function EditorPage({ diaryId: providedDiaryId, embedded = false, className = '', onDiarySaved }: EditorPageProps) {
   const navigate = useNavigate()
   const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
@@ -37,8 +140,8 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
    * 路由页面从 URL 读取 id；列表页内嵌时由父组件直接传入 id。
    */
   const diaryId = providedDiaryId ?? routeDiaryId
-  const editorRootRef = useRef<HTMLDivElement | null>(null)
-  const crepeRef = useRef<Crepe | null>(null)
+  const editorRef = useRef<Editor | null>(null)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
   const initialMarkdownRef = useRef('')
   const latestMarkdownRef = useRef(initialMarkdownRef.current)
   const assetPreviewUrlCacheRef = useRef(new Map<string, string>())
@@ -51,6 +154,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const isAutoSavingRef = useRef(false)
   const isManualSavingRef = useRef(false)
   const [editorVersion, setEditorVersion] = useState(0)
+  const [, setToolbarStateVersion] = useState(0)
   const [isEditorReady, setIsEditorReady] = useState(false)
   const [title, setTitle] = useState('')
   const [mood, setMood] = useState('')
@@ -58,6 +162,8 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
   const [isMoodPopoverOpen, setIsMoodPopoverOpen] = useState(false)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
+  const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
   const [saveStatus, setSaveStatus] = useState('正在读取日记')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -107,12 +213,202 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   }, [selectedTags, tagLibrary])
   const selectedMood = mood ? formatMood(mood) : null
 
+  const uploadDiaryImage = useCallback(
+    async (file: File): Promise<string> => {
+      /*
+       * renderer 只读取图片二进制；真实落盘路径仍由 Electron main process 决定。
+       */
+      if (!diaryId || !window.diaryAPI) {
+        throw new Error('无法保存图片，请通过 Electron 打开日记')
+      }
+
+      const asset = await window.diaryAPI.saveDiaryAsset({
+        diaryId,
+        fileName: file.name,
+        mimeType: file.type || inferImageMimeType(file.name),
+        data: await file.arrayBuffer()
+      })
+
+      setSaveStatus('图片已保存到 assets，正文有未保存更改')
+
+      return asset.relativePath
+    },
+    [diaryId]
+  )
+
+  const resolveDiaryImageUrl = useCallback(
+    async (url: string): Promise<string> => {
+      /*
+       * Markdown 始终保存 assets 相对路径，编辑器 DOM 里才临时换成 data URL 预览。
+       */
+      if (!diaryId || !window.diaryAPI || !isDiaryAssetPath(url)) {
+        return url
+      }
+
+      const cacheKey = `${diaryId}:${url}`
+      const cachedUrl = assetPreviewUrlCacheRef.current.get(cacheKey)
+      if (cachedUrl) {
+        return cachedUrl
+      }
+
+      const dataUrl = await window.diaryAPI.getDiaryAssetDataUrl({
+        diaryId,
+        relativePath: url
+      })
+      assetPreviewUrlCacheRef.current.set(cacheKey, dataUrl)
+
+      return dataUrl
+    },
+    [diaryId]
+  )
+
+  const diaryImageExtension = useMemo(() => createDiaryImageExtension(resolveDiaryImageUrl), [resolveDiaryImageUrl])
+
+  const insertImageFiles = useCallback(
+    async (files: File[]) => {
+      const activeEditor = editorRef.current
+
+      if (!activeEditor || !files.length) {
+        return
+      }
+
+      for (const file of files) {
+        const relativePath = await uploadDiaryImage(file)
+        /*
+         * 文档节点保留 assets/xxx.png，避免 Markdown 序列化时写入 Base64。
+         */
+        activeEditor.chain().focus().setImage({ src: relativePath, alt: '图片' }).run()
+      }
+    },
+    [uploadDiaryImage]
+  )
+
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          /*
+           * 日记编辑器只保留轻量写作格式，禁用代码相关能力。
+           */
+          code: false,
+          codeBlock: false
+        }),
+        Markdown.configure({
+          html: false,
+          linkify: true,
+          tightLists: true
+        }),
+        diaryImageExtension,
+        Link.configure({
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+          HTMLAttributes: {
+            rel: 'noopener noreferrer',
+            target: '_blank'
+          }
+        }),
+        Placeholder.configure({
+          placeholder: '写下这一刻...'
+        }),
+        TaskList,
+        TaskItem.configure({
+          nested: true
+        })
+      ],
+      content: initialMarkdownRef.current,
+      editable: isEditorReady && !loadError,
+      immediatelyRender: false,
+      textDirection: 'auto',
+      editorProps: {
+        attributes: {
+          class: styles.tiptapProseMirror,
+          'aria-label': '日记正文'
+        },
+        handlePaste(_view, event) {
+          const files = getImageFilesFromDataTransfer(event.clipboardData)
+
+          if (!files.length) {
+            return false
+          }
+
+          event.preventDefault()
+          void insertImageFiles(files)
+          return true
+        },
+        handleDrop(_view, event) {
+          const files = getImageFilesFromDataTransfer(event.dataTransfer)
+
+          if (!files.length) {
+            return false
+          }
+
+          event.preventDefault()
+          void insertImageFiles(files)
+          return true
+        }
+      },
+      onCreate({ editor: createdEditor }) {
+        editorRef.current = createdEditor
+
+        if (isEditorReady) {
+          setSaveStatus('日记已载入')
+        }
+      },
+      onTransaction() {
+        /*
+         * undo/redo 的可用状态来自 history plugin，需要每次编辑器 transaction 后刷新工具栏。
+         */
+        setToolbarStateVersion(version => version + 1)
+      },
+      onUpdate({ editor: updatedEditor }) {
+        const markdown = readEditorMarkdown(updatedEditor) ?? ''
+        latestMarkdownRef.current = markdown
+
+        const currentSnapshot = buildDiarySnapshot({
+          ...latestFieldsRef.current,
+          markdown
+        })
+
+        if (currentSnapshot !== lastPersistedSnapshotRef.current) {
+          setSaveStatus('有未保存更改')
+        }
+      }
+    },
+    [diaryId, diaryImageExtension, editorVersion, insertImageFiles, isEditorReady, loadError]
+  )
+
+  useEffect(() => {
+    editorRef.current = editor
+
+    return () => {
+      /*
+       * TipTap 由 React 托管销毁；卸载前只同步一次 Markdown 缓存。
+       */
+      latestMarkdownRef.current = readEditorMarkdown(editor) ?? latestMarkdownRef.current
+
+      if (editorRef.current === editor) {
+        editorRef.current = null
+      }
+    }
+  }, [editor])
+
+  const getCurrentMarkdown = useCallback((): string => {
+    /*
+     * 所有保存入口都从这里读取 Markdown，保持手动保存、自动保存和导出前状态一致。
+     */
+    const markdown = readEditorMarkdown(editorRef.current) ?? latestMarkdownRef.current
+    latestMarkdownRef.current = markdown
+
+    return markdown
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
     /*
      * EditorPage 只编辑已经创建好的日记。
-     * 路由 id 变化时重置表单和 Markdown 初始值，再用 editorVersion 触发 Crepe 重建。
+     * 路由 id 变化时重置表单和 Markdown 初始值，再用 editorVersion 触发 TipTap 重建。
      */
     if (!diaryId) {
       /*
@@ -215,149 +511,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   }, [mood, tagsInput, title])
 
   useEffect(() => {
-    if (!isEditorReady) {
-      return
-    }
-
-    const editorRoot = editorRootRef.current
-
-    if (!editorRoot) {
-      return
-    }
-
-    /*
-     * React 18/19 的 StrictMode 在开发环境会主动重复挂载副作用，用来发现清理逻辑问题。
-     * 在创建 Milkdown 实例前先清空容器，可以避免热更新或重复挂载后残留旧的 ProseMirror DOM。
-     */
-    editorRoot.innerHTML = ''
-
-    const uploadDiaryImage = async (file: File) => {
-      /*
-       * Crepe 会把粘贴、拖拽和工具栏上传都汇总到这里。
-       * renderer 只读取 File 数据，真正写入路径由 main process 控制。
-       */
-      if (!diaryId || !window.diaryAPI) {
-        throw new Error('无法保存图片，请通过 Electron 打开日记')
-      }
-
-      const asset = await window.diaryAPI.saveDiaryAsset({
-        diaryId,
-        fileName: file.name,
-        mimeType: file.type || inferImageMimeType(file.name),
-        data: await file.arrayBuffer()
-      })
-
-      setSaveStatus('图片已保存到 assets，正文有未保存更改')
-
-      return asset.relativePath
-    }
-
-    const resolveDiaryImageUrl = async (url: string) => {
-      /*
-       * Markdown 里保存相对路径，编辑器 DOM 里临时转换成 data URL 才能预览本地图片。
-       */
-      if (!diaryId || !window.diaryAPI || !isDiaryAssetPath(url)) {
-        return url
-      }
-
-      const cacheKey = `${diaryId}:${url}`
-      const cachedUrl = assetPreviewUrlCacheRef.current.get(cacheKey)
-      if (cachedUrl) {
-        return cachedUrl
-      }
-
-      const dataUrl = await window.diaryAPI.getDiaryAssetDataUrl({
-        diaryId,
-        relativePath: url
-      })
-      assetPreviewUrlCacheRef.current.set(cacheKey, dataUrl)
-
-      return dataUrl
-    }
-
-    const crepe = new Crepe({
-      root: editorRoot,
-      defaultValue: initialMarkdownRef.current,
-      features: {
-        /*
-         * TopBar 默认关闭；这里打开它，让编辑页拥有固定格式工具栏。
-         * 其余常用能力（选区工具栏、列表、链接、表格、代码块、数学公式等）沿用 Crepe 默认配置。
-         */
-        [CrepeFeature.TopBar]: true
-      },
-      featureConfigs: {
-        /*
-         * placeholder 使用中文提示，让空文档状态和日记写作场景保持一致。
-         * mode=block 可以在每个空段落中提示输入，适合长文编辑过程中的多段落写作。
-         */
-        [CrepeFeature.Placeholder]: {
-          text: '写下这一刻...',
-          mode: 'block'
-        },
-        [CrepeFeature.ImageBlock]: {
-          onUpload: uploadDiaryImage,
-          proxyDomURL: resolveDiaryImageUrl,
-          inlineUploadButton: '上传',
-          blockUploadButton: '上传图片',
-          inlineUploadPlaceholderText: '或粘贴图片链接',
-          blockUploadPlaceholderText: '或粘贴图片链接'
-        }
-      }
-    })
-
-    crepeRef.current = crepe
-
-    /*
-     * markdownUpdated 会在文档内容变化后给出最新 Markdown。
-     * 创建动作已经提前落库，因此这里只负责标记已有日记是否有未保存更改。
-     */
-    crepe.on(listener => {
-      listener.markdownUpdated((_, markdown) => {
-        latestMarkdownRef.current = markdown
-
-        const currentSnapshot = buildDiarySnapshot({
-          ...latestFieldsRef.current,
-          markdown
-        })
-
-        if (currentSnapshot !== lastPersistedSnapshotRef.current) {
-          setSaveStatus('有未保存更改')
-        }
-      })
-    })
-
-    let disposed = false
-
-    crepe
-      .create()
-      .then(() => {
-        if (!disposed) {
-          setSaveStatus('日记已载入')
-        }
-      })
-      .catch(() => {
-        if (!disposed) {
-          setSaveStatus('编辑器加载失败')
-        }
-      })
-
-    return () => {
-      disposed = true
-      /*
-       * 离开页面时先同步缓存一次当前正文，避免 Crepe 销毁后取不到最新内容。
-       */
-      latestMarkdownRef.current = crepe.getMarkdown()
-      crepeRef.current = null
-
-      /*
-       * Crepe 的销毁过程是异步的。
-       * cleanup 中不等待它完成，让 React 可以继续卸载；destroy 自己会清理 Milkdown 插件和 DOM 监听。
-       */
-      void crepe.destroy()
-    }
-  }, [diaryId, editorVersion, isEditorReady])
-
-  useEffect(() => {
     if (!diaryId || !isEditorReady || loadError) {
       return
     }
@@ -370,7 +523,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       }
 
       const fields = latestFieldsRef.current
-      const markdown = crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
+      const markdown = getCurrentMarkdown()
       const snapshot = buildDiarySnapshot({
         ...fields,
         markdown
@@ -419,7 +572,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
 
         const latestSnapshot = buildDiarySnapshot({
           ...latestFieldsRef.current,
-          markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
+          markdown: getCurrentMarkdown()
         })
 
         if (shouldUpdateStatus) {
@@ -451,14 +604,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       void saveExistingDiaryDraft('leave')
       window.clearInterval(intervalId)
     }
-  }, [diaryId, isEditorReady, loadError])
+  }, [diaryId, getCurrentMarkdown, isEditorReady, loadError, onDiarySaved])
 
   const handleSaveDiary = async () => {
     /*
-     * 提交前从 Crepe 读取最新 Markdown。
+     * 提交前从 TipTap 读取最新 Markdown。
      * 创建动作已经在入口完成，这里只负责更新当前日记。
      */
-    const markdown = crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
+    const markdown = getCurrentMarkdown()
     const normalizedTitle = title.trim()
 
     console.info('Diary save button clicked:', {
@@ -519,7 +672,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
 
       const latestSnapshot = buildDiarySnapshot({
         ...latestFieldsRef.current,
-        markdown: crepeRef.current?.getMarkdown() ?? latestMarkdownRef.current
+        markdown: getCurrentMarkdown()
       })
       const isStillCurrent = latestSnapshot === savedSnapshot
       setSaveStatus('已保存')
@@ -614,6 +767,63 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     markExistingDiaryChanged()
   }
 
+  const isToolbarDisabled = !editor || !isEditorReady || Boolean(loadError)
+  const canUndo = Boolean(editor && !isToolbarDisabled && editor.can().chain().undo().run())
+  const canRedo = Boolean(editor && !isToolbarDisabled && editor.can().chain().redo().run())
+
+  const handleEditorToolbarMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    /*
+     * 工具栏按钮不抢走编辑器焦点，撤销后立刻重做时 history 状态更稳定。
+     */
+    event.preventDefault()
+  }
+
+  const handleUndo = () => {
+    editor?.chain().focus().undo().run()
+  }
+
+  const handleRedo = () => {
+    editor?.chain().focus().redo().run()
+  }
+
+  const handleLinkPopoverOpenChange = (open: boolean) => {
+    /*
+     * 打开链接面板时读取当前链接，方便用户修改或清除。
+     */
+    setIsLinkPopoverOpen(open)
+
+    if (open) {
+      setLinkUrl(getActiveLinkHref(editor))
+    }
+  }
+
+  const handleApplyLink = () => {
+    if (!editor) {
+      return
+    }
+
+    const normalizedUrl = linkUrl.trim()
+
+    if (!normalizedUrl) {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
+    }
+
+    setIsLinkPopoverOpen(false)
+  }
+
+  const handleImageInputChange = (event: ReactChangeEvent<HTMLInputElement>) => {
+    const files = getImageFilesFromFileList(event.target.files)
+    event.target.value = ''
+
+    if (!files.length) {
+      return
+    }
+
+    void insertImageFiles(files)
+  }
+
   const moodPopoverContent = (
     <div className={styles.moodPopoverContent}>
       {MOODS.map(moodOption => (
@@ -663,6 +873,33 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       ) : (
         <span className={styles.tagPopoverEmpty}>暂无标签</span>
       )}
+    </div>
+  )
+
+  const linkPopoverContent = (
+    <div className={styles.editorLinkPopover}>
+      <Input
+        value={linkUrl}
+        placeholder="https://example.com"
+        size="small"
+        onChange={event => setLinkUrl(event.target.value)}
+        onPressEnter={handleApplyLink}
+      />
+      <Space size={6}>
+        <Button size="small" type="primary" onClick={handleApplyLink}>
+          应用
+        </Button>
+        <Button
+          size="small"
+          onClick={() => {
+            setLinkUrl('')
+            editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+            setIsLinkPopoverOpen(false)
+          }}
+        >
+          清除
+        </Button>
+      </Space>
     </div>
   )
 
@@ -741,7 +978,186 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       {loadError ? <p className={styles.editorPageError}>{loadError}</p> : null}
 
       <div className={styles.editorPageWorkspace}>
-        {isEditorReady ? <div ref={editorRootRef} className={styles.editorPageMilkdown} /> : null}
+        {isEditorReady ? (
+          <>
+            {editor ? (
+              <div
+                className={styles.simpleEditorToolbar}
+                role="toolbar"
+                aria-label="TipTap Simple editor 工具栏"
+                onMouseDown={handleEditorToolbarMouseDown}
+              >
+                {/*
+                 * Simple editor 是固定基础工具栏，这里用 TipTap commands 直接驱动编辑器。
+                 */}
+                <Tooltip title="撤销">
+                  <Button
+                    icon={<UndoOutlined />}
+                    disabled={!canUndo}
+                    onClick={handleUndo}
+                  />
+                </Tooltip>
+                <Tooltip title="重做">
+                  <Button
+                    icon={<RedoOutlined />}
+                    disabled={!canRedo}
+                    onClick={handleRedo}
+                  />
+                </Tooltip>
+                <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
+                <Tooltip title="二级标题">
+                  <Button
+                    icon={<FontSizeOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('heading', { level: 2 }) ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                  />
+                </Tooltip>
+                <Tooltip title="加粗">
+                  <Button
+                    icon={<BoldOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('bold') ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleBold().run()}
+                  />
+                </Tooltip>
+                <Tooltip title="斜体">
+                  <Button
+                    icon={<ItalicOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('italic') ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleItalic().run()}
+                  />
+                </Tooltip>
+                <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
+                <Tooltip title="无序列表">
+                  <Button
+                    icon={<UnorderedListOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('bulletList') ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleBulletList().run()}
+                  />
+                </Tooltip>
+                <Tooltip title="有序列表">
+                  <Button
+                    icon={<OrderedListOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('orderedList') ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                  />
+                </Tooltip>
+                <Tooltip title="任务列表">
+                  <Button
+                    icon={<CheckSquareOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('taskList') ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleTaskList().run()}
+                  />
+                </Tooltip>
+                <Tooltip title="引用">
+                  <Button
+                    icon={<CommentOutlined />}
+                    disabled={isToolbarDisabled}
+                    type={editor.isActive('blockquote') ? 'primary' : 'default'}
+                    onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                  />
+                </Tooltip>
+                <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
+                <Popover
+                  content={linkPopoverContent}
+                  trigger="click"
+                  placement="bottom"
+                  open={isLinkPopoverOpen}
+                  onOpenChange={handleLinkPopoverOpenChange}
+                >
+                  <Tooltip title="链接">
+                    <Button icon={<LinkOutlined />} disabled={isToolbarDisabled} type={editor.isActive('link') ? 'primary' : 'default'} />
+                  </Tooltip>
+                </Popover>
+                <Tooltip title="插入图片">
+                  <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
+                </Tooltip>
+              </div>
+            ) : null}
+            {/*
+            <div className={styles.editorToolbar} role="toolbar" aria-label="正文格式工具栏">
+              <Tooltip title="二级标题">
+                <Button
+                  icon={<FontSizeOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('heading', { level: 2 }) ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                />
+              </Tooltip>
+              <Tooltip title="加粗">
+                <Button
+                  icon={<BoldOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('bold') ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleBold().run()}
+                />
+              </Tooltip>
+              <Tooltip title="斜体">
+                <Button
+                  icon={<ItalicOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('italic') ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleItalic().run()}
+                />
+              </Tooltip>
+              <Tooltip title="无序列表">
+                <Button
+                  icon={<UnorderedListOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('bulletList') ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                />
+              </Tooltip>
+              <Tooltip title="有序列表">
+                <Button
+                  icon={<OrderedListOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('orderedList') ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                />
+              </Tooltip>
+              <Tooltip title="任务列表">
+                <Button
+                  icon={<CheckSquareOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('taskList') ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleTaskList().run()}
+                />
+              </Tooltip>
+              <Tooltip title="引用">
+                <Button
+                  icon={<CommentOutlined />}
+                  disabled={isToolbarDisabled}
+                  type={editor?.isActive('blockquote') ? 'primary' : 'default'}
+                  onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+                />
+              </Tooltip>
+              <Popover
+                content={linkPopoverContent}
+                trigger="click"
+                placement="bottom"
+                open={isLinkPopoverOpen}
+                onOpenChange={handleLinkPopoverOpenChange}
+              >
+                <Tooltip title="链接">
+                  <Button icon={<LinkOutlined />} disabled={isToolbarDisabled} type={editor?.isActive('link') ? 'primary' : 'default'} />
+                </Tooltip>
+              </Popover>
+              <Tooltip title="插入图片">
+                <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
+              </Tooltip>
+              <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
+            </div>
+            */}
+            <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
+            <EditorContent editor={editor} className={styles.editorPageMilkdown} />
+          </>
+        ) : null}
       </div>
 
       <footer className={styles.editorPageFooter}>
@@ -775,6 +1191,53 @@ function parseTags(value: string): string[] {
    * 标签输入支持英文逗号和中文逗号，方便中文输入法场景直接录入。
    */
   return normalizeTagList(value.split(/[,，]/))
+}
+
+function readEditorMarkdown(editor: Editor | null): string | null {
+  /*
+   * tiptap-markdown 把序列化能力挂在 storage.markdown 上，这里集中做空值兜底。
+   */
+  const markdownStorage = (editor?.storage as { markdown?: MarkdownStorage } | undefined)?.markdown
+
+  return markdownStorage?.getMarkdown() ?? null
+}
+
+function getActiveLinkHref(editor: Editor | null): string {
+  /*
+   * 选区位于链接内时直接回填 href，让链接面板可以编辑已有链接。
+   */
+  const href = editor?.getAttributes('link').href
+
+  return typeof href === 'string' ? href : ''
+}
+
+function getImageFilesFromDataTransfer(dataTransfer: DataTransfer | null): File[] {
+  /*
+   * 粘贴和拖拽共用一套图片过滤逻辑，只接受 image/* 文件。
+   */
+  if (!dataTransfer) {
+    return []
+  }
+
+  return getImageFilesFromFileList(dataTransfer.files)
+}
+
+function getImageFilesFromFileList(fileList: FileList | null): File[] {
+  /*
+   * input.files / DataTransfer.files 都是 FileList，转成数组后方便顺序插入。
+   */
+  if (!fileList) {
+    return []
+  }
+
+  return Array.from(fileList).filter(file => file.type.startsWith('image/') || isSupportedImageFileName(file.name))
+}
+
+function isSupportedImageFileName(fileName: string): boolean {
+  /*
+   * 有些系统拖拽文件时 MIME 为空，按常见图片后缀补一次判断。
+   */
+  return /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(fileName)
 }
 
 function normalizeTagList(tags: string[]): string[] {
