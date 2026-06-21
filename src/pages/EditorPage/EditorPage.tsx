@@ -1077,18 +1077,20 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         </div>
       </header>
 
-      <Input
-        className={`${styles.editorTitleInput} mb-12`}
-        value={title}
-        variant="borderless"
-        placeholder="给这一天起个名字"
-        size="large"
-        prefix={<EditOutlined className="mr-10 text-black-65!" />}
-        onChange={event => {
-          setTitle(event.target.value)
-          markExistingDiaryChanged()
-        }}
-      />
+      <div className="ml-16">
+        <Input
+          className={`${styles.editorTitleInput} mb-12`}
+          value={title}
+          variant="borderless"
+          placeholder="给这一天起个名字"
+          size="large"
+          prefix={<EditOutlined className="mr-10 text-black-65!" />}
+          onChange={event => {
+            setTitle(event.target.value)
+            markExistingDiaryChanged()
+          }}
+        />
+      </div>
 
       <div className={styles.editorMetaRow}>
         <Popover
@@ -1320,21 +1322,19 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
           {lastSavedAt ? ` · 上次保存时间：${formatLastSavedAt(lastSavedAt)}` : ''}
         </span>
 
-        {!embedded ? (
-          <Button
-            type="primary"
-            shape="round"
-            icon={<SaveOutlined />}
-            style={{
-              width: 100,
-              height: 36
-            }}
-            disabled={isSaving || Boolean(loadError)}
-            onClick={handleSaveDiary}
-          >
-            保存
-          </Button>
-        ) : null}
+        <Button
+          type="primary"
+          shape="round"
+          icon={<SaveOutlined />}
+          style={{
+            width: 100,
+            height: 36
+          }}
+          disabled={isSaving || Boolean(loadError)}
+          onClick={handleSaveDiary}
+        >
+          保存
+        </Button>
       </footer>
     </section>
   )
