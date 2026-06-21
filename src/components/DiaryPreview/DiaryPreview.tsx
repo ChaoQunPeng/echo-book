@@ -1,5 +1,5 @@
-import type { ComponentPropsWithoutRef } from 'react'
-import { useEffect, useState } from 'react'
+import type { ComponentPropsWithoutRef, CSSProperties, SyntheticEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../../shared/diary'
@@ -74,8 +74,28 @@ type DiaryPreviewImageProps = ComponentPropsWithoutRef<'img'> & {
   diaryId: string
 }
 
-function DiaryPreviewImage({ diaryId, src = '', alt = '', ...props }: DiaryPreviewImageProps) {
+function DiaryPreviewImage({ diaryId, src = '', alt = '', onLoad, style, ...props }: DiaryPreviewImageProps) {
   const [resolvedSrc, setResolvedSrc] = useState(src)
+  const imageRef = useRef<HTMLImageElement | null>(null)
+  const imageRatio = useMemo(() => parseMilkdownImageRatio(alt), [alt])
+
+  const applyMilkdownImageRatio = useCallback(() => {
+    /*
+     * Milkdown 图片块把高度缩放比例保存在 alt 中，预览页需要复用这个比例。
+     */
+    const image = imageRef.current
+    if (!image || imageRatio === null) {
+      return
+    }
+
+    const hostWidth = image.parentElement?.getBoundingClientRect().width ?? image.clientWidth
+    if (!hostWidth || !image.naturalWidth || !image.naturalHeight) {
+      return
+    }
+
+    const baseHeight = image.naturalWidth < hostWidth ? image.naturalHeight : hostWidth * (image.naturalHeight / image.naturalWidth)
+    image.style.height = `${(baseHeight * imageRatio).toFixed(2)}px`
+  }, [imageRatio])
 
   useEffect(() => {
     let cancelled = false
@@ -111,7 +131,38 @@ function DiaryPreviewImage({ diaryId, src = '', alt = '', ...props }: DiaryPrevi
     }
   }, [diaryId, src])
 
-  return <img {...props} src={resolvedSrc} alt={alt} />
+  useEffect(() => {
+    if (imageRatio === null) {
+      return
+    }
+
+    /*
+     * 预览容器宽度变化时，按新的最大宽度重新计算图片高度。
+     */
+    window.addEventListener('resize', applyMilkdownImageRatio)
+
+    return () => {
+      window.removeEventListener('resize', applyMilkdownImageRatio)
+    }
+  }, [applyMilkdownImageRatio, imageRatio])
+
+  const handleImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    onLoad?.(event)
+    applyMilkdownImageRatio()
+  }
+
+  const previewImageStyle: CSSProperties = {
+    ...style,
+    ...(imageRatio === null
+      ? null
+      : {
+          display: 'block',
+          maxWidth: '100%',
+          objectFit: 'cover'
+        })
+  }
+
+  return <img {...props} ref={imageRef} src={resolvedSrc} alt={imageRatio === null ? alt : ''} style={previewImageStyle} onLoad={handleImageLoad} />
 }
 
 function isDiaryAssetPath(url: string): boolean {
@@ -119,6 +170,15 @@ function isDiaryAssetPath(url: string): boolean {
    * 只解析当前日记目录的 assets 图片，外链或 data URL 继续交给浏览器处理。
    */
   return /^assets\/[^/]+$/.test(url.trim())
+}
+
+function parseMilkdownImageRatio(alt: string): number | null {
+  /*
+   * Crepe image-block 的 Markdown 形态是 ![ratio](src "caption")。
+   * 普通图片的 alt 文本不是数字时，继续按常规 Markdown 图片处理。
+   */
+  const ratio = Number(alt)
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : null
 }
 
 /**
