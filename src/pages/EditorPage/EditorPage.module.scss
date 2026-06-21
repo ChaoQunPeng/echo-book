@@ -6,16 +6,6 @@
 
 .editorField {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.editorField span {
-  color: rgba(25, 28, 29, 0.68);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.2;
 }
 
 /*
@@ -23,10 +13,11 @@
  * 顶部只保留保存状态和主操作，正文编辑器占据剩余空间。
  */
 .editorPage {
-  min-height: calc(100vh - 48px);
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* gap: 16px; */
+  // border: 1px solid #f00;
 }
 
 /*
@@ -34,10 +25,22 @@
  */
 .editorPageHeader {
   display: flex;
+  padding: 12px;
+}
+
+.editorTitleInput {
+  height: 52px;
+  font-size: 20px;
+  padding-left: 0;
+  margin-left: 16px;
+}
+
+.editorPageFooter {
+  display: flex;
+  border-top: 1px solid var(--echo-color-primary-10);
+  padding: 16px 20px;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
 }
 
 /*
@@ -47,14 +50,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.editorPageEyebrow {
-  color: var(--echo-color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .editorPageTitleGroup h1 {
@@ -81,18 +76,91 @@
   line-height: 1.4;
 }
 
-/*
- * 元信息表单保持紧凑的网格布局。
- */
-.editorPageForm {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.8fr) minmax(180px, 0.9fr);
+// /*
+//  * 元信息表单保持紧凑的网格布局。
+//  */
+// .editorPageForm {
+//   display: grid;
+//   grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.8fr) minmax(180px, 0.9fr);
+//   gap: 12px;
+//   align-items: end;
+// }
+
+.editorMetaRow {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  align-items: end;
+  padding: 0 20px 12px 12px;
+  border-bottom: 1px solid var(--echo-color-primary-10);
+
+  .editorAction {
+    flex-shrink: 0;
+    min-height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    transition: all 0.3s;
+
+    &:hover {
+      background: var(--echo-color-primary-10);
+    }
+  }
+}
+
+.tagEditorAction {
+  max-width: min(460px, 52vw);
+  flex-wrap: wrap;
+}
+
+.moodPopoverContent {
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.moodPopoverOption,
+.moodPopoverClear {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: var(--echo-color-text);
+  cursor: pointer;
+  outline: none;
+}
+
+.moodPopoverOption:hover,
+.moodPopoverOption:focus-visible,
+.moodPopoverClear:hover,
+.moodPopoverClear:focus-visible {
+  background: rgba(25, 28, 29, 0.04);
+}
+
+.moodPopoverOptionActive {
+  color: var(--echo-color-primary);
+  background: var(--echo-color-primary-10);
+  font-weight: 700;
+}
+
+.moodPopoverEmoji {
+  width: 20px;
+  text-align: center;
+}
+
+.moodPopoverClear {
+  margin-top: 4px;
+  border-top: 1px solid rgba(25, 28, 29, 0.08);
+  color: rgba(25, 28, 29, 0.55);
 }
 
 /*
- * 标签字段由 Select 和管理按钮组成，按钮固定宽度，Select 占据剩余空间。
+ * 标签字段由自定义选择区和管理按钮组成，管理按钮固定在右侧。
  */
 .tagSelectRow {
   min-width: 0;
@@ -101,36 +169,27 @@
   gap: 8px;
 }
 
-.tagSelect {
+.tagPickerValue {
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-.tagSelectOption {
+.tagOptionLabel {
   min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.tagSelectOptionDot {
+.tagOptionDot {
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
   border-radius: 999px;
-}
-
-.tagSelectTag {
-  max-width: 150px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-inline-end: 4px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(25, 28, 29, 0.06);
-  font-size: 12px;
-  line-height: 22px;
 }
 
 .tagSelectTagDot {
@@ -147,26 +206,38 @@
   white-space: nowrap;
 }
 
+.tagPopoverContent {
+  min-width: 220px;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+}
+
+.tagPopoverCheckbox {
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.tagPopoverCheckbox:hover {
+  background: rgba(25, 28, 29, 0.04);
+}
+
+.tagPopoverEmpty {
+  color: rgba(25, 28, 29, 0.48);
+  font-size: 13px;
+}
+
 /*
  * workspace 是 Milkdown 编辑器的视觉边界。
  */
 .editorPageWorkspace {
+  // border: 1px solid;
   flex: 1;
-  min-height: 560px;
-  overflow: hidden;
-  border: 1px solid rgba(15, 82, 56, 0.14);
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-/*
- * 底部操作区贴近正文编辑器，补充顶部保存入口。
- */
-.editorPageFooterActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 /*

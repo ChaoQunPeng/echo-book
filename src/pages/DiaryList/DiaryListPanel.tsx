@@ -4,7 +4,7 @@ import type { MenuProps } from 'antd'
 import type { KeyboardEvent } from 'react'
 import { useMemo } from 'react'
 import type { Diary } from '../../../shared/diary'
-import { formatMoodLabel } from '../../../shared/moods'
+import { formatMood } from '../../../shared/moods'
 import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
 
@@ -184,7 +184,7 @@ function DiaryListPanel({
  */
 function buildDiaryMetaSummary(diary: Diary): string {
   const summaryParts = [
-    diary.mood ? `心情：${formatMoodLabel(diary.mood)}` : '',
+    diary.mood ? `心情：${formatMood(diary.mood)}` : '',
     diary.tags?.length ? `标签：${diary.tags.join(' / ')}` : '',
     `更新：${formatUpdatedAt(diary.updatedAt)}`
   ].filter(Boolean)

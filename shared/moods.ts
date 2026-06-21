@@ -25,11 +25,16 @@ export const MOODS = [
   }
 ] as const
 
-export function formatMoodLabel(mood: string): string {
+/*
+ * 新建日记默认选中第一个心情，避免各入口重复硬编码“平静”。
+ */
+export const DEFAULT_MOOD = MOODS[0].name
+
+export function formatMood(mood: string) {
   /*
    * 数据库存储心情名称，展示层再补 emoji；历史自定义心情找不到时保持原文。
    */
   const matchedMood = MOODS.find(moodOption => moodOption.name === mood)
 
-  return matchedMood ? `${matchedMood.emoji} ${matchedMood.name}` : mood
+  return matchedMood;
 }

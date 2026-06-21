@@ -11,6 +11,7 @@ import type {
   SaveDiaryAssetInput,
   UpdateDiaryInput,
 } from "../../shared/diary.js";
+import { DEFAULT_MOOD } from "../../shared/moods.js";
 import { getStorageRootPath } from "../db/connection.js";
 import type { DiaryRepository } from "../repositories/diaryRepository.js";
 import type { TagRepository } from "../repositories/tagRepository.js";
@@ -60,7 +61,10 @@ export class DiaryService {
       createdAt: now,
       updatedAt: now,
       tags,
-      mood: input.mood === undefined ? undefined : normalizeMood(input.mood),
+      /*
+       * 创建入口没有显式心情时，默认选中“平静”。
+       */
+      mood: input.mood === undefined ? DEFAULT_MOOD : normalizeMood(input.mood),
     });
 
     return attachDiaryMarkdown(diary);

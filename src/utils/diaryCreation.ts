@@ -1,5 +1,5 @@
 import type { DiaryDetail } from '../../shared/diary'
-import { DEFAULT_DIARY_MARKDOWN, DEFAULT_DIARY_TITLE_PREFIX } from '../../shared/defaultDiary'
+import { DEFAULT_DIARY_TITLE_PREFIX } from '../../shared/defaultDiary'
 
 /*
  * 创建入口统一走这里，确保按钮点击时已经生成真实日记记录。
@@ -11,7 +11,7 @@ export async function createDefaultDiary(): Promise<DiaryDetail> {
 
   return window.diaryAPI.createDiary({
     title: buildDefaultDiaryTitle(),
-    markdown: DEFAULT_DIARY_MARKDOWN
+    markdown: ''
   })
 }
 

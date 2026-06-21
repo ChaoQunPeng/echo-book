@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../../shared/diary'
-import { formatMoodLabel } from '../../../shared/moods'
+import { formatMood } from '../../../shared/moods'
 import styles from './DiaryPreview.module.scss'
 
 type DiaryPreviewProps = {
@@ -38,7 +38,7 @@ function DiaryPreview({
             <div className={styles.diaryPreviewMeta}>
               <p>{formatFullCreatedAt(diary.createdAt)}</p>
               {/* <span>更新：{formatUpdatedAt(diary.updatedAt)}</span> */}
-              {diary.mood ? <span>心情：{formatMoodLabel(diary.mood)}</span> : null}
+              {diary.mood ? <span>心情：{formatMood(diary.mood)?.name}</span> : null}
               {diary.tags?.length ? <span>标签：{diary.tags.join(' / ')}</span> : null}
             </div>
           </div>
@@ -162,7 +162,16 @@ function DiaryPreviewImage({ diaryId, src = '', alt = '', onLoad, style, ...prop
         })
   }
 
-  return <img {...props} ref={imageRef} src={resolvedSrc} alt={imageRatio === null ? alt : ''} style={previewImageStyle} onLoad={handleImageLoad} />
+  return (
+    <img
+      {...props}
+      ref={imageRef}
+      src={resolvedSrc}
+      alt={imageRatio === null ? alt : ''}
+      style={previewImageStyle}
+      onLoad={handleImageLoad}
+    />
+  )
 }
 
 function isDiaryAssetPath(url: string): boolean {

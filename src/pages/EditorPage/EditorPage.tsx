@@ -1,30 +1,27 @@
-import { ArrowLeftOutlined, SaveOutlined, TagsOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, EditOutlined, SaveOutlined, SettingOutlined, SmileOutlined, TagsOutlined } from '@ant-design/icons'
 import { Crepe, CrepeFeature } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
-import { Button, Input, Select, Tag } from 'antd'
+import { Button, Checkbox, Input, Popover, Space, Tag } from 'antd'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { DEFAULT_DIARY_MARKDOWN } from '../../../shared/defaultDiary'
 import type { Diary } from '../../../shared/diary'
-import { MOODS } from '../../../shared/moods'
+import { formatMood, MOODS } from '../../../shared/moods'
 import type { TagLibraryItem } from '../../../shared/tags'
-import EchoButton from '../../components/EchoButton'
 import styles from './EditorPage.module.scss'
 import TagManagerDialog from './TagManagerDialog'
 
 const DEFAULT_TAG_COLOR = '#237804'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
-const MOOD_SELECT_OPTIONS = MOODS.map(mood => ({
-  value: mood.name,
-  label: `${mood.emoji} ${mood.name}`
-}))
 
 type DiaryDraftFields = {
   title: string
   mood: string
   tagsInput: string
 }
+
+type SelectableTag = Pick<TagLibraryItem, 'name' | 'color'>
 
 type EditorPageProps = {
   diaryId?: string
@@ -42,7 +39,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const diaryId = providedDiaryId ?? routeDiaryId
   const editorRootRef = useRef<HTMLDivElement | null>(null)
   const crepeRef = useRef<Crepe | null>(null)
-  const initialMarkdownRef = useRef(DEFAULT_DIARY_MARKDOWN)
+  const initialMarkdownRef = useRef('')
   const latestMarkdownRef = useRef(initialMarkdownRef.current)
   const assetPreviewUrlCacheRef = useRef(new Map<string, string>())
   const latestFieldsRef = useRef<DiaryDraftFields>({
@@ -59,6 +56,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const [mood, setMood] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
+  const [isMoodPopoverOpen, setIsMoodPopoverOpen] = useState(false)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState('正在读取日记')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
@@ -86,20 +84,28 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     void loadTagLibrary()
   }, [])
 
-  const tagSelectOptions = useMemo(() => {
-    return tagLibrary.map(tag => ({
-      value: tag.name,
-      label: (
-        <span className={styles.tagSelectOption}>
-          <span className={styles.tagSelectOptionDot} style={{ backgroundColor: tag.color }} />
-          <span>{tag.name}</span>
-        </span>
-      )
-    }))
-  }, [tagLibrary])
   const tagColorMap = useMemo(() => {
     return new Map(tagLibrary.map(tag => [tag.name, tag.color]))
   }, [tagLibrary])
+  const selectedTags = useMemo(() => parseTags(tagsInput), [tagsInput])
+  const selectableTags = useMemo(() => {
+    /*
+     * 历史日记里可能存在已删除或手动创建过的标签，选择器里也保留它们。
+     */
+    const tagMap = new Map<string, SelectableTag>(tagLibrary.map(tag => [tag.name, tag]))
+
+    selectedTags.forEach(tagName => {
+      if (!tagMap.has(tagName)) {
+        tagMap.set(tagName, {
+          name: tagName,
+          color: DEFAULT_TAG_COLOR
+        })
+      }
+    })
+
+    return Array.from(tagMap.values())
+  }, [selectedTags, tagLibrary])
+  const selectedMood = mood ? formatMood(mood) : null
 
   useEffect(() => {
     let cancelled = false
@@ -113,8 +119,8 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
        * 正常路由只有 /editor/:diaryId。
        * 这里保留防御分支，避免测试或异常挂载时继续请求无效 id。
        */
-      initialMarkdownRef.current = DEFAULT_DIARY_MARKDOWN
-      latestMarkdownRef.current = DEFAULT_DIARY_MARKDOWN
+      initialMarkdownRef.current = ''
+      latestMarkdownRef.current = ''
       assetPreviewUrlCacheRef.current.clear()
       lastPersistedSnapshotRef.current = ''
       setTitle('')
@@ -158,7 +164,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
           return
         }
 
-        const loadedMarkdown = diary.markdown || DEFAULT_DIARY_MARKDOWN
+        const loadedMarkdown = diary.markdown || ''
         const loadedTagsInput = diary.tags?.join(', ') ?? ''
 
         initialMarkdownRef.current = loadedMarkdown
@@ -569,6 +575,97 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     setSaveStatus('有未保存更改')
   }
 
+  const handlePickerTriggerKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    /*
+     * 自定义触发区域不是原生按钮，补齐 Enter 和 Space 的键盘操作。
+     */
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      event.currentTarget.click()
+    }
+  }
+
+  const handleMoodChange = (nextMood: string) => {
+    /*
+     * Popover 只负责选择体验，真正保存的仍是心情名称。
+     */
+    setMood(nextMood)
+    setIsMoodPopoverOpen(false)
+    markExistingDiaryChanged()
+  }
+
+  const handleTagCheckedChange = (tagName: string, checked: boolean) => {
+    /*
+     * Popover 勾选结果最终仍同步回 tagsInput，复用原来的保存与快照逻辑。
+     */
+    const nextTags = checked ? normalizeTagList([...selectedTags, tagName]) : selectedTags.filter(tag => tag !== tagName)
+
+    setTagsInput(nextTags.join(', '))
+    markExistingDiaryChanged()
+  }
+
+  const handleTagClose = (tagName: string) => {
+    /*
+     * 标签关闭按钮也回写 tagsInput，保证 Popover 勾选状态和已选标签保持同步。
+     */
+    const nextTags = selectedTags.filter(tag => tag !== tagName)
+
+    setTagsInput(nextTags.join(', '))
+    markExistingDiaryChanged()
+  }
+
+  const moodPopoverContent = (
+    <div className={styles.moodPopoverContent}>
+      {MOODS.map(moodOption => (
+        <div
+          key={moodOption.name}
+          className={mood === moodOption.name ? `${styles.moodPopoverOption} ${styles.moodPopoverOptionActive}` : styles.moodPopoverOption}
+          role="button"
+          tabIndex={0}
+          aria-pressed={mood === moodOption.name}
+          onClick={() => handleMoodChange(moodOption.name)}
+          onKeyDown={handlePickerTriggerKeyDown}
+        >
+          <span className={styles.moodPopoverEmoji}>{moodOption.emoji}</span>
+          <span>{moodOption.name}</span>
+        </div>
+      ))}
+      {mood ? (
+        <div
+          className={styles.moodPopoverClear}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleMoodChange('')}
+          onKeyDown={handlePickerTriggerKeyDown}
+        >
+          不记录心情
+        </div>
+      ) : null}
+    </div>
+  )
+
+  const tagPopoverContent = (
+    <div className={styles.tagPopoverContent}>
+      {selectableTags.length ? (
+        selectableTags.map(tag => (
+          <Checkbox
+            key={tag.name}
+            checked={selectedTags.includes(tag.name)}
+            className={styles.tagPopoverCheckbox}
+            onChange={event => handleTagCheckedChange(tag.name, event.target.checked)}
+          >
+            <span className={styles.tagOptionLabel}>
+              <span className={styles.tagOptionDot} style={{ backgroundColor: tag.color }} />
+              <span>{tag.name}</span>
+            </span>
+          </Checkbox>
+        ))
+      ) : (
+        <span className={styles.tagPopoverEmpty}>暂无标签</span>
+      )}
+    </div>
+  )
+
   /*
    * 编辑页只承载已有日记的修改体验。
    * 新日记由入口按钮先创建记录，再携带 id 跳转到这里。
@@ -576,98 +673,67 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   return (
     <section className={className ? `${styles.editorPage} ${className}` : styles.editorPage}>
       <header className={styles.editorPageHeader}>
-        {/* <div className={styles.editorPageTitleGroup}>
-          <p className={styles.editorPageEyebrow}>Echo Book</p>
-          <h1>编辑日记</h1>
-        </div> */}
         <div className={styles.editorPageActions}>
-          <span className={styles.editorPageStatus} aria-live="polite">
-            {saveStatus}
-            {lastSavedAt ? ` · 更新：${formatLastSavedAt(lastSavedAt)}` : ''}
-          </span>
           {/*
            * 内嵌在列表页时不显示返回入口，避免右侧编辑器影响左侧列表导航。
            */}
           {!embedded ? (
-            <Button type="text" onClick={() => navigate(-1)}>
+            <Button variant="text" type="text" onClick={() => navigate(-1)}>
               <ArrowLeftOutlined /> 返回
             </Button>
           ) : null}
-          <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
-            保存
-          </EchoButton>
         </div>
       </header>
 
-      <div className={styles.editorPageForm}>
-        <label className={styles.editorField}>
-          <span>标题</span>
-          <Input
-            value={title}
-            placeholder="给这一天起个名字"
-            onChange={event => {
-              setTitle(event.target.value)
-              markExistingDiaryChanged()
-            }}
-          />
-        </label>
+      <Input
+        className={styles.editorTitleInput}
+        value={title}
+        variant="borderless"
+        placeholder="给这一天起个名字"
+        size="large"
+        prefix={<EditOutlined className="mr-10 text-black-65!" />}
+        onChange={event => {
+          setTitle(event.target.value)
+          markExistingDiaryChanged()
+        }}
+      />
 
-        <label className={styles.editorField}>
-          <span>心情</span>
-          {/* icon={<SearchOutlined />} */}
+      <div className={styles.editorMetaRow}>
+        <Popover
+          content={moodPopoverContent}
+          trigger="click"
+          placement="bottomLeft"
+          open={isMoodPopoverOpen}
+          onOpenChange={setIsMoodPopoverOpen}
+        >
+          <Button icon={<SmileOutlined />}>
+            {mood ? (
+              <div className="flex items-center leading-none!">
+                <span className="mood-name leading-none! mr-4">{selectedMood?.name}</span>
+                <span className="mood-emoji text-size-18">{selectedMood?.emoji}</span>
+              </div>
+            ) : (
+              '选择今天的心情'
+            )}
+          </Button>
+        </Popover>
 
-          <Select
-            allowClear
-            value={mood || undefined}
-            placeholder="选择今天的心情"
-            options={MOOD_SELECT_OPTIONS}
-            onChange={value => {
-              /*
-               * 下拉值只保存心情名称，emoji 由展示层统一补充。
-               */
-              setMood(value ?? '')
-              markExistingDiaryChanged()
-            }}
-          />
-        </label>
-        <div className={styles.editorField}>
-          <span>标签</span>
-          <div className={styles.tagSelectRow}>
-            <Select
-              mode="tags"
-              allowClear
-              className={styles.tagSelect}
-              value={parseTags(tagsInput)}
-              placeholder="选择或输入标签"
-              options={tagSelectOptions}
-              optionFilterProp="value"
-              tagRender={tag => {
-                /*
-                 * 已选标签展示标签库颜色；新输入但未保存入库的标签使用默认颜色兜底。
-                 */
-                const tagName = String(tag.value)
-                const tagColor = tagColorMap.get(tagName) ?? DEFAULT_TAG_COLOR
+        <Space.Compact>
+          <Popover content={tagPopoverContent} trigger="click" placement="bottomLeft">
+            <Button icon={<TagsOutlined />}>选择标签</Button>
+          </Popover>
+          <Button icon={<SettingOutlined />} onClick={() => setIsTagManagerOpen(true)}></Button>
+        </Space.Compact>
 
-                return (
-                  <Tag className={styles.tagSelectTag} closable={tag.closable} onClose={tag.onClose}>
-                    <span className={styles.tagSelectTagDot} style={{ backgroundColor: tagColor }} />
-                    <span className={styles.tagSelectTagText}>{tag.label}</span>
-                  </Tag>
-                )
-              }}
-              onChange={(nextTags: string[]) => {
-                /*
-                 * Select 支持输入新标签；保存日记时主进程会自动写入标签库。
-                 */
-                setTagsInput(normalizeTagList(nextTags).join(', '))
-                markExistingDiaryChanged()
-              }}
-            />
-            <EchoButton variant="outline" icon={<TagsOutlined />} onClick={() => setIsTagManagerOpen(true)}>
-              管理
-            </EchoButton>
-          </div>
-        </div>
+        {selectedTags.map(tagName => {
+          const tagColor = tagColorMap.get(tagName) ?? DEFAULT_TAG_COLOR
+
+          return (
+            <Tag key={tagName} variant="outlined" color={tagColor} closable onClose={() => handleTagClose(tagName)}>
+              #{tagName}
+            </Tag>
+          )
+        })}
       </div>
 
       <TagManagerDialog open={isTagManagerOpen} onOpenChange={setIsTagManagerOpen} onTagsChanged={loadTagLibrary} />
@@ -678,19 +744,28 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         {isEditorReady ? <div ref={editorRootRef} className={styles.editorPageMilkdown} /> : null}
       </div>
 
-      {/*
-       * 独立路由保留底部操作区，列表内嵌场景只保留顶部保存按钮。
-       */}
-      {!embedded ? (
-        <div className={styles.editorPageFooterActions}>
-          <EchoButton variant="outline" icon={<ArrowLeftOutlined />} onClick={() => navigate('/list')}>
-            返回列表
-          </EchoButton>
-          <EchoButton icon={<SaveOutlined />} disabled={isSaving || Boolean(loadError)} onClick={handleSaveDiary}>
+      <footer className={styles.editorPageFooter}>
+        <span className={styles.editorPageStatus} aria-live="polite">
+          {saveStatus}
+          {lastSavedAt ? ` · 上次保存时间：${formatLastSavedAt(lastSavedAt)}` : ''}
+        </span>
+
+        {!embedded ? (
+          <Button
+            type="primary"
+            shape="round"
+            icon={<SaveOutlined />}
+            style={{
+              width: 120,
+              height: 36
+            }}
+            disabled={isSaving || Boolean(loadError)}
+            onClick={handleSaveDiary}
+          >
             保存
-          </EchoButton>
-        </div>
-      ) : null}
+          </Button>
+        ) : null}
+      </footer>
     </section>
   )
 }

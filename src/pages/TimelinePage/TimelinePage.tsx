@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
-import { formatMoodLabel } from '../../../shared/moods'
+import { formatMood } from '../../../shared/moods'
 import PageHeader from '../../components/PageHeader'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import styles from './TimelinePage.module.scss'
@@ -194,7 +194,7 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
         <time className="mr-12" dateTime={new Date(diary.createdAt).toISOString()}>
           {formatCreatedAt(diary.createdAt)}
         </time>
-        <span className={styles.timelineCardMood}>{diary.mood ? formatMoodLabel(diary.mood) : '🙂 未记录'}</span>
+        <span className={styles.timelineCardMood}>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
       </div>
       <p>{summary}</p>
       {diary.tags?.length ? (
