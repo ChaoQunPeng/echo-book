@@ -3,6 +3,7 @@ import {
   BoldOutlined,
   CheckSquareOutlined,
   CommentOutlined,
+  DownOutlined,
   EditOutlined,
   FontSizeOutlined,
   ItalicOutlined,
@@ -26,7 +27,7 @@ import TaskList from '@tiptap/extension-task-list'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Button, Checkbox, Input, Popover, Space, Tag, Tooltip } from 'antd'
+import { Button, Checkbox, Dropdown, Input, Popover, Space, Tag, Tooltip, type MenuProps } from 'antd'
 import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -39,6 +40,10 @@ import TagManagerDialog from './TagManagerDialog'
 
 const DEFAULT_TAG_COLOR = '#237804'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
+const DIARY_IMAGE_WIDTH_TITLE_PREFIX = 'echo-width:'
+const HEADING_LEVELS = [1, 2, 3, 4, 5] as const
+
+type HeadingLevel = (typeof HEADING_LEVELS)[number]
 
 type DiaryDraftFields = {
   title: string
@@ -59,6 +64,30 @@ type DiaryImageUrlResolver = (url: string) => Promise<string>
 
 function createDiaryImageExtension(resolveImageUrl: DiaryImageUrlResolver) {
   return Image.extend({
+    parseMarkdown(token, helpers) {
+      /*
+       * 图片宽度保存在 Markdown title 中，重新打开编辑器时恢复到节点属性。
+       */
+      const imageTitle = typeof token.title === 'string' ? token.title : ''
+      const imageWidth = parseDiaryImageWidthTitle(imageTitle)
+
+      return helpers.createNode('image', {
+        src: token.href,
+        alt: token.text,
+        title: imageWidth === null ? token.title : null,
+        width: imageWidth
+      })
+    },
+    renderMarkdown(node) {
+      /*
+       * Markdown 图片语法没有标准宽度字段，用内部 title 标记持久化宽度。
+       */
+      const src = typeof node.attrs?.src === 'string' ? node.attrs.src : ''
+      const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''
+      const title = serializeDiaryImageWidthTitle(node.attrs?.width) ?? (typeof node.attrs?.title === 'string' ? node.attrs.title : '')
+
+      return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`
+    },
     addNodeView() {
       if (typeof document === 'undefined') {
         return null
@@ -72,11 +101,20 @@ function createDiaryImageExtension(resolveImageUrl: DiaryImageUrlResolver) {
   })
 }
 
-function createDiaryImageNodeView({ node, extension }: NodeViewRendererProps, resolveImageUrl: DiaryImageUrlResolver) {
+function createDiaryImageNodeView({ node, extension, editor, getPos }: NodeViewRendererProps, resolveImageUrl: DiaryImageUrlResolver) {
   let currentNode = node
   let isDestroyed = false
   let renderToken = 0
+  let startWidth = 0
+  let startPointerX = 0
+  const wrapperElement = document.createElement('span')
   const imageElement = document.createElement('img')
+  const resizeHandle = document.createElement('span')
+
+  wrapperElement.className = styles.diaryImageNodeView
+  resizeHandle.className = styles.diaryImageResizeHandle
+  resizeHandle.setAttribute('role', 'presentation')
+  wrapperElement.append(imageElement, resizeHandle)
 
   const renderImage = () => {
     const token = renderToken + 1
@@ -99,6 +137,8 @@ function createDiaryImageNodeView({ node, extension }: NodeViewRendererProps, re
       imageElement.setAttribute(key, String(value))
     })
 
+    applyDiaryImageWidth(imageElement, currentNode.attrs.width)
+
     if (!rawSrc) {
       return
     }
@@ -113,10 +153,61 @@ function createDiaryImageNodeView({ node, extension }: NodeViewRendererProps, re
     })
   }
 
+  const commitWidth = (width: number) => {
+    const rawPos = getPos()
+
+    /*
+     * 拖拽结束后把像素宽度写回图片节点，触发 Markdown 序列化保存。
+     */
+    if (typeof rawPos !== 'number') {
+      return
+    }
+
+    editor
+      .chain()
+      .focus()
+      .setNodeSelection(rawPos)
+      .updateAttributes('image', { width: Math.round(width) })
+      .run()
+  }
+
+  const handlePointerMove = (event: PointerEvent) => {
+    const nextWidth = Math.max(120, startWidth + event.clientX - startPointerX)
+    imageElement.style.width = `${Math.round(nextWidth)}px`
+  }
+
+  const handlePointerUp = (event: PointerEvent) => {
+    const nextWidth = imageElement.getBoundingClientRect().width
+    const pointerId = event.pointerId
+
+    document.removeEventListener('pointermove', handlePointerMove)
+    document.removeEventListener('pointerup', handlePointerUp)
+
+    if (resizeHandle.hasPointerCapture?.(pointerId)) {
+      resizeHandle.releasePointerCapture(pointerId)
+    }
+
+    commitWidth(nextWidth)
+  }
+
+  resizeHandle.addEventListener('pointerdown', event => {
+    /*
+     * 只横向调整显示宽度，保持图片原始比例，避免日记图片被拉伸变形。
+     */
+    event.preventDefault()
+    event.stopPropagation()
+    startPointerX = event.clientX
+    startWidth = imageElement.getBoundingClientRect().width
+    resizeHandle.dataset.pointerId = String(event.pointerId)
+    resizeHandle.setPointerCapture?.(event.pointerId)
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
+  })
+
   renderImage()
 
   return {
-    dom: imageElement,
+    dom: wrapperElement,
     update(updatedNode: ProseMirrorNode) {
       if (updatedNode.type !== currentNode.type) {
         return false
@@ -129,6 +220,8 @@ function createDiaryImageNodeView({ node, extension }: NodeViewRendererProps, re
     },
     destroy() {
       isDestroyed = true
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
     }
   }
 }
@@ -770,6 +863,11 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const isToolbarDisabled = !editor || !isEditorReady || Boolean(loadError)
   const canUndo = Boolean(editor && !isToolbarDisabled && editor.can().chain().undo().run())
   const canRedo = Boolean(editor && !isToolbarDisabled && editor.can().chain().redo().run())
+  const activeHeadingLevel = HEADING_LEVELS.find(level => editor?.isActive('heading', { level })) ?? null
+  const headingMenuItems: MenuProps['items'] = HEADING_LEVELS.map(level => ({
+    key: String(level),
+    label: `${level}级标题`
+  }))
 
   const handleEditorToolbarMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     /*
@@ -786,10 +884,66 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     editor?.chain().focus().redo().run()
   }
 
+  const handleToggleHeading = (level: HeadingLevel) => {
+    /*
+     * 标题下拉只改变当前块级段落，和正文 mark 选区逻辑分开处理。
+     */
+    editor?.chain().focus().toggleHeading({ level }).run()
+  }
+
+  const handleHeadingMenuClick: MenuProps['onClick'] = ({ key }) => {
+    const level = Number(key) as HeadingLevel
+
+    /*
+     * Dropdown 的 key 来自固定标题级别，执行前仍做一次轻量兜底。
+     */
+    if (HEADING_LEVELS.includes(level)) {
+      handleToggleHeading(level)
+    }
+  }
+
+  const handleToggleBold = () => {
+    if (!editor) {
+      return
+    }
+
+    selectWordAroundCursor(editor)
+    editor.chain().focus().toggleBold().run()
+  }
+
+  const handleToggleItalic = () => {
+    if (!editor) {
+      return
+    }
+
+    selectWordAroundCursor(editor)
+    editor.chain().focus().toggleItalic().run()
+  }
+
+  const handleToggleBulletList = () => {
+    editor?.chain().focus().toggleBulletList().run()
+  }
+
+  const handleToggleOrderedList = () => {
+    editor?.chain().focus().toggleOrderedList().run()
+  }
+
+  const handleToggleTaskList = () => {
+    editor?.chain().focus().toggleTaskList().run()
+  }
+
+  const handleToggleBlockquote = () => {
+    editor?.chain().focus().toggleBlockquote().run()
+  }
+
   const handleLinkPopoverOpenChange = (open: boolean) => {
     /*
      * 打开链接面板时读取当前链接，方便用户修改或清除。
      */
+    if (open && editor && !editor.isActive('link')) {
+      selectWordAroundCursor(editor)
+    }
+
     setIsLinkPopoverOpen(open)
 
     if (open) {
@@ -807,6 +961,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     if (!normalizedUrl) {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()
     } else {
+      selectWordAroundCursor(editor)
       editor.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
     }
 
@@ -991,34 +1146,33 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                  * Simple editor 是固定基础工具栏，这里用 TipTap commands 直接驱动编辑器。
                  */}
                 <Tooltip title="撤销">
-                  <Button
-                    icon={<UndoOutlined />}
-                    disabled={!canUndo}
-                    onClick={handleUndo}
-                  />
+                  <Button icon={<UndoOutlined />} disabled={!canUndo} onClick={handleUndo} />
                 </Tooltip>
                 <Tooltip title="重做">
-                  <Button
-                    icon={<RedoOutlined />}
-                    disabled={!canRedo}
-                    onClick={handleRedo}
-                  />
+                  <Button icon={<RedoOutlined />} disabled={!canRedo} onClick={handleRedo} />
                 </Tooltip>
                 <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
-                <Tooltip title="二级标题">
-                  <Button
-                    icon={<FontSizeOutlined />}
+                <Tooltip title="标题大小">
+                  <Dropdown
                     disabled={isToolbarDisabled}
-                    type={editor.isActive('heading', { level: 2 }) ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                  />
+                    menu={{
+                      items: headingMenuItems,
+                      selectedKeys: activeHeadingLevel ? [String(activeHeadingLevel)] : [],
+                      onClick: handleHeadingMenuClick
+                    }}
+                    trigger={['click']}
+                  >
+                    <Button icon={<FontSizeOutlined />} disabled={isToolbarDisabled} type={activeHeadingLevel ? 'primary' : 'default'}>
+                      {activeHeadingLevel ? `H${activeHeadingLevel}` : '标题'} <DownOutlined />
+                    </Button>
+                  </Dropdown>
                 </Tooltip>
                 <Tooltip title="加粗">
                   <Button
                     icon={<BoldOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('bold') ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleBold().run()}
+                    onClick={handleToggleBold}
                   />
                 </Tooltip>
                 <Tooltip title="斜体">
@@ -1026,7 +1180,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                     icon={<ItalicOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('italic') ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
+                    onClick={handleToggleItalic}
                   />
                 </Tooltip>
                 <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
@@ -1035,7 +1189,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                     icon={<UnorderedListOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('bulletList') ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
+                    onClick={handleToggleBulletList}
                   />
                 </Tooltip>
                 <Tooltip title="有序列表">
@@ -1043,7 +1197,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                     icon={<OrderedListOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('orderedList') ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                    onClick={handleToggleOrderedList}
                   />
                 </Tooltip>
                 <Tooltip title="任务列表">
@@ -1051,19 +1205,22 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                     icon={<CheckSquareOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('taskList') ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleTaskList().run()}
+                    onClick={handleToggleTaskList}
                   />
                 </Tooltip>
-                <Tooltip title="引用">
+                <Tooltip title="插入图片">
+                  <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
+                </Tooltip>
+                {/* <Tooltip title="引用">
                   <Button
                     icon={<CommentOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('blockquote') ? 'primary' : 'default'}
-                    onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                    onClick={handleToggleBlockquote}
                   />
-                </Tooltip>
-                <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
-                <Popover
+                </Tooltip> */}
+                {/* <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" /> */}
+                {/* <Popover
                   content={linkPopoverContent}
                   trigger="click"
                   placement="bottom"
@@ -1073,10 +1230,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                   <Tooltip title="链接">
                     <Button icon={<LinkOutlined />} disabled={isToolbarDisabled} type={editor.isActive('link') ? 'primary' : 'default'} />
                   </Tooltip>
-                </Popover>
-                <Tooltip title="插入图片">
-                  <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
-                </Tooltip>
+                </Popover> */}
               </div>
             ) : null}
             {/*
@@ -1193,6 +1347,46 @@ function parseTags(value: string): string[] {
   return normalizeTagList(value.split(/[,，]/))
 }
 
+function selectWordAroundCursor(editor: Editor): boolean {
+  const { selection } = editor.state
+
+  if (!selection.empty) {
+    return false
+  }
+
+  const { $from } = selection
+  const text = $from.parent.textContent
+
+  if (!$from.parent.isTextblock || !text) {
+    return false
+  }
+
+  let start = $from.parentOffset
+  let end = $from.parentOffset
+
+  /*
+   * 空选区点工具栏时，优先选中光标左侧或所在位置的连续文字。
+   */
+  while (start > 0 && /\S/.test(text[start - 1] ?? '')) {
+    start -= 1
+  }
+
+  while (end < text.length && /\S/.test(text[end] ?? '')) {
+    end += 1
+  }
+
+  if (start === end) {
+    return false
+  }
+
+  editor.commands.setTextSelection({
+    from: $from.start() + start,
+    to: $from.start() + end
+  })
+
+  return true
+}
+
 function readEditorMarkdown(editor: Editor | null): string | null {
   /*
    * tiptap-markdown 把序列化能力挂在 storage.markdown 上，这里集中做空值兜底。
@@ -1200,6 +1394,39 @@ function readEditorMarkdown(editor: Editor | null): string | null {
   const markdownStorage = (editor?.storage as { markdown?: MarkdownStorage } | undefined)?.markdown
 
   return markdownStorage?.getMarkdown() ?? null
+}
+
+function parseDiaryImageWidthTitle(title: string): number | null {
+  /*
+   * 只识别本编辑器写入的尺寸标记，普通图片 title 保持原样。
+   */
+  if (!title.startsWith(DIARY_IMAGE_WIDTH_TITLE_PREFIX)) {
+    return null
+  }
+
+  const width = Number(title.slice(DIARY_IMAGE_WIDTH_TITLE_PREFIX.length))
+
+  return Number.isFinite(width) && width > 0 ? Math.round(width) : null
+}
+
+function serializeDiaryImageWidthTitle(width: unknown): string | null {
+  const normalizedWidth = typeof width === 'number' ? width : Number(width)
+
+  if (!Number.isFinite(normalizedWidth) || normalizedWidth <= 0) {
+    return null
+  }
+
+  return `${DIARY_IMAGE_WIDTH_TITLE_PREFIX}${Math.round(normalizedWidth)}`
+}
+
+function applyDiaryImageWidth(image: HTMLImageElement, width: unknown) {
+  const normalizedWidth = typeof width === 'number' ? width : Number(width)
+
+  /*
+   * 图片宽度只限制最大显示尺寸，容器变窄时仍能响应式缩小。
+   */
+  image.style.width = Number.isFinite(normalizedWidth) && normalizedWidth > 0 ? `${Math.round(normalizedWidth)}px` : ''
+  image.style.height = ''
 }
 
 function getActiveLinkHref(editor: Editor | null): string {

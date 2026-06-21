@@ -309,44 +309,147 @@
 
 .editorPageMilkdown :global(.ProseMirror) h1,
 .editorPageMilkdown :global(.ProseMirror) h2,
-.editorPageMilkdown :global(.ProseMirror) h3 {
+.editorPageMilkdown :global(.ProseMirror) h3,
+.editorPageMilkdown :global(.ProseMirror) h4,
+.editorPageMilkdown :global(.ProseMirror) h5 {
   color: var(--echo-color-text);
   line-height: 1.25;
 }
 
-/*
- * Crepe 图片块默认只有 4px 高的拖拽条，不容易发现。
- * 这里放大命中区域并在 hover/选中时显示，让日记图片可以更自然地调整高度。
- */
-.editorPageMilkdown :global(.milkdown-image-block > .image-wrapper > .image-resize-handle) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 28px;
-  bottom: -14px;
-  color: #fff;
-  background: var(--echo-color-primary);
-  border: 2px solid #fff;
-  border-radius: 999px;
-  cursor: row-resize;
+.editorPageMilkdown :global(.ProseMirror) h1 {
+  margin: 22px 0 12px;
+  font-size: 28px;
 }
 
-.editorPageMilkdown :global(.milkdown-block-handle) {
-  display: none;
+.editorPageMilkdown :global(.ProseMirror) h2 {
+  margin: 20px 0 10px;
+  font-size: 23px;
 }
 
-.editorPageMilkdown :global(.milkdown-image-block > .image-wrapper > .image-resize-handle::before) {
+.editorPageMilkdown :global(.ProseMirror) h3 {
+  margin: 18px 0 8px;
+  font-size: 19px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) h4 {
+  margin: 16px 0 8px;
+  font-size: 17px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) h5 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) p,
+.editorPageMilkdown :global(.ProseMirror) ul,
+.editorPageMilkdown :global(.ProseMirror) ol,
+.editorPageMilkdown :global(.ProseMirror) blockquote {
+  margin: 0 0 12px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) ul,
+.editorPageMilkdown :global(.ProseMirror) ol {
   /*
-   * Milkdown 的拖拽节点本身没有内容，用符号做一个明确的“上下调整”提示。
+   * Tailwind preflight 会清掉列表符号，编辑器正文需要单独恢复。
    */
-  content: '↕';
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
+  padding-left: 26px;
 }
 
-.editorPageMilkdown :global(.milkdown-image-block:hover > .image-wrapper > .image-resize-handle),
-.editorPageMilkdown :global(.milkdown-image-block.selected > .image-wrapper > .image-resize-handle) {
+.editorPageMilkdown :global(.ProseMirror) ul {
+  list-style: disc;
+}
+
+.editorPageMilkdown :global(.ProseMirror) ol {
+  list-style: decimal;
+}
+
+.editorPageMilkdown :global(.ProseMirror) li + li {
+  margin-top: 4px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) blockquote {
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid rgba(15, 82, 56, 0.28);
+  color: rgba(25, 28, 29, 0.64);
+}
+
+.editorPageMilkdown :global(.ProseMirror) a {
+  color: var(--echo-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) :global(ul[data-type='taskList']) {
+  padding-left: 0;
+  list-style: none;
+}
+
+.editorPageMilkdown :global(.ProseMirror) :global(li[data-type='taskItem']) {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.editorPageMilkdown :global(.ProseMirror) :global(li[data-type='taskItem'] > label) {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.editorPageMilkdown :global(.ProseMirror) :global(li[data-type='taskItem'] > div) {
+  min-width: 0;
+  flex: 1;
+}
+
+.diaryImageNodeView {
+  /*
+   * 图片 node view 用 inline-block 包一层，方便放置右下角缩放手柄。
+   */
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 8px 0 14px;
+  line-height: 0;
+}
+
+.diaryImageNodeView img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.diaryImageResizeHandle {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--echo-color-primary);
+  box-shadow: 0 2px 8px rgba(25, 28, 29, 0.18);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.diaryImageResizeHandle::before {
+  /*
+   * 小横线提示这里可以横向拖动调整图片宽度。
+   */
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 4px;
+  width: 6px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.diaryImageNodeView:hover .diaryImageResizeHandle,
+.diaryImageNodeView:focus-within .diaryImageResizeHandle,
+.diaryImageNodeView:global(.ProseMirror-selectednode) .diaryImageResizeHandle {
   opacity: 1;
 }

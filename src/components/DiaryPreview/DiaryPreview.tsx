@@ -74,10 +74,11 @@ type DiaryPreviewImageProps = ComponentPropsWithoutRef<'img'> & {
   diaryId: string
 }
 
-function DiaryPreviewImage({ diaryId, src = '', alt = '', onLoad, style, ...props }: DiaryPreviewImageProps) {
+function DiaryPreviewImage({ diaryId, src = '', alt = '', title = '', onLoad, style, ...props }: DiaryPreviewImageProps) {
   const [resolvedSrc, setResolvedSrc] = useState(src)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const imageRatio = useMemo(() => parseMilkdownImageRatio(alt), [alt])
+  const imageWidth = useMemo(() => parseDiaryImageWidthTitle(title), [title])
 
   const applyMilkdownImageRatio = useCallback(() => {
     /*
@@ -153,6 +154,14 @@ function DiaryPreviewImage({ diaryId, src = '', alt = '', onLoad, style, ...prop
 
   const previewImageStyle: CSSProperties = {
     ...style,
+    ...(imageWidth === null
+      ? null
+      : {
+          display: 'block',
+          width: imageWidth,
+          maxWidth: '100%',
+          height: 'auto'
+        }),
     ...(imageRatio === null
       ? null
       : {
@@ -168,6 +177,7 @@ function DiaryPreviewImage({ diaryId, src = '', alt = '', onLoad, style, ...prop
       ref={imageRef}
       src={resolvedSrc}
       alt={imageRatio === null ? alt : ''}
+      title={imageWidth === null ? title : undefined}
       style={previewImageStyle}
       onLoad={handleImageLoad}
     />
@@ -188,6 +198,21 @@ function parseMilkdownImageRatio(alt: string): number | null {
    */
   const ratio = Number(alt)
   return Number.isFinite(ratio) && ratio > 0 ? ratio : null
+}
+
+function parseDiaryImageWidthTitle(title: string | undefined): number | null {
+  /*
+   * Tiptap 编辑器把图片宽度存在 Markdown title 中，预览时再转成样式。
+   */
+  const widthPrefix = 'echo-width:'
+
+  if (!title?.startsWith(widthPrefix)) {
+    return null
+  }
+
+  const width = Number(title.slice(widthPrefix.length))
+
+  return Number.isFinite(width) && width > 0 ? Math.round(width) : null
 }
 
 /**
