@@ -33,7 +33,7 @@ function DiaryPreview({
     <section className={`${panelClassName} bg-white`} aria-label={ariaLabel}>
       {diary ? (
         <article className={styles.diaryPreviewArticle}>
-          <div className={styles.diaryPreviewHeader}>
+          <div className={`${styles.diaryPreviewHeader} mb-30`}>
             <h2>{diary.title}</h2>
             <div className={styles.diaryPreviewMeta}>
               <p>{formatFullCreatedAt(diary.createdAt)}</p>

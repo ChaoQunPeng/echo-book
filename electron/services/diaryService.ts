@@ -29,7 +29,7 @@ export class DiaryService {
   public constructor(
     private readonly diaryRepository: DiaryRepository,
     private readonly tagRepository: TagRepository,
-  ) {}
+  ) { }
 
   /**
    * 创建日记。
@@ -234,9 +234,9 @@ function normalizeMarkdown(value: string): string {
     throw new Error("markdown must be a string.");
   }
 
-  if (!value.trim()) {
-    throw new Error("markdown cannot be empty.");
-  }
+  // if (!value.trim()) {
+  //   throw new Error("markdown cannot be empty.");
+  // }
 
   return value;
 }

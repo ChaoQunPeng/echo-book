@@ -291,7 +291,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
          * mode=block 可以在每个空段落中提示输入，适合长文编辑过程中的多段落写作。
          */
         [CrepeFeature.Placeholder]: {
-          text: '继续写下这一刻...',
+          text: '写下这一刻...',
           mode: 'block'
         },
         [CrepeFeature.ImageBlock]: {
@@ -686,7 +686,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       </header>
 
       <Input
-        className={styles.editorTitleInput}
+        className={`${styles.editorTitleInput} mb-12`}
         value={title}
         variant="borderless"
         placeholder="给这一天起个名字"
@@ -756,7 +756,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
             shape="round"
             icon={<SaveOutlined />}
             style={{
-              width: 120,
+              width: 100,
               height: 36
             }}
             disabled={isSaving || Boolean(loadError)}
