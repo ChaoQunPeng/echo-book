@@ -64,6 +64,37 @@ export interface UpdateDiaryInput {
 }
 
 /**
+ * 保存到日记 assets 目录的图片输入。
+ *
+ * renderer 只能把二进制数据交给 main process，由 service 决定真实落盘路径。
+ */
+export interface SaveDiaryAssetInput {
+  diaryId: string;
+  fileName: string;
+  mimeType: string;
+  data: ArrayBuffer;
+}
+
+/**
+ * 图片保存后的 Markdown 引用信息。
+ *
+ * relativePath 是写进 Markdown 的相对路径，例如 assets/xxx.png。
+ */
+export interface DiaryAsset {
+  relativePath: string;
+  fileName: string;
+  mimeType: string;
+}
+
+/**
+ * 读取日记 assets 图片时使用的受控输入。
+ */
+export interface GetDiaryAssetInput {
+  diaryId: string;
+  relativePath: string;
+}
+
+/**
  * 查询日记列表的参数。
  *
  * 目前先提供分页、日期过滤和是否包含软删除数据。搜索、标签筛选等能力后续可以
@@ -89,4 +120,6 @@ export interface DiaryApi {
   deleteDiary(id: string): Promise<{ success: boolean }>;
   getDiaryById(id: string): Promise<DiaryDetail | null>;
   getDiaryList(options?: GetDiaryListOptions): Promise<Diary[]>;
+  saveDiaryAsset(input: SaveDiaryAssetInput): Promise<DiaryAsset>;
+  getDiaryAssetDataUrl(input: GetDiaryAssetInput): Promise<string>;
 }

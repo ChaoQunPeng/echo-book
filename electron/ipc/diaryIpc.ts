@@ -1,5 +1,11 @@
 import { ipcMain } from "electron";
-import type { CreateDiaryInput, GetDiaryListOptions, UpdateDiaryInput } from "../../shared/diary.js";
+import type {
+  CreateDiaryInput,
+  GetDiaryAssetInput,
+  GetDiaryListOptions,
+  SaveDiaryAssetInput,
+  UpdateDiaryInput,
+} from "../../shared/diary.js";
 import type { CreateTagInput, UpdateTagInput } from "../../shared/tags.js";
 import { getDatabase } from "../db/connection.js";
 import { initializeDatabase } from "../db/schema.js";
@@ -19,6 +25,8 @@ const DIARY_CHANNELS = {
   delete: "diary:delete",
   getById: "diary:getById",
   list: "diary:list",
+  saveAsset: "diary:saveAsset",
+  getAssetDataUrl: "diary:getAssetDataUrl",
 } as const;
 
 const TAG_CHANNELS = {
@@ -88,6 +96,22 @@ export function registerDiaryIpcHandlers(): void {
 
   ipcMain.handle(DIARY_CHANNELS.list, (_event, options?: GetDiaryListOptions) => {
     return diaryService.getDiaryList(options);
+  });
+
+  ipcMain.handle(DIARY_CHANNELS.saveAsset, (_event, input: SaveDiaryAssetInput) => {
+    try {
+      /*
+       * 图片资源只通过 service 落盘，确保 renderer 不能指定任意本机路径。
+       */
+      return diaryService.saveDiaryAsset(input);
+    } catch (error) {
+      console.error("Failed to save diary asset:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(DIARY_CHANNELS.getAssetDataUrl, (_event, input: GetDiaryAssetInput) => {
+    return diaryService.getDiaryAssetDataUrl(input);
   });
 
   ipcMain.handle(TAG_CHANNELS.list, () => {

@@ -2,7 +2,9 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   CreateDiaryInput,
   DiaryApi,
+  GetDiaryAssetInput,
   GetDiaryListOptions,
+  SaveDiaryAssetInput,
   UpdateDiaryInput,
 } from "../shared/diary.js";
 import type { SettingsApi } from "../shared/settings.js";
@@ -33,6 +35,14 @@ const diaryAPI: DiaryApi = {
 
   getDiaryList(options?: GetDiaryListOptions) {
     return ipcRenderer.invoke("diary:list", options);
+  },
+
+  saveDiaryAsset(input: SaveDiaryAssetInput) {
+    return ipcRenderer.invoke("diary:saveAsset", input);
+  },
+
+  getDiaryAssetDataUrl(input: GetDiaryAssetInput) {
+    return ipcRenderer.invoke("diary:getAssetDataUrl", input);
   },
 };
 

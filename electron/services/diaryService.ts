@@ -4,8 +4,11 @@ import path from "node:path";
 import type {
   CreateDiaryInput,
   Diary,
+  DiaryAsset,
   DiaryDetail,
+  GetDiaryAssetInput,
   GetDiaryListOptions,
+  SaveDiaryAssetInput,
   UpdateDiaryInput,
 } from "../../shared/diary.js";
 import { getStorageRootPath } from "../db/connection.js";
@@ -139,6 +142,62 @@ export class DiaryService {
           : normalizeDate(options.diaryDate, "diaryDate"),
       tagId: options.tagId === undefined ? undefined : normalizeId(options.tagId),
     });
+  }
+
+  /**
+   * 保存日记图片资源。
+   *
+   * 所有图片都落在当前 Markdown 文件同级的 assets 目录，Markdown 中只保存相对路径。
+   */
+  public saveDiaryAsset(input: SaveDiaryAssetInput): DiaryAsset {
+    const diary = this.diaryRepository.getDiaryById(normalizeId(input.diaryId));
+    if (!diary) {
+      throw new Error(`Diary not found: ${input.diaryId}`);
+    }
+
+    const mimeType = normalizeImageMimeType(input.mimeType);
+    const extension = getImageExtension(input.fileName, mimeType);
+    const fileName = `${Date.now()}_${randomUUID()}.${extension}`;
+    const relativePath = `assets/${fileName}`;
+    const absolutePath = resolveDiaryAssetPath(diary.filepath, relativePath);
+    const data = Buffer.from(input.data);
+
+    if (data.byteLength === 0) {
+      throw new Error("image data cannot be empty.");
+    }
+
+    fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+    fs.writeFileSync(absolutePath, data);
+
+    return {
+      relativePath,
+      fileName,
+      mimeType,
+    };
+  }
+
+  /**
+   * 读取日记图片资源并返回 data URL。
+   *
+   * renderer 不能直接访问本机文件系统，因此预览本地 assets 图片时通过这条受控链路读取。
+   */
+  public getDiaryAssetDataUrl(input: GetDiaryAssetInput): string {
+    const diary = this.diaryRepository.getDiaryById(normalizeId(input.diaryId));
+    if (!diary) {
+      throw new Error(`Diary not found: ${input.diaryId}`);
+    }
+
+    const relativePath = normalizeAssetRelativePath(input.relativePath);
+    const absolutePath = resolveDiaryAssetPath(diary.filepath, relativePath);
+
+    if (!fs.existsSync(absolutePath)) {
+      throw new Error(`Diary asset not found: ${relativePath}`);
+    }
+
+    const mimeType = getMimeTypeFromFilePath(absolutePath);
+    const base64 = fs.readFileSync(absolutePath).toString("base64");
+
+    return `data:${mimeType};base64,${base64}`;
   }
 }
 
@@ -281,4 +340,98 @@ function resolveDiaryFilePath(filepath: string): string {
   }
 
   return absolutePath;
+}
+
+function resolveDiaryAssetPath(diaryFilepath: string, assetRelativePath: string): string {
+  const diaryFileAbsolutePath = resolveDiaryFilePath(diaryFilepath);
+  const diaryDirectory = path.dirname(diaryFileAbsolutePath);
+  const absolutePath = path.resolve(diaryDirectory, normalizeAssetRelativePath(assetRelativePath));
+  const assetsDirectory = path.join(diaryDirectory, "assets");
+  const relativePath = path.relative(assetsDirectory, absolutePath);
+
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error("Invalid diary asset path.");
+  }
+
+  return absolutePath;
+}
+
+function normalizeAssetRelativePath(relativePath: string): string {
+  if (typeof relativePath !== "string") {
+    throw new Error("asset path must be a string.");
+  }
+
+  const normalized = relativePath.trim().replace(/\\/g, "/");
+  if (!/^assets\/[^/]+$/.test(normalized)) {
+    throw new Error("asset path must point to the diary assets directory.");
+  }
+
+  return normalized;
+}
+
+function normalizeImageMimeType(mimeType: string): string {
+  if (typeof mimeType !== "string") {
+    throw new Error("mimeType must be a string.");
+  }
+
+  const normalized = mimeType.trim().toLowerCase();
+  if (!normalized.startsWith("image/")) {
+    throw new Error("only image files can be saved as diary assets.");
+  }
+
+  return normalized;
+}
+
+function getImageExtension(fileName: string, mimeType: string): string {
+  const extensionFromMime = getImageExtensionFromMimeType(mimeType);
+  if (extensionFromMime) {
+    return extensionFromMime;
+  }
+
+  const extension = path.extname(fileName).replace(".", "").toLowerCase();
+  if (/^[a-z0-9]{1,8}$/.test(extension)) {
+    return extension;
+  }
+
+  return "png";
+}
+
+function getImageExtensionFromMimeType(mimeType: string): string | null {
+  switch (mimeType) {
+    case "image/jpeg":
+    case "image/jpg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/gif":
+      return "gif";
+    case "image/webp":
+      return "webp";
+    case "image/svg+xml":
+      return "svg";
+    case "image/avif":
+      return "avif";
+    default:
+      return null;
+  }
+}
+
+function getMimeTypeFromFilePath(filePath: string): string {
+  switch (path.extname(filePath).toLowerCase()) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".gif":
+      return "image/gif";
+    case ".webp":
+      return "image/webp";
+    case ".svg":
+      return "image/svg+xml";
+    case ".avif":
+      return "image/avif";
+    default:
+      return "application/octet-stream";
+  }
 }

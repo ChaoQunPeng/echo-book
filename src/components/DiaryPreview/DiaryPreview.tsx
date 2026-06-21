@@ -1,3 +1,5 @@
+import type { ComponentPropsWithoutRef } from 'react'
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../../shared/diary'
@@ -46,7 +48,16 @@ function DiaryPreview({
              */}
             {loading ? <p>正在读取正文...</p> : null}
             {!loading && errorMessage ? <p>{errorMessage}</p> : null}
-            {!loading && !errorMessage ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown || '没有正文预览'}</ReactMarkdown> : null}
+            {!loading && !errorMessage ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  img: imageProps => <DiaryPreviewImage diaryId={diary.id} {...imageProps} />
+                }}
+              >
+                {markdown || '没有正文预览'}
+              </ReactMarkdown>
+            ) : null}
           </div>
         </article>
       ) : (
@@ -57,6 +68,57 @@ function DiaryPreview({
       )}
     </section>
   )
+}
+
+type DiaryPreviewImageProps = ComponentPropsWithoutRef<'img'> & {
+  diaryId: string
+}
+
+function DiaryPreviewImage({ diaryId, src = '', alt = '', ...props }: DiaryPreviewImageProps) {
+  const [resolvedSrc, setResolvedSrc] = useState(src)
+
+  useEffect(() => {
+    let cancelled = false
+
+    /*
+     * Markdown 中保留 assets/xxx 相对路径；预览时再通过 IPC 读取成 data URL。
+     */
+    if (!src || !isDiaryAssetPath(src) || !window.diaryAPI) {
+      setResolvedSrc(src)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    window.diaryAPI
+      .getDiaryAssetDataUrl({
+        diaryId,
+        relativePath: src
+      })
+      .then(dataUrl => {
+        if (!cancelled) {
+          setResolvedSrc(dataUrl)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResolvedSrc(src)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [diaryId, src])
+
+  return <img {...props} src={resolvedSrc} alt={alt} />
+}
+
+function isDiaryAssetPath(url: string): boolean {
+  /*
+   * 只解析当前日记目录的 assets 图片，外链或 data URL 继续交给浏览器处理。
+   */
+  return /^assets\/[^/]+$/.test(url.trim())
 }
 
 /**

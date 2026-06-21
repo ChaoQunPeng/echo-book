@@ -211,3 +211,36 @@
   color: var(--echo-color-text);
   line-height: 1.25;
 }
+
+/*
+ * Crepe 图片块默认只有 4px 高的拖拽条，不容易发现。
+ * 这里放大命中区域并在 hover/选中时显示，让日记图片可以更自然地调整高度。
+ */
+.editorPageMilkdown :global(.milkdown-image-block > .image-wrapper > .image-resize-handle) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 28px;
+  bottom: -14px;
+  color: #fff;
+  background: var(--echo-color-primary);
+  border: 2px solid #fff;
+  border-radius: 999px;
+  cursor: row-resize;
+}
+
+.editorPageMilkdown :global(.milkdown-image-block > .image-wrapper > .image-resize-handle::before) {
+  /*
+   * Milkdown 的拖拽节点本身没有内容，用符号做一个明确的“上下调整”提示。
+   */
+  content: '↕';
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.editorPageMilkdown :global(.milkdown-image-block:hover > .image-wrapper > .image-resize-handle),
+.editorPageMilkdown :global(.milkdown-image-block.selected > .image-wrapper > .image-resize-handle) {
+  opacity: 1;
+}

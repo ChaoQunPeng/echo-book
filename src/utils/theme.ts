@@ -10,6 +10,11 @@ export type EchoTheme = {
   }
 }
 
+/*
+ * 主题 id 仍由运行时主题列表校验；类型层保持 string，方便未来从配置或插件扩展主题。
+ */
+export type EchoThemeId = string
+
 const THEME_STORAGE_KEY = 'echo-book-theme'
 
 export const DEFAULT_ECHO_THEME_ID: string = 'forest'

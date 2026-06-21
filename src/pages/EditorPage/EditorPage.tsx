@@ -44,6 +44,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const crepeRef = useRef<Crepe | null>(null)
   const initialMarkdownRef = useRef(DEFAULT_DIARY_MARKDOWN)
   const latestMarkdownRef = useRef(initialMarkdownRef.current)
+  const assetPreviewUrlCacheRef = useRef(new Map<string, string>())
   const latestFieldsRef = useRef<DiaryDraftFields>({
     title: '',
     mood: '',
@@ -114,6 +115,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
        */
       initialMarkdownRef.current = DEFAULT_DIARY_MARKDOWN
       latestMarkdownRef.current = DEFAULT_DIARY_MARKDOWN
+      assetPreviewUrlCacheRef.current.clear()
       lastPersistedSnapshotRef.current = ''
       setTitle('')
       setMood('')
@@ -161,6 +163,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
 
         initialMarkdownRef.current = loadedMarkdown
         latestMarkdownRef.current = loadedMarkdown
+        assetPreviewUrlCacheRef.current.clear()
         latestFieldsRef.current = {
           title: diary.title,
           mood: diary.mood ?? '',
@@ -222,6 +225,50 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
      */
     editorRoot.innerHTML = ''
 
+    const uploadDiaryImage = async (file: File) => {
+      /*
+       * Crepe 会把粘贴、拖拽和工具栏上传都汇总到这里。
+       * renderer 只读取 File 数据，真正写入路径由 main process 控制。
+       */
+      if (!diaryId || !window.diaryAPI) {
+        throw new Error('无法保存图片，请通过 Electron 打开日记')
+      }
+
+      const asset = await window.diaryAPI.saveDiaryAsset({
+        diaryId,
+        fileName: file.name,
+        mimeType: file.type || inferImageMimeType(file.name),
+        data: await file.arrayBuffer()
+      })
+
+      setSaveStatus('图片已保存到 assets，正文有未保存更改')
+
+      return asset.relativePath
+    }
+
+    const resolveDiaryImageUrl = async (url: string) => {
+      /*
+       * Markdown 里保存相对路径，编辑器 DOM 里临时转换成 data URL 才能预览本地图片。
+       */
+      if (!diaryId || !window.diaryAPI || !isDiaryAssetPath(url)) {
+        return url
+      }
+
+      const cacheKey = `${diaryId}:${url}`
+      const cachedUrl = assetPreviewUrlCacheRef.current.get(cacheKey)
+      if (cachedUrl) {
+        return cachedUrl
+      }
+
+      const dataUrl = await window.diaryAPI.getDiaryAssetDataUrl({
+        diaryId,
+        relativePath: url
+      })
+      assetPreviewUrlCacheRef.current.set(cacheKey, dataUrl)
+
+      return dataUrl
+    }
+
     const crepe = new Crepe({
       root: editorRoot,
       defaultValue: initialMarkdownRef.current,
@@ -240,6 +287,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         [CrepeFeature.Placeholder]: {
           text: '继续写下这一刻...',
           mode: 'block'
+        },
+        [CrepeFeature.ImageBlock]: {
+          onUpload: uploadDiaryImage,
+          proxyDomURL: resolveDiaryImageUrl,
+          inlineUploadButton: '上传',
+          blockUploadButton: '上传图片',
+          inlineUploadPlaceholderText: '或粘贴图片链接',
+          blockUploadPlaceholderText: '或粘贴图片链接'
         }
       }
     })
@@ -294,7 +349,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
        */
       void crepe.destroy()
     }
-  }, [editorVersion, isEditorReady])
+  }, [diaryId, editorVersion, isEditorReady])
 
   useEffect(() => {
     if (!diaryId || !isEditorReady || loadError) {
@@ -672,6 +727,36 @@ function isAppleLikePlatform(): boolean {
    * Electron renderer 没有直接使用 Node.js process，这里通过浏览器平台信息区分快捷键习惯。
    */
   return /Mac|iPhone|iPad|iPod/.test(window.navigator.platform)
+}
+
+function isDiaryAssetPath(url: string): boolean {
+  /*
+   * 只有日记目录下的 assets/xxx 需要走本地资源读取；外链、data URL 和普通相对路径原样保留。
+   */
+  return /^assets\/[^/]+$/.test(url.trim())
+}
+
+function inferImageMimeType(fileName: string): string {
+  /*
+   * 部分剪贴板图片没有 MIME，这里按扩展名做轻量兜底。
+   */
+  const extension = fileName.split('.').pop()?.toLowerCase()
+
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'gif':
+      return 'image/gif'
+    case 'webp':
+      return 'image/webp'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'avif':
+      return 'image/avif'
+    default:
+      return 'image/png'
+  }
 }
 
 function formatLastSavedAt(timestamp: number): string {
