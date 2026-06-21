@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import styles from './App.module.scss'
 import logoUrl from './assets/logo.svg'
+import AboutDialog from './components/AboutDialog'
 import { EchoThemeContext } from './contexts/EchoThemeContext'
 import { createDefaultDiary } from './utils/diaryCreation'
 import { applyEchoTheme, getEchoTheme, persistEchoThemeId, readStoredEchoThemeId } from './utils/theme'
@@ -26,21 +27,6 @@ const sidebarMenus = [
   //   label: '回收站',
   //   icon: DeleteOutlined
   // }
-]
-
-const sidebarFooterMenus = [
-  {
-    type: 'route',
-    path: '/settings',
-    label: '设置',
-    icon: SettingOutlined
-  },
-  {
-    type: 'action',
-    label: '帮助',
-    icon: QuestionCircleOutlined,
-    onClick: () => {}
-  }
 ]
 
 function App() {
@@ -97,6 +83,21 @@ function AppLayout() {
   const { message } = AntdApp.useApp()
   const navigate = useNavigate()
   const [isCreatingDiary, setIsCreatingDiary] = useState(false)
+  const [isAboutOpen, setIsAboutOpen] = useState(false)
+  const sidebarFooterMenus = [
+    {
+      type: 'route',
+      path: '/settings',
+      label: '设置',
+      icon: SettingOutlined
+    },
+    {
+      type: 'action',
+      label: '帮助',
+      icon: QuestionCircleOutlined,
+      onClick: () => setIsAboutOpen(true)
+    }
+  ] as const
 
   const handleCreateDiary = async () => {
     /*
@@ -186,7 +187,22 @@ function AppLayout() {
 
               // 👉 action 类型
               return (
-                <div key={menu.label} className={`${styles.sideMenuItem} cursor-pointer`} onClick={menu.onClick} role="button">
+                <div
+                  key={menu.label}
+                  className={`${styles.sideMenuItem} cursor-pointer`}
+                  onClick={menu.onClick}
+                  onKeyDown={event => {
+                    /*
+                     * 让侧边栏里的 action 项也能通过键盘打开弹框。
+                     */
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      menu.onClick()
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
                   <Icon className="text-size-14 mr-12" />
                   <span className="text-size-14">{menu.label}</span>
                 </div>
@@ -198,6 +214,7 @@ function AppLayout() {
       <div className={styles.mainContainer}>
         <Outlet />
       </div>
+      <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
     </div>
   )
 }

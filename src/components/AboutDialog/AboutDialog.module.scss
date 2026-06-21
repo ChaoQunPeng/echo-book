@@ -1,0 +1,84 @@
+.aboutModal {
+  :global(.ant-modal-content) {
+    overflow: hidden;
+    background: var(--about-bg);
+    box-shadow: none; /* 弹窗不使用阴影，保持纯文字说明的安静感 */
+  }
+
+  :global(.ant-modal-close) {
+    color: var(--about-text-tertiary);
+  }
+}
+
+.aboutDialog {
+  padding: 30px 56px 52px 52px;
+}
+
+.aboutInner {
+  width: 100%;
+  max-width: 520px; /* 控制阅读宽度，避免中文长句过散 */
+  font-size: 16px;
+}
+
+.aboutHeader {
+  text-align: center;
+}
+
+.aboutEyebrow {
+  color: var(--about-text-tertiary);
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.aboutTitle {
+  margin: 6px 0 0 !important;
+  color: var(--about-text) !important;
+  font-size: 28px !important;
+  line-height: 1.25 !important;
+  font-weight: 600 !important;
+}
+
+.aboutLead {
+  margin: 14px auto 0 !important;
+  color: var(--about-text-secondary) !important;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* 纯文本对比排版：只依靠字号、字重、字色和留白区分内容。 */
+.aboutPrinciples {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 30px;
+}
+
+.aboutPrincipleRow {
+  padding: 0;
+  background: transparent;
+}
+
+.aboutPrincipleTitle {
+  margin: 0 0 10px 0 !important;
+  color: var(--about-text) !important;
+  font-size: 18px !important;
+  line-height: 1.45 !important;
+  font-weight: 600 !important;
+}
+
+.aboutPrincipleDescription {
+  margin: 0 0 6px 0 !important;
+  color: var(--about-text-secondary) !important;
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.aboutPrincipleNote {
+  margin: 0 !important;
+  color: var(--about-text-tertiary) !important;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 400;
+}
