@@ -42,6 +42,7 @@ export interface UpdateDiaryRecord {
   id: string;
   title?: string;
   diaryDate?: string;
+  createdAt?: number;
   tags?: string[];
   mood?: string | null;
   updatedAt: number;
@@ -118,6 +119,11 @@ export class DiaryRepository {
     if (record.diaryDate !== undefined) {
       sets.push("diary_date = @diaryDate");
       params.diaryDate = record.diaryDate;
+    }
+
+    if (record.createdAt !== undefined) {
+      sets.push("created_at = @createdAt");
+      params.createdAt = record.createdAt;
     }
 
     if (record.mood !== undefined) {
