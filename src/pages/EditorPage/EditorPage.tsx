@@ -2,12 +2,10 @@ import {
   ArrowLeftOutlined,
   BoldOutlined,
   CheckSquareOutlined,
-  CommentOutlined,
   DownOutlined,
   EditOutlined,
   FontSizeOutlined,
   ItalicOutlined,
-  LinkOutlined,
   OrderedListOutlined,
   PictureOutlined,
   RedoOutlined,
@@ -255,8 +253,8 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
   const [isMoodPopoverOpen, setIsMoodPopoverOpen] = useState(false)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
-  const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
-  const [linkUrl, setLinkUrl] = useState('')
+  // const [setIsLinkPopoverOpen] = useState(false)
+  // const [linkUrl] = useState('')
   const [saveStatus, setSaveStatus] = useState('正在读取日记')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -932,41 +930,41 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     editor?.chain().focus().toggleTaskList().run()
   }
 
-  const handleToggleBlockquote = () => {
-    editor?.chain().focus().toggleBlockquote().run()
-  }
+  // const handleToggleBlockquote = () => {
+  //   editor?.chain().focus().toggleBlockquote().run()
+  // }
 
-  const handleLinkPopoverOpenChange = (open: boolean) => {
-    /*
-     * 打开链接面板时读取当前链接，方便用户修改或清除。
-     */
-    if (open && editor && !editor.isActive('link')) {
-      selectWordAroundCursor(editor)
-    }
+  // const handleLinkPopoverOpenChange = (open: boolean) => {
+  //   /*
+  //    * 打开链接面板时读取当前链接，方便用户修改或清除。
+  //    */
+  //   if (open && editor && !editor.isActive('link')) {
+  //     selectWordAroundCursor(editor)
+  //   }
 
-    setIsLinkPopoverOpen(open)
+  //   setIsLinkPopoverOpen(open)
 
-    if (open) {
-      setLinkUrl(getActiveLinkHref(editor))
-    }
-  }
+  //   if (open) {
+  //     setLinkUrl(getActiveLinkHref(editor))
+  //   }
+  // }
 
-  const handleApplyLink = () => {
-    if (!editor) {
-      return
-    }
+  // const handleApplyLink = () => {
+  //   if (!editor) {
+  //     return
+  //   }
 
-    const normalizedUrl = linkUrl.trim()
+  //   const normalizedUrl = linkUrl.trim()
 
-    if (!normalizedUrl) {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-    } else {
-      selectWordAroundCursor(editor)
-      editor.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
-    }
+  //   if (!normalizedUrl) {
+  //     editor.chain().focus().extendMarkRange('link').unsetLink().run()
+  //   } else {
+  //     selectWordAroundCursor(editor)
+  //     editor.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
+  //   }
 
-    setIsLinkPopoverOpen(false)
-  }
+  //   setIsLinkPopoverOpen(false)
+  // }
 
   const handleImageInputChange = (event: ReactChangeEvent<HTMLInputElement>) => {
     const files = getImageFilesFromFileList(event.target.files)
@@ -1031,32 +1029,32 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     </div>
   )
 
-  const linkPopoverContent = (
-    <div className={styles.editorLinkPopover}>
-      <Input
-        value={linkUrl}
-        placeholder="https://example.com"
-        size="small"
-        onChange={event => setLinkUrl(event.target.value)}
-        onPressEnter={handleApplyLink}
-      />
-      <Space size={6}>
-        <Button size="small" type="primary" onClick={handleApplyLink}>
-          应用
-        </Button>
-        <Button
-          size="small"
-          onClick={() => {
-            setLinkUrl('')
-            editor?.chain().focus().extendMarkRange('link').unsetLink().run()
-            setIsLinkPopoverOpen(false)
-          }}
-        >
-          清除
-        </Button>
-      </Space>
-    </div>
-  )
+  // const linkPopoverContent = (
+  //   <div className={styles.editorLinkPopover}>
+  //     <Input
+  //       value={linkUrl}
+  //       placeholder="https://example.com"
+  //       size="small"
+  //       onChange={event => setLinkUrl(event.target.value)}
+  //       onPressEnter={handleApplyLink}
+  //     />
+  //     <Space size={6}>
+  //       <Button size="small" type="primary" onClick={handleApplyLink}>
+  //         应用
+  //       </Button>
+  //       <Button
+  //         size="small"
+  //         onClick={() => {
+  //           setLinkUrl('')
+  //           editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+  //           setIsLinkPopoverOpen(false)
+  //         }}
+  //       >
+  //         清除
+  //       </Button>
+  //     </Space>
+  //   </div>
+  // )
 
   /*
    * 编辑页只承载已有日记的修改体验。
@@ -1429,14 +1427,14 @@ function applyDiaryImageWidth(image: HTMLImageElement, width: unknown) {
   image.style.height = ''
 }
 
-function getActiveLinkHref(editor: Editor | null): string {
-  /*
-   * 选区位于链接内时直接回填 href，让链接面板可以编辑已有链接。
-   */
-  const href = editor?.getAttributes('link').href
+// function getActiveLinkHref(editor: Editor | null): string {
+//   /*
+//    * 选区位于链接内时直接回填 href，让链接面板可以编辑已有链接。
+//    */
+//   const href = editor?.getAttributes('link').href
 
-  return typeof href === 'string' ? href : ''
-}
+//   return typeof href === 'string' ? href : ''
+// }
 
 function getImageFilesFromDataTransfer(dataTransfer: DataTransfer | null): File[] {
   /*

@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import DiaryListPage from './pages/DiaryList'
@@ -9,9 +9,12 @@ import EditorPage from './pages/EditorPage'
 import SettingsPage from './pages/SettingsPage'
 import TimelinePage from './pages/TimelinePage'
 
+// 打包后的 Electron 使用 file:// 加载页面，HashRouter 可以避免刷新或跳转时丢失 index.html。
+const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <Router>
       {/*
        * 顶层路由使用 App 作为固定布局容器，App 内部的 <Outlet />
        * 会接收这里声明的所有子路由页面。后续新增页面时，只需要继续
@@ -47,6 +50,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
           <Route path="*" element={<Navigate to="/list" replace />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </Router>
   </React.StrictMode>
 )

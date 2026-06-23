@@ -12,7 +12,44 @@
     "preview": "vite preview",
     "electron:build": "tsc -p tsconfig.electron.json && node scripts/write-electron-dist-package.mjs",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
-    "electron": "node scripts/electron-run.mjs"
+    "electron": "node scripts/electron-run.mjs",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:dmg": "npm run build && electron-builder --mac dmg",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:win-installer": "npm run build && electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.echobook.app",
+    "productName": "EchoBook",
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "node_modules/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "dir"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",

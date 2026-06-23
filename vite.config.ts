@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => {
   const isDevelopment = mode === "development";
 
   return {
+    // 生产包由 Electron 通过 file:// 加载，资源路径必须是相对路径。
+    base: isDevelopment ? "/" : "./",
+
     plugins: [
       tailwindcss(),
       codeInspectorPlugin({
