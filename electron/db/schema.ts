@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import fs from "node:fs";
 import { getDatabase, getNotesPath } from "./connection.js";
 
-const DB_VERSION = "3";
+const DB_VERSION = "4";
 
 /**
  * 初始化 SQLite schema。
@@ -16,6 +16,7 @@ export function initializeDatabase(db?: Database.Database): void {
     ensureStorageDirectories();
   }
 
+  targetDb.pragma("trusted_schema = ON");
   resetIncompatibleSchema(targetDb);
   createCurrentSchema(targetDb);
   initializeSettings(targetDb);
@@ -57,7 +58,6 @@ function resetIncompatibleSchema(db: Database.Database): void {
 }
 
 function dropUnexpectedTables(db: Database.Database): void {
-  const currentTables = new Set(["diaries", "tags", "settings"]);
   const rows = db
     .prepare(
       `
@@ -70,13 +70,15 @@ function dropUnexpectedTables(db: Database.Database): void {
     .all() as Array<{ name: string }>;
 
   for (const row of rows) {
-    if (!currentTables.has(row.name)) {
+    if (!isCurrentSchemaTable(row.name)) {
       dropTableIfExists(db, row.name);
     }
   }
 }
 
 function createCurrentSchema(db: Database.Database): void {
+  resetIncompatibleFtsSchema(db);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS diaries (
       id TEXT PRIMARY KEY,
@@ -122,6 +124,75 @@ function createCurrentSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_deleted
       ON diaries(deleted);
   `);
+
+  createDiaryFtsSchema(db);
+}
+
+function createDiaryFtsSchema(db: Database.Database): void {
+  /*
+   * diary_fts 是从 Markdown 派生出来的搜索缓存，不是用户资产。
+   * 这里用 trigram tokenizer 支持中文连续文本的全文检索。
+   */
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS diary_fts USING fts5(
+      title,
+      content,
+      tokenize = 'trigram'
+    );
+  `);
+
+  recreateDiaryFtsTriggers(db);
+}
+
+function recreateDiaryFtsTriggers(db: Database.Database): void {
+  /*
+   * triggers 只负责 FTS 行生命周期和标题同步；正文来自 Markdown，
+   * 由 service 在写文件成功后写入索引，避免 SQLite 变成正文数据源。
+   */
+  db.exec(`
+    DROP TRIGGER IF EXISTS diaries_ai;
+    DROP TRIGGER IF EXISTS diaries_au;
+    DROP TRIGGER IF EXISTS diaries_ad;
+
+    CREATE TRIGGER diaries_ai AFTER INSERT ON diaries BEGIN
+      INSERT INTO diary_fts(rowid, title, content)
+      VALUES (new.rowid, new.title, '');
+    END;
+
+    CREATE TRIGGER diaries_au AFTER UPDATE OF title, deleted ON diaries BEGIN
+      UPDATE diary_fts
+      SET title = new.title
+      WHERE rowid = old.rowid
+        AND new.deleted = 0;
+
+      INSERT INTO diary_fts(rowid, title, content)
+      SELECT new.rowid, new.title, ''
+      WHERE new.deleted = 0
+        AND NOT EXISTS (
+          SELECT 1
+          FROM diary_fts
+          WHERE rowid = new.rowid
+        );
+
+      DELETE FROM diary_fts
+      WHERE rowid = old.rowid
+        AND new.deleted = 1;
+    END;
+
+    CREATE TRIGGER diaries_ad AFTER DELETE ON diaries BEGIN
+      DELETE FROM diary_fts WHERE rowid = old.rowid;
+    END;
+  `);
+}
+
+function resetIncompatibleFtsSchema(db: Database.Database): void {
+  if (!hasTable(db, "diary_fts")) {
+    return;
+  }
+
+  if (!hasExactColumns(db, "diary_fts", ["title", "content"]) || !hasExpectedDiaryFtsSql(db)) {
+    dropTableIfExists(db, "diary_fts");
+  }
 }
 
 function initializeSettings(db: Database.Database): void {
@@ -152,6 +223,33 @@ function hasTable(db: Database.Database, tableName: string): boolean {
     .get({ tableName }) as { name: string } | undefined;
 
   return Boolean(table);
+}
+
+function isCurrentSchemaTable(tableName: string): boolean {
+  const currentTables = new Set(["diaries", "tags", "settings", "diary_fts"]);
+
+  /*
+   * FTS5 会为虚拟表生成 shadow tables，不能被开发期清理逻辑误删。
+   */
+  return currentTables.has(tableName) || tableName.startsWith("diary_fts_");
+}
+
+function hasExpectedDiaryFtsSql(db: Database.Database): boolean {
+  const row = db
+    .prepare(
+      `
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'diary_fts'
+        LIMIT 1
+      `,
+    )
+    .get() as { sql: string | null } | undefined;
+
+  const sql = row?.sql?.toLowerCase() ?? "";
+
+  return sql.includes("using fts5") && sql.includes("tokenize = 'trigram'");
 }
 
 function hasExactColumns(db: Database.Database, tableName: string, expectedColumns: string[]): boolean {

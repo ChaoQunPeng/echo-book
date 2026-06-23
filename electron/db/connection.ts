@@ -64,6 +64,7 @@ export function getDatabasePath(): string {
  *
  * 这里会确保 userData 目录存在，并设置基础 PRAGMA：
  * - journal_mode=WAL：提升桌面应用读写并发和崩溃恢复表现
+ * - trusted_schema=ON：允许应用自有 trigger 维护 FTS5 虚拟表索引
  */
 export function getDatabase(): Database.Database {
   if (database) {
@@ -74,6 +75,7 @@ export function getDatabase(): Database.Database {
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
 
   database = new Database(databasePath);
+  database.pragma("trusted_schema = ON");
   database.pragma("journal_mode = WAL");
 
   return database;

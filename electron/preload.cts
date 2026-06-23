@@ -37,6 +37,10 @@ const diaryAPI: DiaryApi = {
     return ipcRenderer.invoke("diary:list", options);
   },
 
+  searchDiary(keyword: string) {
+    return ipcRenderer.invoke("diary:search", keyword);
+  },
+
   saveDiaryAsset(input: SaveDiaryAssetInput) {
     return ipcRenderer.invoke("diary:saveAsset", input);
   },

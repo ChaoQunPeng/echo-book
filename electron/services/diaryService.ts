@@ -13,7 +13,7 @@ import type {
 } from "../../shared/diary.js";
 import { DEFAULT_MOOD } from "../../shared/moods.js";
 import { getStorageRootPath } from "../db/connection.js";
-import type { DiaryRepository } from "../repositories/diaryRepository.js";
+import type { DiaryRepository, DiarySearchIndexRecord } from "../repositories/diaryRepository.js";
 import type { TagRepository } from "../repositories/tagRepository.js";
 import { normalizeTagNames } from "./tagService.js";
 
@@ -97,6 +97,12 @@ export class DiaryService {
       mood,
     });
 
+    this.diaryRepository.syncDiarySearchIndex({
+      id: diary.id,
+      title: diary.title,
+      content: markdown,
+    });
+
     return this.attachDiaryMarkdown(diary);
   }
 
@@ -164,6 +170,12 @@ export class DiaryService {
       throw new Error(`Diary not found: ${id}`);
     }
 
+    this.diaryRepository.syncDiarySearchIndex({
+      id: updatedDiary.id,
+      title: updatedDiary.title,
+      content: nextMarkdown,
+    });
+
     return this.attachDiaryMarkdown(updatedDiary);
   }
 
@@ -196,6 +208,30 @@ export class DiaryService {
           : normalizeDate(options.diaryDate, "diaryDate"),
       tagId: options.tagId === undefined ? undefined : normalizeId(options.tagId),
     });
+  }
+
+  /**
+   * 使用 FTS 查询标题和 Markdown 正文。
+   */
+  public searchDiary(keyword: string): Diary[] {
+    return this.diaryRepository.searchDiary(normalizeSearchKeyword(keyword));
+  }
+
+  /**
+   * 从 Markdown 文件重建 FTS 缓存。
+   *
+   * 这条路径只读 Markdown，不写 Markdown，因此 FTS 损坏或被删除时可以安全恢复。
+   */
+  public rebuildDiarySearchIndex(): void {
+    const records: DiarySearchIndexRecord[] = this.diaryRepository
+      .getDiariesForSearchIndex()
+      .map((diary) => ({
+        id: diary.id,
+        title: diary.title,
+        content: readDiaryMarkdownFile(diary.filepath).markdown,
+      }));
+
+    this.diaryRepository.rebuildDiarySearchIndex(records);
   }
 
   /**
@@ -350,6 +386,14 @@ function normalizeId(id: string): string {
   }
 
   return id.trim();
+}
+
+function normalizeSearchKeyword(keyword: string): string {
+  if (typeof keyword !== "string") {
+    throw new Error("keyword must be a string.");
+  }
+
+  return keyword.trim();
 }
 
 /**

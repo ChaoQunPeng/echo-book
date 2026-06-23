@@ -77,7 +77,7 @@ function DiaryListPanel({
           allowClear
           variant="borderless"
           prefix={<SearchOutlined />}
-          placeholder="搜索日记标题"
+          placeholder="搜索标题或正文"
           value={searchKeyword}
           onChange={event => onSearchKeywordChange(event.target.value)}
         />
@@ -104,7 +104,7 @@ function DiaryListPanel({
         {groupedDiaries.length === 0 ? (
           <div className={styles.diaryListNoResult}>
             <h2>没有匹配的日记</h2>
-            <p>换个标题关键词或筛选条件试试。</p>
+            <p>换个关键词或筛选条件试试。</p>
           </div>
         ) : (
           groupedDiaries.map(group => (

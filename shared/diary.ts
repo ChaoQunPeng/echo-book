@@ -120,6 +120,7 @@ export interface DiaryApi {
   deleteDiary(id: string): Promise<{ success: boolean }>;
   getDiaryById(id: string): Promise<DiaryDetail | null>;
   getDiaryList(options?: GetDiaryListOptions): Promise<Diary[]>;
+  searchDiary(keyword: string): Promise<Diary[]>;
   saveDiaryAsset(input: SaveDiaryAssetInput): Promise<DiaryAsset>;
   getDiaryAssetDataUrl(input: GetDiaryAssetInput): Promise<string>;
 }

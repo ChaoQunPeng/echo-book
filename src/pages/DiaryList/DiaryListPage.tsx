@@ -38,22 +38,18 @@ function DiaryListPage() {
   const [isCreatingDiary, setIsCreatingDiary] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const currentDateFilterLabel = DATE_FILTER_OPTIONS.find(option => option.value === dateFilter)?.label ?? '全部日记'
+  const hasActiveSearch = Boolean(searchKeyword.trim())
 
   const filteredDiaries = useMemo(() => {
-    const keyword = searchKeyword.trim().toLocaleLowerCase()
-
     /*
      * diaryDate 暂时不在界面使用，列表展示统一按 createdAt 倒序处理。
      */
     return [...diaries]
-      .filter(diary => {
-        const matchesTitle = keyword ? diary.title.toLocaleLowerCase().includes(keyword) : true
-        return matchesTitle && isDiaryInDateFilter(diary, dateFilter)
-      })
+      .filter(diary => isDiaryInDateFilter(diary, dateFilter))
       .sort((firstDiary, secondDiary) => {
         return secondDiary.createdAt - firstDiary.createdAt || secondDiary.updatedAt - firstDiary.updatedAt
       })
-  }, [dateFilter, diaries, searchKeyword])
+  }, [dateFilter, diaries])
 
   const selectedDiary = useMemo(() => {
     return filteredDiaries.find(diary => diary.id === selectedDiaryId) ?? null
@@ -63,26 +59,27 @@ function DiaryListPage() {
    * 加载日记列表数据
    * 从本地数据库读取最近的日记记录并更新页面状态
    */
-  const loadDiaries = async () => {
+  const loadDiaries = async (nextSearchKeyword = searchKeyword) => {
     setIsLoading(true)
     setErrorMessage('')
 
     try {
+      const keyword = nextSearchKeyword.trim()
+
       if (!window.diaryAPI) {
         /*
          * 纯 Web 调试环境没有 Electron preload API。
          * 这里给一组内存示例数据，让布局和搜索都能正常展示。
          */
         const previewData = buildWebPreviewData()
-        setDiaries(previewData.diaries)
+        setDiaries(keyword ? searchWebPreviewDiaries(previewData.diaries, previewData.markdownById, keyword) : previewData.diaries)
         return
       }
 
       /*
-       * 列表页先取最近 100 条，满足当前轻量日记场景。
-       * 后续做无限滚动或搜索时，可以在这里继续使用 limit/offset 扩展。
+       * 有关键词时走 SQLite FTS；无关键词时仍取最近列表，避免普通浏览被搜索接口耦合。
        */
-      const diaryList = await window.diaryAPI.getDiaryList({ limit: 100 })
+      const diaryList = keyword ? await window.diaryAPI.searchDiary(keyword) : await window.diaryAPI.getDiaryList({ limit: 100 })
       setDiaries(diaryList)
     } catch (error) {
       console.error('Failed to load diary list:', error)
@@ -93,8 +90,12 @@ function DiaryListPage() {
   }
 
   useEffect(() => {
-    void loadDiaries()
-  }, [])
+    const searchTimer = window.setTimeout(() => {
+      void loadDiaries(searchKeyword)
+    }, 180)
+
+    return () => window.clearTimeout(searchTimer)
+  }, [searchKeyword])
 
   useEffect(() => {
     /*
@@ -170,7 +171,8 @@ function DiaryListPage() {
      * 右侧编辑器保存成功后，直接替换左侧列表中的同一条日记元数据。
      */
     setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
-  }, [])
+    void loadDiaries(searchKeyword)
+  }, [searchKeyword])
 
   /*
    * 日记列表页是应用打开后的默认页面。
@@ -183,7 +185,7 @@ function DiaryListPage() {
       <div className={styles.diaryListPageContent}>
         {isLoading ? <p className={styles.diaryListPageEmpty}>正在读取日记...</p> : null}
 
-        {!isLoading && diaries.length === 0 ? (
+        {!isLoading && diaries.length === 0 && !hasActiveSearch ? (
           <div className={styles.diaryListPageEmptyState}>
             {/*
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
@@ -196,7 +198,7 @@ function DiaryListPage() {
           </div>
         ) : null}
 
-        {!isLoading && diaries.length > 0 ? (
+        {!isLoading && (diaries.length > 0 || hasActiveSearch) ? (
           <div className={styles.diarySplitLayout}>
             <DiaryListPanel
               dateFilter={dateFilter}
@@ -243,6 +245,21 @@ function getErrorMessage(error: unknown): string {
   }
 
   return '请确认通过 Electron 启动应用'
+}
+
+/**
+ * Web 预览环境没有 SQLite FTS，用内存数据模拟标题 + 正文搜索。
+ */
+function searchWebPreviewDiaries(diaries: Diary[], markdownById: Record<string, string>, keyword: string): Diary[] {
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase()
+  if (!normalizedKeyword) {
+    return diaries
+  }
+
+  return diaries.filter(diary => {
+    const markdown = markdownById[diary.id] ?? ''
+    return `${diary.title}\n${markdown}`.toLocaleLowerCase().includes(normalizedKeyword)
+  })
 }
 
 /**

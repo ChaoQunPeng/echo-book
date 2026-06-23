@@ -25,6 +25,7 @@ const DIARY_CHANNELS = {
   delete: "diary:delete",
   getById: "diary:getById",
   list: "diary:list",
+  search: "diary:search",
   saveAsset: "diary:saveAsset",
   getAssetDataUrl: "diary:getAssetDataUrl",
 } as const;
@@ -50,6 +51,11 @@ export function registerDiaryIpcHandlers(): void {
   const tagRepository = new TagRepository(db);
   const diaryService = new DiaryService(diaryRepository, tagRepository);
   const tagService = new TagService(tagRepository);
+
+  /*
+   * FTS 是可重建缓存，启动时从 Markdown 重新灌入，避免索引缺失或陈旧。
+   */
+  diaryService.rebuildDiarySearchIndex();
 
   ipcMain.handle(DIARY_CHANNELS.create, (_event, input: CreateDiaryInput) => {
     try {
@@ -96,6 +102,10 @@ export function registerDiaryIpcHandlers(): void {
 
   ipcMain.handle(DIARY_CHANNELS.list, (_event, options?: GetDiaryListOptions) => {
     return diaryService.getDiaryList(options);
+  });
+
+  ipcMain.handle(DIARY_CHANNELS.search, (_event, keyword: string) => {
+    return diaryService.searchDiary(keyword);
   });
 
   ipcMain.handle(DIARY_CHANNELS.saveAsset, (_event, input: SaveDiaryAssetInput) => {
