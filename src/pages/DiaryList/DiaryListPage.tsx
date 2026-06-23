@@ -1,7 +1,7 @@
 import { PlusOutlined } from '@ant-design/icons'
 import { App as AntdApp, Empty } from 'antd'
 import type { MenuProps } from 'antd'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import EchoButton from '../../components/EchoButton'
@@ -27,9 +27,14 @@ const DATE_FILTER_MENU_ITEMS: MenuProps['items'] = DATE_FILTER_OPTIONS.map(optio
   label: option.label
 }))
 
+type LoadDiariesOptions = {
+  showPageLoading?: boolean
+}
+
 function DiaryListPage() {
   const navigate = useNavigate()
   const { modal } = AntdApp.useApp()
+  const hasLoadedDiariesRef = useRef(false)
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [selectedDiaryId, setSelectedDiaryId] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -59,8 +64,17 @@ function DiaryListPage() {
    * 加载日记列表数据
    * 从本地数据库读取最近的日记记录并更新页面状态
    */
-  const loadDiaries = async (nextSearchKeyword = searchKeyword) => {
-    setIsLoading(true)
+  const loadDiaries = useCallback(async (nextSearchKeyword = searchKeyword, options: LoadDiariesOptions = {}) => {
+    /*
+     * 首次进入需要整页读取态；搜索和编辑器保存后的列表同步只做后台刷新，
+     * 避免左右分栏被“正在读取日记”打断。
+     */
+    const shouldShowPageLoading = options.showPageLoading ?? true
+
+    if (shouldShowPageLoading) {
+      setIsLoading(true)
+    }
+
     setErrorMessage('')
 
     try {
@@ -85,17 +99,25 @@ function DiaryListPage() {
       console.error('Failed to load diary list:', error)
       setErrorMessage(`读取日记列表失败：${getErrorMessage(error)}`)
     } finally {
-      setIsLoading(false)
+      hasLoadedDiariesRef.current = true
+
+      if (shouldShowPageLoading) {
+        setIsLoading(false)
+      }
     }
-  }
+  }, [searchKeyword])
 
   useEffect(() => {
     const searchTimer = window.setTimeout(() => {
-      void loadDiaries(searchKeyword)
+      /*
+       * 搜索框变化只刷新列表数据，保留当前页面和编辑器状态。
+       * 只有第一次进入列表页时展示整页读取 loading。
+       */
+      void loadDiaries(searchKeyword, { showPageLoading: !hasLoadedDiariesRef.current })
     }, 180)
 
     return () => window.clearTimeout(searchTimer)
-  }, [searchKeyword])
+  }, [loadDiaries, searchKeyword])
 
   useEffect(() => {
     /*
@@ -169,10 +191,11 @@ function DiaryListPage() {
   const handleDiarySaved = useCallback((updatedDiary: Diary) => {
     /*
      * 右侧编辑器保存成功后，直接替换左侧列表中的同一条日记元数据。
+     * 后台刷新只校准搜索结果和数据库排序，不再触发列表页读取 loading。
      */
     setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
-    void loadDiaries(searchKeyword)
-  }, [searchKeyword])
+    void loadDiaries(searchKeyword, { showPageLoading: false })
+  }, [loadDiaries, searchKeyword])
 
   /*
    * 日记列表页是应用打开后的默认页面。
