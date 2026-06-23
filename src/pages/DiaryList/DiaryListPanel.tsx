@@ -1,8 +1,8 @@
 import { DeleteOutlined, EditOutlined, FilterOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Input } from 'antd'
 import type { MenuProps } from 'antd'
-import type { KeyboardEvent } from 'react'
-import { useMemo } from 'react'
+import type { ChangeEvent, CompositionEvent, KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
 import styles from './DiaryListPage.module.scss'
@@ -35,6 +35,8 @@ function DiaryListPanel({
   onSearchKeywordChange,
   onSelectDiary
 }: DiaryListPanelProps) {
+  const isComposingSearchRef = useRef(false)
+  const [searchInputValue, setSearchInputValue] = useState(searchKeyword)
   const groupedDiaries = useMemo(() => {
     /*
      * 分组只影响左侧列表展示，因此放在列表组件内部维护。
@@ -60,6 +62,40 @@ function DiaryListPanel({
     return groups
   }, [diaries])
 
+  useEffect(() => {
+    /*
+     * 外部清空或恢复搜索词时同步输入框；中文输入法组词期间交给本地值维护。
+     */
+    if (!isComposingSearchRef.current) {
+      setSearchInputValue(searchKeyword)
+    }
+  }, [searchKeyword])
+
+  const handleSearchInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextKeyword = event.target.value
+
+    setSearchInputValue(nextKeyword)
+
+    if (!isComposingSearchRef.current) {
+      onSearchKeywordChange(nextKeyword)
+    }
+  }
+
+  const handleSearchCompositionStart = () => {
+    /*
+     * 拼音候选还没上屏时不触发真正搜索，避免输入过程反复刷新列表。
+     */
+    isComposingSearchRef.current = true
+  }
+
+  const handleSearchCompositionEnd = (event: CompositionEvent<HTMLInputElement>) => {
+    const nextKeyword = event.currentTarget.value
+
+    isComposingSearchRef.current = false
+    setSearchInputValue(nextKeyword)
+    onSearchKeywordChange(nextKeyword)
+  }
+
   const handleFilterIconKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
     /*
      * 图标不是原生按钮，手动补齐键盘触发能力。
@@ -78,8 +114,10 @@ function DiaryListPanel({
           variant="borderless"
           prefix={<SearchOutlined />}
           placeholder="搜索标题或正文"
-          value={searchKeyword}
-          onChange={event => onSearchKeywordChange(event.target.value)}
+          value={searchInputValue}
+          onChange={handleSearchInputChange}
+          onCompositionStart={handleSearchCompositionStart}
+          onCompositionEnd={handleSearchCompositionEnd}
         />
         <Dropdown
           trigger={['click']}
