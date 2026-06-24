@@ -110,12 +110,7 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
       title="管理标签"
       open={open}
       onCancel={() => onOpenChange(false)}
-      footer=""
-      // footer={
-      //   <Button variant="outlined" onClick={() => onOpenChange(false)}>
-      //     关闭
-      //   </Button>
-      // }
+      footer={null}
       width={640}
     >
       <div className={styles.dialogBody}>

@@ -22,11 +22,6 @@ const sidebarMenus = [
     label: '日记',
     icon: ReadOutlined
   }
-  // {
-  //   path: '/trash',
-  //   label: '回收站',
-  //   icon: DeleteOutlined
-  // }
 ]
 
 function App() {

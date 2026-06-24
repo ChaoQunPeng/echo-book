@@ -66,7 +66,6 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
               <div key={principle.title} className="">
                 <div className="font-bold mb-8 text-size-18">{principle.title}</div>
                 <div className="text-black-65! mb-4">{principle.description}</div>
-                {/* border-left: 2px solid var(--echo-color-primary); padding-left: 12px; color: var(--echo-color-primary) !important; */}
                 <div className="text-black-65! mb-4">{principle.note}</div>
               </div>
             ))}

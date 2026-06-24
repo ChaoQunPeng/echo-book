@@ -50,10 +50,6 @@ export default defineConfig(({ mode }) => {
         host: "localhost",
         port: 5173,
       },
-
-      watch: {
-        ignored: ["**/src-tauri/**"],
-      },
     },
   };
 });

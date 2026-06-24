@@ -37,7 +37,6 @@ function DiaryPreview({
             <h2>{diary.title}</h2>
             <div className={styles.diaryPreviewMeta}>
               <p>{formatFullCreatedAt(diary.createdAt)}</p>
-              {/* <span>更新：{formatUpdatedAt(diary.updatedAt)}</span> */}
               {diary.mood ? <span>心情：{formatMood(diary.mood)?.name}</span> : null}
               {diary.tags?.length ? <span>标签：{diary.tags.join(' / ')}</span> : null}
             </div>

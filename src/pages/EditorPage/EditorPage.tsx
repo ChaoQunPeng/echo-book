@@ -2,12 +2,10 @@ import {
   ArrowLeftOutlined,
   BoldOutlined,
   CheckSquareOutlined,
-  CommentOutlined,
   DownOutlined,
   EditOutlined,
   FontSizeOutlined,
   ItalicOutlined,
-  LinkOutlined,
   OrderedListOutlined,
   PictureOutlined,
   RedoOutlined,
@@ -255,8 +253,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
   const [isMoodPopoverOpen, setIsMoodPopoverOpen] = useState(false)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
-  const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
-  const [linkUrl, setLinkUrl] = useState('')
   const [saveStatus, setSaveStatus] = useState('正在读取日记')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -932,42 +928,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     editor?.chain().focus().toggleTaskList().run()
   }
 
-  const handleToggleBlockquote = () => {
-    editor?.chain().focus().toggleBlockquote().run()
-  }
-
-  const handleLinkPopoverOpenChange = (open: boolean) => {
-    /*
-     * 打开链接面板时读取当前链接，方便用户修改或清除。
-     */
-    if (open && editor && !editor.isActive('link')) {
-      selectWordAroundCursor(editor)
-    }
-
-    setIsLinkPopoverOpen(open)
-
-    if (open) {
-      setLinkUrl(getActiveLinkHref(editor))
-    }
-  }
-
-  const handleApplyLink = () => {
-    if (!editor) {
-      return
-    }
-
-    const normalizedUrl = linkUrl.trim()
-
-    if (!normalizedUrl) {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-    } else {
-      selectWordAroundCursor(editor)
-      editor.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
-    }
-
-    setIsLinkPopoverOpen(false)
-  }
-
   const handleImageInputChange = (event: ReactChangeEvent<HTMLInputElement>) => {
     const files = getImageFilesFromFileList(event.target.files)
     event.target.value = ''
@@ -1028,33 +988,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       ) : (
         <span className={styles.tagPopoverEmpty}>暂无标签</span>
       )}
-    </div>
-  )
-
-  const linkPopoverContent = (
-    <div className={styles.editorLinkPopover}>
-      <Input
-        value={linkUrl}
-        placeholder="https://example.com"
-        size="small"
-        onChange={event => setLinkUrl(event.target.value)}
-        onPressEnter={handleApplyLink}
-      />
-      <Space size={6}>
-        <Button size="small" type="primary" onClick={handleApplyLink}>
-          应用
-        </Button>
-        <Button
-          size="small"
-          onClick={() => {
-            setLinkUrl('')
-            editor?.chain().focus().extendMarkRange('link').unsetLink().run()
-            setIsLinkPopoverOpen(false)
-          }}
-        >
-          清除
-        </Button>
-      </Space>
     </div>
   )
 
@@ -1213,103 +1146,8 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                 <Tooltip title="插入图片">
                   <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
                 </Tooltip>
-                {/* <Tooltip title="引用">
-                  <Button
-                    icon={<CommentOutlined />}
-                    disabled={isToolbarDisabled}
-                    type={editor.isActive('blockquote') ? 'primary' : 'default'}
-                    onClick={handleToggleBlockquote}
-                  />
-                </Tooltip> */}
-                {/* <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" /> */}
-                {/* <Popover
-                  content={linkPopoverContent}
-                  trigger="click"
-                  placement="bottom"
-                  open={isLinkPopoverOpen}
-                  onOpenChange={handleLinkPopoverOpenChange}
-                >
-                  <Tooltip title="链接">
-                    <Button icon={<LinkOutlined />} disabled={isToolbarDisabled} type={editor.isActive('link') ? 'primary' : 'default'} />
-                  </Tooltip>
-                </Popover> */}
               </div>
             ) : null}
-            {/*
-            <div className={styles.editorToolbar} role="toolbar" aria-label="正文格式工具栏">
-              <Tooltip title="二级标题">
-                <Button
-                  icon={<FontSizeOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('heading', { level: 2 }) ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                />
-              </Tooltip>
-              <Tooltip title="加粗">
-                <Button
-                  icon={<BoldOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('bold') ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleBold().run()}
-                />
-              </Tooltip>
-              <Tooltip title="斜体">
-                <Button
-                  icon={<ItalicOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('italic') ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleItalic().run()}
-                />
-              </Tooltip>
-              <Tooltip title="无序列表">
-                <Button
-                  icon={<UnorderedListOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('bulletList') ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                />
-              </Tooltip>
-              <Tooltip title="有序列表">
-                <Button
-                  icon={<OrderedListOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('orderedList') ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-                />
-              </Tooltip>
-              <Tooltip title="任务列表">
-                <Button
-                  icon={<CheckSquareOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('taskList') ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleTaskList().run()}
-                />
-              </Tooltip>
-              <Tooltip title="引用">
-                <Button
-                  icon={<CommentOutlined />}
-                  disabled={isToolbarDisabled}
-                  type={editor?.isActive('blockquote') ? 'primary' : 'default'}
-                  onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-                />
-              </Tooltip>
-              <Popover
-                content={linkPopoverContent}
-                trigger="click"
-                placement="bottom"
-                open={isLinkPopoverOpen}
-                onOpenChange={handleLinkPopoverOpenChange}
-              >
-                <Tooltip title="链接">
-                  <Button icon={<LinkOutlined />} disabled={isToolbarDisabled} type={editor?.isActive('link') ? 'primary' : 'default'} />
-                </Tooltip>
-              </Popover>
-              <Tooltip title="插入图片">
-                <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
-              </Tooltip>
-              <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
-            </div>
-            */}
             <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
             <EditorContent editor={editor} className={styles.editorPageMilkdown} />
           </>
@@ -1427,15 +1265,6 @@ function applyDiaryImageWidth(image: HTMLImageElement, width: unknown) {
    */
   image.style.width = Number.isFinite(normalizedWidth) && normalizedWidth > 0 ? `${Math.round(normalizedWidth)}px` : ''
   image.style.height = ''
-}
-
-function getActiveLinkHref(editor: Editor | null): string {
-  /*
-   * 选区位于链接内时直接回填 href，让链接面板可以编辑已有链接。
-   */
-  const href = editor?.getAttributes('link').href
-
-  return typeof href === 'string' ? href : ''
 }
 
 function getImageFilesFromDataTransfer(dataTransfer: DataTransfer | null): File[] {

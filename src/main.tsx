@@ -22,7 +22,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
           <Route index element={<Navigate to="/list" replace />} />
           {/*
            * `/today` 是之前临时验证路由出口时使用过的旧路径。
-           * 如果浏览器、Tauri WebView 或开发服务器热更新后仍停留在这个地址，
+           * 如果浏览器、Electron 窗口或开发服务器热更新后仍停留在这个地址，
            * React Router 会因为找不到匹配路由而不渲染页面；这里将旧地址
            * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
           */}
