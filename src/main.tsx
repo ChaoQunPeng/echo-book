@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
 import App from './App'
+import AppShellLayout from './layouts/AppShellLayout'
 import DiaryListPage from './pages/DiaryList'
 import DiaryPreviewPage from './pages/DiaryPreviewPage'
 import EditorPage from './pages/EditorPage'
@@ -16,38 +17,37 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Router>
       {/*
-       * 顶层路由使用 App 作为固定布局容器，App 内部的 <Outlet />
-       * 会接收这里声明的所有子路由页面。后续新增页面时，只需要继续
-       * 在这个 <Route path="/" element={<App />}> 下添加子路由即可。
+       * 顶层 App 只负责全局 Provider 和路由出口。
+       * 带侧边栏的页面统一挂在 AppShellLayout 下面。
        */}
       <Routes>
         <Route path="/" element={<App />}>
-          <Route index element={<Navigate to="/list" replace />} />
-          {/*
-           * `/today` 是之前临时验证路由出口时使用过的旧路径。
-           * 如果浏览器、Electron 窗口或开发服务器热更新后仍停留在这个地址，
-           * React Router 会因为找不到匹配路由而不渲染页面；这里将旧地址
-           * 平滑重定向到当前默认的日记列表页，避免出现空白页面。
-          */}
-          <Route path="list" element={<DiaryListPage />} />
-          {/* 时光页只负责浏览和回顾历史记录，打开日记时进入内容页。 */}
-          <Route path="timeline" element={<TimelinePage />} />
-          {/*
-           * 设置页独立成路由，便于后续继续加入更多设置分组。
-           */}
-          <Route path="settings" element={<SettingsPage />} />
-          {/*
-           * 编辑页只接收已创建日记的 id。
-           * 新建入口会先创建日记，再使用返回的 id 进入这里。
-           */}
-          <Route path="editor/:diaryId" element={<EditorPage />} />
-          {/* 内容页复用 DiaryPreviewPage，按 id 展示单篇日记。 */}
-          <Route path="preview/:diaryId" element={<DiaryPreviewPage />} />
-          {/*
-           * 兜底路由用于处理输入错误或历史遗留的未知路径。
-           * 统一回到默认列表页，可以保证 App 布局和主内容区始终有内容展示。
-           */}
-          <Route path="*" element={<Navigate to="/list" replace />} />
+          <Route element={<AppShellLayout />}>
+            <Route index element={<Navigate to="/list" replace />} />
+            {/*
+             * `/today` 是之前临时验证路由出口时使用过的旧路径。
+             * 保留重定向可以避免历史地址打开后出现空白页面。
+             */}
+            <Route path="today" element={<Navigate to="/list" replace />} />
+            <Route path="list" element={<DiaryListPage />} />
+            {/* 时光页只负责浏览和回顾历史记录，打开日记时进入内容页。 */}
+            <Route path="timeline" element={<TimelinePage />} />
+            {/*
+             * 设置页独立成路由，便于后续继续加入更多设置分组。
+             */}
+            <Route path="settings" element={<SettingsPage />} />
+            {/*
+             * 编辑页只接收已创建日记的 id。
+             * 新建入口会先创建日记，再使用返回的 id 进入这里。
+             */}
+            <Route path="editor/:diaryId" element={<EditorPage />} />
+            {/* 内容页复用 DiaryPreviewPage，按 id 展示单篇日记。 */}
+            <Route path="preview/:diaryId" element={<DiaryPreviewPage />} />
+            {/*
+             * 兜底路由用于处理输入错误或历史遗留的未知路径。
+             */}
+            <Route path="*" element={<Navigate to="/list" replace />} />
+          </Route>
         </Route>
       </Routes>
     </Router>
