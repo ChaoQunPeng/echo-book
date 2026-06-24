@@ -13,46 +13,18 @@
     "electron:build": "tsc -p tsconfig.electron.json && node scripts/write-electron-dist-package.mjs",
     "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
     "electron": "node scripts/electron-run.mjs",
-    "dist": "npm run build && electron-builder",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:dmg": "npm run build && electron-builder --mac dmg",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:win-installer": "npm run build && electron-builder --win nsis"
-  },
-  "build": {
-    "appId": "com.echobook.app",
-    "productName": "EchoBook",
-    "files": [
-      "dist/**",
-      "dist-electron/**",
-      "node_modules/**",
-      "package.json"
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "mac": {
-      "category": "public.app-category.productivity",
-      "target": [
-        "dmg",
-        "dir"
-      ]
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
+    "dist": "npm run build && electron-builder --config electron-builder.config.cjs",
+    "dist:mac": "npm run build && electron-builder --config electron-builder.config.cjs --mac",
+    "dist:dmg": "npm run build && electron-builder --config electron-builder.config.cjs --mac dmg",
+    "dist:win": "npm run build && electron-builder --config electron-builder.config.cjs --win",
+    "dist:win-installer": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.1"
+  },
+  "devDependencies": {
     "@ant-design/icons": "^6.2.5",
+    "@tailwindcss/vite": "^4.3.1",
     "@tiptap/extension-image": "^3.27.1",
     "@tiptap/extension-link": "^3.27.1",
     "@tiptap/extension-placeholder": "^3.27.1",
@@ -60,28 +32,24 @@
     "@tiptap/extension-task-list": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
     "antd": "^6.4.4",
-    "better-sqlite3": "^12.10.1",
+    "code-inspector-plugin": "^1.6.0",
     "dayjs": "^1.11.21",
+    "electron": "^28.3.3",
+    "electron-builder": "^26.15.3",
+    "electron-rebuild": "^3.2.9",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.17.0",
     "remark-gfm": "^4.0.1",
-    "tiptap-markdown": "^0.9.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.1",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.6.0",
-    "code-inspector-plugin": "^1.6.0",
-    "electron": "^28.3.3",
-    "electron-builder": "^26.15.3",
-    "electron-rebuild": "^3.2.9",
     "sass-embedded": "^1.100.0",
     "tailwindcss": "^4.3.1",
+    "tiptap-markdown": "^0.9.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   }

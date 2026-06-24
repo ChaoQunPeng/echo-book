@@ -1,0 +1,71 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+function getResourcesPath(context) {
+  if (context.electronPlatformName !== "darwin") {
+    return path.join(context.appOutDir, "resources");
+  }
+
+  const appDirectoryName = fs.readdirSync(context.appOutDir).find((name) => name.endsWith(".app"));
+  return appDirectoryName ? path.join(context.appOutDir, appDirectoryName, "Contents", "Resources") : null;
+}
+
+function removeIfExists(targetPath) {
+  fs.rmSync(targetPath, { recursive: true, force: true });
+}
+
+/**
+ * 前端依赖已经由 Vite 打包进 dist，这里只放编译产物和主进程运行依赖。
+ * 避免把完整 node_modules 重复塞进 app.asar，安装包会小很多。
+ */
+module.exports = {
+  appId: "com.echobook.app",
+  productName: "EchoBook",
+  files: ["dist/**", "dist-electron/**", "package.json"],
+  compression: "maximum",
+  electronLanguages: ["zh_CN", "zh_TW", "en"],
+  directories: {
+    output: "release",
+  },
+  async afterPack(context) {
+    const resourcesPath = getResourcesPath(context);
+    if (!resourcesPath) {
+      return;
+    }
+
+    const betterSqliteUnpackedPath = path.join(
+      resourcesPath,
+      "app.asar.unpacked",
+      "node_modules",
+      "better-sqlite3",
+    );
+
+    /**
+     * better-sqlite3 运行时只需要 JS 包装代码和 better_sqlite3.node。
+     * 这些源码、obj 和测试扩展是编译残留，删掉不会影响数据库加载。
+     */
+    for (const relativePath of [
+      "bin",
+      "deps",
+      "src",
+      "build/deps",
+      "build/Release/obj",
+      "build/Release/test_extension.node",
+    ]) {
+      removeIfExists(path.join(betterSqliteUnpackedPath, relativePath));
+    }
+  },
+  mac: {
+    category: "public.app-category.productivity",
+    target: ["dmg", "dir"],
+  },
+  win: {
+    target: ["nsis", "portable"],
+  },
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+  },
+};
