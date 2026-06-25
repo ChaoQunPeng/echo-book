@@ -1,13 +1,23 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type SaveDialogOptions } from "electron";
 import fs from "node:fs";
 import path from "node:path";
-import type { ExportBackupResult, StorageInfo } from "../../shared/settings.js";
+import type {
+  ExportBackupResult,
+  MigrateNotesResult,
+  SelectDirectoryResult,
+  SetCustomNotesPathResult,
+  StorageInfo,
+} from "../../shared/settings.js";
 import {
   checkpointDatabase,
+  getCustomNotesPathFromMemory,
   getDatabaseDirectoryPath,
   getDatabasePath,
+  getDefaultNotesPath,
   getNotesPath,
   getStorageRootPath,
+  resetCustomNotesPath,
+  setCustomNotesPath,
 } from "../db/connection.js";
 import { createStorageBackupZip } from "../services/exportService.js";
 
@@ -18,6 +28,10 @@ const SETTINGS_CHANNELS = {
   getStorageInfo: "settings:getStorageInfo",
   exportBackup: "settings:exportBackup",
   openStorageRoot: "settings:openStorageRoot",
+  selectDirectory: "settings:selectDirectory",
+  setCustomNotesPath: "settings:setCustomNotesPath",
+  resetCustomNotesPath: "settings:resetCustomNotesPath",
+  migrateNotes: "settings:migrateNotes",
 } as const;
 const BACKUP_README_FILE_NAME = "导出须知.txt";
 
@@ -45,18 +59,136 @@ function getStorageInfo(): StorageInfo {
     notesPath,
     databaseDirectoryPath,
     databasePath,
+    customNotesPath: getCustomNotesPathFromMemory(),
   };
 }
 
 /**
  * 注册设置相关 IPC handlers。
  *
- * 当前只读出日记文件和数据库的存放位置，并额外开放“打开应用存储根目录”。
+ * 当前只读出日记文件和数据库的存放位置，并额外开放"打开应用存储根目录"。
  * 这里不接收 renderer 传来的路径参数，避免设置页变成任意文件系统入口。
  */
 export function registerSettingsIpcHandlers(): void {
   ipcMain.handle(SETTINGS_CHANNELS.getStorageInfo, (): StorageInfo => {
     return getStorageInfo();
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.selectDirectory, async (event): Promise<SelectDirectoryResult> => {
+    const focusedWindow = BrowserWindow.fromWebContents(event.sender);
+    const dialogOptions = {
+      title: "选择日记存放目录",
+      buttonLabel: "选择",
+      properties: ["openDirectory", "createDirectory"] as Array<"openDirectory" | "createDirectory">,
+    };
+    const result = focusedWindow
+      ? await dialog.showOpenDialog(focusedWindow, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions);
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    return { canceled: false, directoryPath: result.filePaths[0] };
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.setCustomNotesPath, (_event, directoryPath: string): SetCustomNotesPathResult => {
+    try {
+      if (!directoryPath || typeof directoryPath !== "string") {
+        return { success: false, error: "目录路径不能为空" };
+      }
+
+      const resolvedPath = path.resolve(directoryPath);
+
+      if (!fs.existsSync(resolvedPath)) {
+        return { success: false, error: "目录不存在" };
+      }
+
+      if (!fs.statSync(resolvedPath).isDirectory()) {
+        return { success: false, error: "路径不是目录" };
+      }
+
+      setCustomNotesPath(resolvedPath);
+
+      /*
+       * 确保新目录已经创建好。
+       */
+      fs.mkdirSync(resolvedPath, { recursive: true });
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: `设置自定义目录失败: ${(error as Error).message}` };
+    }
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.resetCustomNotesPath, (): SetCustomNotesPathResult => {
+    try {
+      resetCustomNotesPath();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: `重置目录失败: ${(error as Error).message}` };
+    }
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.migrateNotes, async (_event, newNotesPath: string): Promise<MigrateNotesResult> => {
+    try {
+      if (!newNotesPath || typeof newNotesPath !== "string") {
+        return { success: false, movedCount: 0, error: "新目录路径不能为空" };
+      }
+
+      /*
+       * 特殊标记：重置为默认目录。
+       */
+      const isResetToDefault = newNotesPath === "__RESET_TO_DEFAULT__";
+      const resolvedNewPath = isResetToDefault ? getDefaultNotesPath() : path.resolve(newNotesPath);
+      const { notesPath: oldNotesPath } = getStorageInfo();
+
+      if (path.resolve(oldNotesPath) === resolvedNewPath) {
+        return { success: true, movedCount: 0 };
+      }
+
+      if (!fs.existsSync(resolvedNewPath)) {
+        fs.mkdirSync(resolvedNewPath, { recursive: true });
+      }
+
+      if (!fs.existsSync(oldNotesPath)) {
+        /*
+         * 旧目录不存在，无需迁移。
+         */
+        setCustomNotesPath(resolvedNewPath);
+        return { success: true, movedCount: 0 };
+      }
+
+      /*
+       * 获取当前 notes 下所有 Markdown 文件。
+       */
+      const markdownFiles = collectMarkdownFiles(oldNotesPath);
+      let movedCount = 0;
+
+      for (const relativePath of markdownFiles) {
+        const sourcePath = path.join(oldNotesPath, relativePath);
+        const targetPath = path.join(resolvedNewPath, relativePath);
+
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+        fs.copyFileSync(sourcePath, targetPath);
+        fs.unlinkSync(sourcePath);
+        movedCount += 1;
+      }
+
+      /*
+       * 删除旧的空目录结构。
+       */
+      removeEmptyDirectories(oldNotesPath);
+
+      /*
+       * 更新自定义路径持久化。
+       */
+      setCustomNotesPath(resolvedNewPath);
+
+      return { success: true, movedCount };
+    } catch (error) {
+      return { success: false, movedCount: 0, error: `迁移失败: ${(error as Error).message}` };
+    }
   });
 
   ipcMain.handle(SETTINGS_CHANNELS.exportBackup, async (event): Promise<ExportBackupResult> => {
@@ -127,6 +259,76 @@ export function registerSettingsIpcHandlers(): void {
       throw new Error(errorMessage);
     }
   });
+}
+
+/**
+ * 递归收集指定目录下的所有 .md 文件，返回相对于根目录的路径列表。
+ */
+function collectMarkdownFiles(rootPath: string): string[] {
+  const files: string[] = [];
+
+  function walk(directory: string): void {
+    let entries: string[];
+
+    try {
+      entries = fs.readdirSync(directory);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(directory, entry);
+      let stat: fs.Stats;
+
+      try {
+        stat = fs.statSync(fullPath);
+      } catch {
+        continue;
+      }
+
+      if (stat.isDirectory()) {
+        walk(fullPath);
+      } else if (stat.isFile() && entry.toLowerCase().endsWith(".md")) {
+        files.push(path.relative(rootPath, fullPath));
+      }
+    }
+  }
+
+  walk(rootPath);
+  return files;
+}
+
+/**
+ * 递归删除空目录（从叶子向根 cleanup）。
+ */
+function removeEmptyDirectories(directory: string): void {
+  let entries: string[];
+
+  try {
+    entries = fs.readdirSync(directory);
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const fullPath = path.join(directory, entry);
+
+    try {
+      if (fs.statSync(fullPath).isDirectory()) {
+        removeEmptyDirectories(fullPath);
+      }
+    } catch {
+      // ignored
+    }
+  }
+
+  try {
+    if (fs.readdirSync(directory).length === 0) {
+      fs.rmdirSync(directory);
+    }
+  } catch {
+    // ignored
+  }
 }
 
 function formatBackupTimestamp(date: Date): string {

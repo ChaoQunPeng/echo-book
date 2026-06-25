@@ -1,3 +1,11 @@
+/*
+ * @Author: PengChaoQun 1152684231@qq.com
+ * @Date: 2026-06-18 12:29:52
+ * @LastEditors: PengChaoQun 1152684231@qq.com
+ * @LastEditTime: 2026-06-25 10:22:02
+ * @FilePath: /echo-book/shared/settings.ts
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 /**
  * 设置页只读取路径类信息，并提供少量受控桌面动作。
  *
@@ -9,11 +17,41 @@ export interface StorageInfo {
   notesPath: string;
   databaseDirectoryPath: string;
   databasePath: string;
+
+  /**
+   * 当前自定义 notes 路径（如果未自定义则为 null）。
+   */
+  customNotesPath: string | null;
 }
 
 export interface ExportBackupResult {
   canceled: boolean;
   filePath?: string;
+}
+
+/**
+ * 选择目录对话框的返回结果。
+ */
+export interface SelectDirectoryResult {
+  canceled: boolean;
+  directoryPath?: string;
+}
+
+/**
+ * 设置自定义 notes 路径的结果。
+ */
+export interface SetCustomNotesPathResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * 迁移笔记的结果。
+ */
+export interface MigrateNotesResult {
+  success: boolean;
+  movedCount: number;
+  error?: string;
 }
 
 /**
@@ -25,7 +63,7 @@ export interface SettingsApi {
   /**
    * 导出应用数据备份。
    *
-   * renderer 只发起“导出当前应用数据”这个业务动作，保存路径由 main process 弹出
+   * renderer 只发起"导出当前应用数据"这个业务动作，保存路径由 main process 弹出
    * 系统保存对话框让用户选择；真正被打包的目录仍然固定为 database 和 notes。
    */
   exportBackup(): Promise<ExportBackupResult>;
@@ -33,8 +71,34 @@ export interface SettingsApi {
   /**
    * 打开应用自己的存储根目录。
    *
-   * renderer 只发起“打开当前应用目录”这个明确动作，不传入任意路径；
+   * renderer 只发起"打开当前应用目录"这个明确动作，不传入任意路径；
    * 实际路径仍由 main process 根据 Electron userData 目录计算，减少误开系统路径的风险。
    */
   openStorageRoot(): Promise<void>;
+
+  /**
+   * 弹出系统目录选择对话框，让用户选择一个文件夹作为日记存放目录。
+   *
+   * 只返回选择的路径，不执行任何写入操作。
+   */
+  selectDirectory(): Promise<SelectDirectoryResult>;
+
+  /**
+   * 设置自定义 notes 目录路径并持久化到 settings 表。
+   *
+   * 调用前应确保用户已通过 selectDirectory 选择了路径。
+   */
+  setCustomNotesPath(path: string): Promise<SetCustomNotesPathResult>;
+
+  /**
+   * 重置自定义 notes 目录为默认值。
+   */
+  resetCustomNotesPath(): Promise<SetCustomNotesPathResult>;
+
+  /**
+   * 将现有笔记从旧的 notes 目录迁移到新的目录。
+   *
+   * 迁移逻辑由 main process 处理，包括文件复制和数据库 filepath 更新。
+   */
+  migrateNotes(newNotesPath: string): Promise<MigrateNotesResult>;
 }

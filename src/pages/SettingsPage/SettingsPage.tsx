@@ -1,5 +1,14 @@
-import { BgColorsOutlined, CheckOutlined, CopyOutlined, DatabaseOutlined, ExportOutlined, FolderOpenOutlined } from '@ant-design/icons'
-import { Alert, App as AntdApp, Button, Card, Form, Input, Space } from 'antd'
+import {
+  BgColorsOutlined,
+  CheckOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  ExportOutlined,
+  FolderOpenOutlined,
+  FolderAddOutlined,
+  UndoOutlined,
+} from '@ant-design/icons'
+import { Alert, App as AntdApp, Button, Card, Form, Input, Modal, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { StorageInfo } from '../../../shared/settings'
@@ -17,6 +26,8 @@ function SettingsPage() {
   const [isLoadingStorageInfo, setIsLoadingStorageInfo] = useState(true)
   const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
   const [isExportingBackup, setIsExportingBackup] = useState(false)
+  const [isSelectingDirectory, setIsSelectingDirectory] = useState(false)
+  const [isMigratingNotes, setIsMigratingNotes] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -114,6 +125,128 @@ function SettingsPage() {
       })
   }
 
+  const handleSelectDirectory = async () => {
+    if (!window.settingsAPI) {
+      message.error('请通过 Electron 启动应用后选择目录')
+      return
+    }
+
+    setIsSelectingDirectory(true)
+    try {
+      const selectResult = await window.settingsAPI.selectDirectory()
+      if (selectResult.canceled || !selectResult.directoryPath) {
+        return
+      }
+
+      const newDirectory = selectResult.directoryPath
+
+      /*
+       * 确认迁移：将旧目录下的笔记文件搬到新目录。
+       */
+      Modal.confirm({
+        title: '修改日记存放目录',
+        content: (
+          <div>
+            <p>你选择的新目录：</p>
+            <p><code style={{ wordBreak: 'break-all' }}>{newDirectory}</code></p>
+            <p style={{ marginTop: 12, color: 'var(--color-text-secondary)' }}>
+              已有笔记文件将迁移到新目录，数据库文件不受影响。
+            </p>
+          </div>
+        ),
+        okText: '确认迁移',
+        cancelText: '取消',
+        onOk: async () => {
+          setIsMigratingNotes(true)
+          try {
+            const migrateResult = await window.settingsAPI.migrateNotes(newDirectory)
+            if (!migrateResult.success) {
+              message.error(migrateResult.error ?? '迁移失败')
+              return
+            }
+
+            /*
+             * 迁移成功后重新读取存储信息。
+             */
+            const info = await window.settingsAPI.getStorageInfo()
+            setStorageInfo(info)
+            setSettingsError('')
+
+            if (migrateResult.movedCount > 0) {
+              message.success(`已迁移 ${migrateResult.movedCount} 篇日记到新目录`)
+            } else {
+              message.success('日记存放目录已更新')
+            }
+          } catch (error) {
+            message.error('迁移过程出错')
+          } finally {
+            setIsMigratingNotes(false)
+          }
+        },
+        onCancel() {
+          /*
+           * 取消时不清除选择，用户可以再次点击确认。
+           */
+        },
+      })
+    } catch {
+      message.error('选择目录失败')
+    } finally {
+      setIsSelectingDirectory(false)
+    }
+  }
+
+  const handleResetDirectory = () => {
+    if (!window.settingsAPI) {
+      return
+    }
+
+    Modal.confirm({
+      title: '恢复默认目录',
+      content: '日记文件将恢复到默认的应用数据目录下。已有笔记将从当前自定义目录迁移回默认位置。',
+      okText: '确认恢复',
+      cancelText: '取消',
+      onOk: async () => {
+        setIsMigratingNotes(true)
+        try {
+          /*
+           * 先获取默认路径，然后迁移到默认路径。
+           * 重置时先读取 storageInfo 获得默认路径。
+           */
+          const info = await window.settingsAPI.getStorageInfo()
+          if (!info) {
+            message.error('无法读取存储信息')
+            return
+          }
+
+          /*
+           * 默认 notes 路径需要从主进程获取（不经过自定义）。
+           * 这里通过先 reset 拿到默认路径，然后在 connection 层获取。
+           */
+          const migrateResult = await window.settingsAPI.migrateNotes('__RESET_TO_DEFAULT__')
+          if (!migrateResult.success) {
+            message.error(migrateResult.error ?? '恢复默认目录失败')
+            return
+          }
+
+          const updatedInfo = await window.settingsAPI.getStorageInfo()
+          setStorageInfo(updatedInfo)
+          setSettingsError('')
+
+          if (migrateResult.movedCount > 0) {
+            message.success(`已迁移 ${migrateResult.movedCount} 篇日记到默认目录`)
+          } else {
+            message.success('已恢复默认目录')
+          }
+        } catch {
+          message.error('恢复默认目录失败')
+        } finally {
+          setIsMigratingNotes(false)
+        }
+      },
+    })
+  }
+
   const handleCopyPath = (path: string | undefined, label: string) => {
     /*
      * 复制按钮只处理已读取到的真实路径，避免把加载文案写进剪贴板。
@@ -139,6 +272,8 @@ function SettingsPage() {
     setThemeId(nextThemeId)
     message.success('主题已更新')
   }
+
+  const isCustomNotesPath = storageInfo?.customNotesPath != null
 
   return (
     <section className={styles.settingsPage}>
@@ -187,15 +322,25 @@ function SettingsPage() {
               </Space>
             }
             extra={
-              <Button
-                type="primary"
-                icon={<FolderOpenOutlined />}
-                loading={isOpeningStorageRoot}
-                disabled={!storageInfo || Boolean(settingsError)}
-                onClick={handleOpenStorageRoot}
-              >
-                打开存储目录
-              </Button>
+              <Space>
+                <Button
+                  icon={<FolderAddOutlined />}
+                  loading={isSelectingDirectory || isMigratingNotes}
+                  disabled={!window.settingsAPI || Boolean(settingsError)}
+                  onClick={handleSelectDirectory}
+                >
+                  选择目录
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<FolderOpenOutlined />}
+                  loading={isOpeningStorageRoot}
+                  disabled={!storageInfo || Boolean(settingsError)}
+                  onClick={handleOpenStorageRoot}
+                >
+                  打开存储目录
+                </Button>
+              </Space>
             }
           >
             {settingsError ? <Alert className={styles.settingsAlert} message={settingsError} type="error" showIcon /> : null}
@@ -215,6 +360,18 @@ function SettingsPage() {
                   </Button>
                 </Space.Compact>
               </Form.Item>
+              {isCustomNotesPath && (
+                <Form.Item>
+                  <Button
+                    icon={<UndoOutlined />}
+                    loading={isMigratingNotes}
+                    onClick={handleResetDirectory}
+                    size="small"
+                  >
+                    恢复默认目录
+                  </Button>
+                </Form.Item>
+              )}
               <Form.Item label="数据库文件">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input readOnly value={storageInfo?.databasePath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
