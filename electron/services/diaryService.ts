@@ -12,6 +12,7 @@ import type {
   UpdateDiaryInput,
 } from "../../shared/diary.js";
 import { DEFAULT_MOOD } from "../../shared/moods.js";
+import { formatWeather } from "../../shared/weather.js";
 import { getStorageRootPath } from "../db/connection.js";
 import type { DiaryRepository, DiarySearchIndexRecord } from "../repositories/diaryRepository.js";
 import type { TagRepository } from "../repositories/tagRepository.js";
@@ -33,6 +34,7 @@ interface BuildDiaryMarkdownFileInput {
   updatedAt: number;
   tags: string[];
   mood?: string;
+  weather?: string;
   markdown: string;
 }
 
@@ -69,6 +71,7 @@ export class DiaryService {
     const filepath = generateFilePath(now, id);
     const tags = normalizeTagNames(input.tags);
     const mood = input.mood === undefined ? DEFAULT_MOOD : normalizeMood(input.mood);
+    const weather = input.weather === undefined ? undefined : normalizeWeather(input.weather);
 
     writeDiaryFile(
       filepath,
@@ -78,6 +81,7 @@ export class DiaryService {
         updatedAt: now,
         tags,
         mood,
+        weather,
         markdown,
       }),
     );
@@ -95,6 +99,7 @@ export class DiaryService {
        * 创建入口没有显式心情时，默认选中“平静”。
        */
       mood,
+      weather,
     });
 
     this.diaryRepository.syncDiarySearchIndex({
@@ -136,6 +141,14 @@ export class DiaryService {
       input.mood === undefined || moodUpdate === undefined
         ? existingDiary.mood
         : moodUpdate ?? undefined;
+    const weatherUpdate =
+      input.weather === undefined
+        ? undefined
+        : normalizeWeatherUpdateValue(input.weather);
+    const nextWeather =
+      input.weather === undefined || weatherUpdate === undefined
+        ? existingDiary.weather
+        : weatherUpdate ?? undefined;
     const updatedAt = Date.now();
     const nextMarkdown =
       markdown === undefined
@@ -150,6 +163,7 @@ export class DiaryService {
         updatedAt,
         tags: tags ?? existingDiary.tags ?? [],
         mood: nextMood,
+        weather: nextWeather,
         markdown: nextMarkdown,
       }),
     );
@@ -163,6 +177,7 @@ export class DiaryService {
       diaryDate: formatTimestampDate(existingDiary.createdAt),
       tags,
       mood: input.mood === undefined ? undefined : moodUpdate,
+      weather: input.weather === undefined ? undefined : weatherUpdate,
       updatedAt,
     });
 
@@ -432,6 +447,28 @@ function normalizeMoodUpdateValue(mood: string | null): string | null | undefine
   return normalizeMood(mood);
 }
 
+function normalizeWeather(weather: string): string | undefined {
+  if (typeof weather !== "string") {
+    throw new Error("weather must be a string.");
+  }
+
+  const normalized = weather.trim();
+  const matchedWeather = formatWeather(normalized);
+
+  /*
+   * 这里沿用与心情相同的策略，允许历史数据里出现自定义值。
+   */
+  return normalized ? matchedWeather?.name ?? normalized : undefined;
+}
+
+function normalizeWeatherUpdateValue(weather: string | null): string | null | undefined {
+  if (weather === null) {
+    return null;
+  }
+
+  return normalizeWeather(weather);
+}
+
 /**
  * 生成本机本地日期字符串。
  *
@@ -475,6 +512,10 @@ function buildDiaryMarkdownFile(input: BuildDiaryMarkdownFileInput): string {
 
   if (input.mood) {
     frontMatterLines.push(`mood: ${formatYamlString(input.mood)}`);
+  }
+
+  if (input.weather) {
+    frontMatterLines.push(`weather: ${formatYamlString(input.weather)}`);
   }
 
   /*

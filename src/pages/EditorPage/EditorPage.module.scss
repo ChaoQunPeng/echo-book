@@ -57,6 +57,7 @@
 .editorMetaRow {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 0 20px 12px 12px;
   border-bottom: 1px solid var(--echo-color-primary-10);
@@ -78,15 +79,15 @@
   }
 }
 
-.moodPopoverContent {
+.metadataPopoverContent {
   min-width: 180px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.moodPopoverOption,
-.moodPopoverClear {
+.metadataPopoverOption,
+.metadataPopoverClear {
   min-height: 32px;
   display: flex;
   align-items: center;
@@ -98,25 +99,25 @@
   outline: none;
 }
 
-.moodPopoverOption:hover,
-.moodPopoverOption:focus-visible,
-.moodPopoverClear:hover,
-.moodPopoverClear:focus-visible {
+.metadataPopoverOption:hover,
+.metadataPopoverOption:focus-visible,
+.metadataPopoverClear:hover,
+.metadataPopoverClear:focus-visible {
   background: rgba(25, 28, 29, 0.04);
 }
 
-.moodPopoverOptionActive {
+.metadataPopoverOptionActive {
   color: var(--echo-color-primary);
   background: var(--echo-color-primary-10);
   font-weight: 700;
 }
 
-.moodPopoverEmoji {
+.metadataPopoverEmoji {
   width: 20px;
   text-align: center;
 }
 
-.moodPopoverClear {
+.metadataPopoverClear {
   margin-top: 4px;
   border-top: 1px solid rgba(25, 28, 29, 0.08);
   color: rgba(25, 28, 29, 0.55);

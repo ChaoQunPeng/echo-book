@@ -2,6 +2,7 @@ import {
   ArrowLeftOutlined,
   BoldOutlined,
   CheckSquareOutlined,
+  CloudOutlined,
   DownOutlined,
   EditOutlined,
   FontSizeOutlined,
@@ -32,6 +33,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Markdown, type MarkdownStorage } from 'tiptap-markdown'
 import type { Diary } from '../../../shared/diary'
 import { formatMood, MOODS } from '../../../shared/moods'
+import { formatWeather, WEATHERS } from '../../../shared/weather'
 import type { TagLibraryItem } from '../../../shared/tags'
 import styles from './EditorPage.module.scss'
 import TagManagerDialog from './TagManagerDialog'
@@ -46,6 +48,7 @@ type HeadingLevel = (typeof HEADING_LEVELS)[number]
 type DiaryDraftFields = {
   title: string
   mood: string
+  weather: string
   tagsInput: string
 }
 
@@ -239,6 +242,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const latestFieldsRef = useRef<DiaryDraftFields>({
     title: '',
     mood: '',
+    weather: '',
     tagsInput: ''
   })
   const lastPersistedSnapshotRef = useRef('')
@@ -249,9 +253,11 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   const [isEditorReady, setIsEditorReady] = useState(false)
   const [title, setTitle] = useState('')
   const [mood, setMood] = useState('')
+  const [weather, setWeather] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
   const [isMoodPopoverOpen, setIsMoodPopoverOpen] = useState(false)
+  const [isWeatherPopoverOpen, setIsWeatherPopoverOpen] = useState(false)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState('正在读取日记')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
@@ -301,6 +307,11 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     return Array.from(tagMap.values())
   }, [selectedTags, tagLibrary])
   const selectedMood = mood ? formatMood(mood) : null
+  const selectedMoodName = selectedMood?.name ?? mood
+  const selectedMoodEmoji = selectedMood?.emoji ?? ''
+  const selectedWeather = weather ? formatWeather(weather) : null
+  const selectedWeatherName = selectedWeather?.name ?? weather
+  const selectedWeatherEmoji = selectedWeather?.emoji ?? ''
 
   const uploadDiaryImage = useCallback(
     async (file: File): Promise<string> => {
@@ -510,6 +521,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       lastPersistedSnapshotRef.current = ''
       setTitle('')
       setMood('')
+      setWeather('')
       setTagsInput('')
       setLoadError('缺少日记 id')
       setSaveStatus('无法读取日记')
@@ -558,6 +570,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         latestFieldsRef.current = {
           title: diary.title,
           mood: diary.mood ?? '',
+          weather: diary.weather ?? '',
           tagsInput: loadedTagsInput
         }
         /*
@@ -569,6 +582,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         })
         setTitle(diary.title)
         setMood(diary.mood ?? '')
+        setWeather(diary.weather ?? '')
         setTagsInput(loadedTagsInput)
         setSaveStatus('日记已载入')
         setLastSavedAt(diary.updatedAt)
@@ -595,9 +609,10 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     latestFieldsRef.current = {
       title,
       mood,
+      weather,
       tagsInput
     }
-  }, [mood, tagsInput, title])
+  }, [mood, tagsInput, title, weather])
 
   useEffect(() => {
     if (!diaryId || !isEditorReady || loadError) {
@@ -650,6 +665,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
           title: normalizedTitle,
           markdown,
           mood: fields.mood.trim() ? fields.mood : null,
+          weather: fields.weather.trim() ? fields.weather : null,
           tags: parseTags(fields.tagsInput)
         })
 
@@ -743,12 +759,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         title: normalizedTitle,
         markdown,
         mood: mood.trim() ? mood : null,
+        weather: weather.trim() ? weather : null,
         tags: parseTags(tagsInput)
       })
 
       const savedSnapshot = buildDiarySnapshot({
         title: normalizedTitle,
         mood,
+        weather,
         tagsInput,
         markdown
       })
@@ -833,6 +851,15 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
      */
     setMood(nextMood)
     setIsMoodPopoverOpen(false)
+    markExistingDiaryChanged()
+  }
+
+  const handleWeatherChange = (nextWeather: string) => {
+    /*
+     * 天气和心情一样，只保存枚举名称，展示层再补 emoji。
+     */
+    setWeather(nextWeather)
+    setIsWeatherPopoverOpen(false)
     markExistingDiaryChanged()
   }
 
@@ -939,35 +966,21 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
     void insertImageFiles(files)
   }
 
-  const moodPopoverContent = (
-    <div className={styles.moodPopoverContent}>
-      {MOODS.map(moodOption => (
-        <div
-          key={moodOption.name}
-          className={mood === moodOption.name ? `${styles.moodPopoverOption} ${styles.moodPopoverOptionActive}` : styles.moodPopoverOption}
-          role="button"
-          tabIndex={0}
-          aria-pressed={mood === moodOption.name}
-          onClick={() => handleMoodChange(moodOption.name)}
-          onKeyDown={handlePickerTriggerKeyDown}
-        >
-          <span className={styles.moodPopoverEmoji}>{moodOption.emoji}</span>
-          <span>{moodOption.name}</span>
-        </div>
-      ))}
-      {mood ? (
-        <div
-          className={styles.moodPopoverClear}
-          role="button"
-          tabIndex={0}
-          onClick={() => handleMoodChange('')}
-          onKeyDown={handlePickerTriggerKeyDown}
-        >
-          不记录心情
-        </div>
-      ) : null}
-    </div>
-  )
+  const moodPopoverContent = renderMetadataPopoverContent({
+    options: MOODS,
+    selectedValue: mood,
+    onSelect: handleMoodChange,
+    clearLabel: '不记录心情',
+    onKeyDown: handlePickerTriggerKeyDown
+  })
+
+  const weatherPopoverContent = renderMetadataPopoverContent({
+    options: WEATHERS,
+    selectedValue: weather,
+    onSelect: handleWeatherChange,
+    clearLabel: '不记录天气',
+    onKeyDown: handlePickerTriggerKeyDown
+  })
 
   const tagPopoverContent = (
     <div className={styles.tagPopoverContent}>
@@ -1036,11 +1049,30 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
           <Button icon={<SmileOutlined />}>
             {mood ? (
               <div className="flex items-center leading-none!">
-                <span className="mood-name leading-none! mr-4">{selectedMood?.name}</span>
-                <span className="mood-emoji text-size-18">{selectedMood?.emoji}</span>
+                <span className="mood-name leading-none! mr-4">{selectedMoodName}</span>
+                <span className="mood-emoji text-size-18">{selectedMoodEmoji}</span>
               </div>
             ) : (
               '选择今天的心情'
+            )}
+          </Button>
+        </Popover>
+
+        <Popover
+          content={weatherPopoverContent}
+          trigger="click"
+          placement="bottomLeft"
+          open={isWeatherPopoverOpen}
+          onOpenChange={setIsWeatherPopoverOpen}
+        >
+          <Button icon={<CloudOutlined />}>
+            {weather ? (
+              <div className="flex items-center leading-none!">
+                <span className="mood-name leading-none! mr-4">{selectedWeatherName}</span>
+                <span className="mood-emoji text-size-18">{selectedWeatherEmoji}</span>
+              </div>
+            ) : (
+              '选择天气'
             )}
           </Button>
         </Popover>
@@ -1185,6 +1217,50 @@ function parseTags(value: string): string[] {
   return normalizeTagList(value.split(/[,，]/))
 }
 
+function renderMetadataPopoverContent({
+  options,
+  selectedValue,
+  onSelect,
+  clearLabel,
+  onKeyDown
+}: {
+  options: ReadonlyArray<{ name: string; emoji: string }>
+  selectedValue: string
+  onSelect: (value: string) => void
+  clearLabel: string
+  onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
+}) {
+  return (
+    <div className={styles.metadataPopoverContent}>
+      {options.map(option => (
+        <div
+          key={option.name}
+          className={selectedValue === option.name ? `${styles.metadataPopoverOption} ${styles.metadataPopoverOptionActive}` : styles.metadataPopoverOption}
+          role="button"
+          tabIndex={0}
+          aria-pressed={selectedValue === option.name}
+          onClick={() => onSelect(option.name)}
+          onKeyDown={onKeyDown}
+        >
+          <span className={styles.metadataPopoverEmoji}>{option.emoji}</span>
+          <span>{option.name}</span>
+        </div>
+      ))}
+      {selectedValue ? (
+        <div
+          className={styles.metadataPopoverClear}
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelect('')}
+          onKeyDown={onKeyDown}
+        >
+          {clearLabel}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function selectWordAroundCursor(editor: Editor): boolean {
   const { selection } = editor.state
 
@@ -1311,6 +1387,7 @@ function buildDiarySnapshot(input: DiaryDraftFields & { markdown: string }): str
   return JSON.stringify({
     title: input.title.trim(),
     mood: input.mood.trim(),
+    weather: input.weather.trim(),
     tags: parseTags(input.tagsInput),
     markdown: input.markdown
   })

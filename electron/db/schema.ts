@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import fs from "node:fs";
 import { getDatabase, getNotesPath } from "./connection.js";
 
-const DB_VERSION = "4";
+const DB_VERSION = "5";
 
 /**
  * 初始化 SQLite schema。
@@ -45,6 +45,7 @@ function resetIncompatibleSchema(db: Database.Database): void {
       "created_at",
       "updated_at",
       "mood",
+      "weather",
       "tags",
       "deleted",
     ])
@@ -93,6 +94,7 @@ function createCurrentSchema(db: Database.Database): void {
       updated_at INTEGER NOT NULL,
 
       mood TEXT,
+      weather TEXT,
 
       tags TEXT NOT NULL DEFAULT '[]',
 

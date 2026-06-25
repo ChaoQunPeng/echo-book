@@ -5,6 +5,7 @@ import type { ChangeEvent, CompositionEvent, KeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
+import { formatWeather } from '../../../shared/weather'
 import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
 
@@ -222,7 +223,8 @@ function DiaryListPanel({
  */
 function buildDiaryMetaSummary(diary: Diary): string {
   const summaryParts = [
-    diary.mood ? `心情：${formatMood(diary.mood)}` : '',
+    diary.mood ? `心情：${formatMood(diary.mood)?.name ?? diary.mood}` : '',
+    diary.weather ? `天气：${formatWeather(diary.weather)?.name ?? diary.weather}` : '',
     diary.tags?.length ? `标签：${diary.tags.join(' / ')}` : '',
     `更新：${formatUpdatedAt(diary.updatedAt)}`
   ].filter(Boolean)
