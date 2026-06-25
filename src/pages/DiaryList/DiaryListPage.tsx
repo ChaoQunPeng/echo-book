@@ -31,17 +31,27 @@ type LoadDiariesOptions = {
   showPageLoading?: boolean
 }
 
+type DiaryListCache = {
+  diaries: Diary[]
+  searchKeyword: string
+  dateFilter: DateFilterValue
+}
+
+let diaryListCache: DiaryListCache | null = null
+
 function DiaryListPage() {
   const navigate = useNavigate()
   const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
   const { modal } = AntdApp.useApp()
-  const hasLoadedDiariesRef = useRef(false)
-  const [diaries, setDiaries] = useState<Diary[]>([])
-  const [searchKeyword, setSearchKeyword] = useState('')
-  const [dateFilter, setDateFilter] = useState<DateFilterValue>('all')
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedList = diaryListCache
+  const hasLoadedDiariesRef = useRef(Boolean(cachedList))
+  const [diaries, setDiaries] = useState<Diary[]>(() => cachedList?.diaries ?? [])
+  const [searchKeyword, setSearchKeyword] = useState(() => cachedList?.searchKeyword ?? '')
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>(() => cachedList?.dateFilter ?? 'all')
+  const [isLoading, setIsLoading] = useState(!cachedList)
   const [isCreatingDiary, setIsCreatingDiary] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const dateFilterRef = useRef(dateFilter)
   const currentDateFilterLabel = DATE_FILTER_OPTIONS.find(option => option.value === dateFilter)?.label ?? '全部日记'
   const hasActiveSearch = Boolean(searchKeyword.trim())
 
@@ -64,54 +74,81 @@ function DiaryListPage() {
    * 加载日记列表数据
    * 从本地数据库读取最近的日记记录并更新页面状态
    */
-  const loadDiaries = useCallback(async (nextSearchKeyword = searchKeyword, options: LoadDiariesOptions = {}) => {
-    /*
-     * 首次进入需要整页读取态；搜索和编辑器保存后的列表同步只做后台刷新，
-     * 避免左右分栏被“正在读取日记”打断。
-     */
-    const shouldShowPageLoading = options.showPageLoading ?? true
-
-    if (shouldShowPageLoading) {
-      setIsLoading(true)
-    }
-
-    setErrorMessage('')
-
-    try {
-      const keyword = nextSearchKeyword.trim()
-
-      if (!window.diaryAPI) {
-        /*
-         * 纯 Web 调试环境没有 Electron preload API。
-         * 这里给一组内存示例数据，让布局和搜索都能正常展示。
-         */
-        const previewData = buildWebPreviewData()
-        setDiaries(keyword ? searchWebPreviewDiaries(previewData.diaries, previewData.markdownById, keyword) : previewData.diaries)
-        return
-      }
-
+  const loadDiaries = useCallback(
+    async (nextSearchKeyword = searchKeyword, options: LoadDiariesOptions = {}) => {
       /*
-       * 有关键词时走 SQLite FTS；无关键词时仍取最近列表，避免普通浏览被搜索接口耦合。
+       * 没有缓存时展示整页读取态；已有缓存时只做后台刷新。
        */
-      const diaryList = keyword ? await window.diaryAPI.searchDiary(keyword) : await window.diaryAPI.getDiaryList({ limit: 100 })
-      setDiaries(diaryList)
-    } catch (error) {
-      console.error('Failed to load diary list:', error)
-      setErrorMessage(`读取日记列表失败：${getErrorMessage(error)}`)
-    } finally {
-      hasLoadedDiariesRef.current = true
+      const shouldShowPageLoading = options.showPageLoading ?? true
 
       if (shouldShowPageLoading) {
-        setIsLoading(false)
+        setIsLoading(true)
       }
+
+      setErrorMessage('')
+
+      try {
+        const keyword = nextSearchKeyword.trim()
+        let nextDiaries: Diary[]
+
+        if (!window.diaryAPI) {
+          /*
+           * 纯 Web 调试环境没有 Electron preload API。
+           * 这里给一组内存示例数据，让布局和搜索都能正常展示。
+           */
+          const previewData = buildWebPreviewData()
+          nextDiaries = keyword ? searchWebPreviewDiaries(previewData.diaries, previewData.markdownById, keyword) : previewData.diaries
+        } else {
+          /*
+           * 有关键词时走 SQLite FTS；无关键词时仍取最近列表，避免普通浏览被搜索接口耦合。
+           */
+          nextDiaries = keyword ? await window.diaryAPI.searchDiary(keyword) : await window.diaryAPI.getDiaryList({ limit: 100 })
+        }
+
+        setDiaries(nextDiaries)
+        diaryListCache = {
+          diaries: nextDiaries,
+          searchKeyword: nextSearchKeyword,
+          dateFilter: dateFilterRef.current
+        }
+      } catch (error) {
+        console.error('Failed to load diary list:', error)
+        setErrorMessage(`读取日记列表失败：${getErrorMessage(error)}`)
+      } finally {
+        hasLoadedDiariesRef.current = true
+
+        if (shouldShowPageLoading) {
+          setIsLoading(false)
+        }
+      }
+    },
+    [searchKeyword]
+  )
+
+  useEffect(() => {
+    /*
+     * 加载函数通过 ref 读取最新筛选值，避免筛选变化触发数据库请求。
+     */
+    dateFilterRef.current = dateFilter
+
+    if (!hasLoadedDiariesRef.current) {
+      return
     }
-  }, [searchKeyword])
+
+    /*
+     * 筛选和搜索属于列表数据视图状态，切回列表时直接恢复。
+     */
+    diaryListCache = {
+      diaries,
+      searchKeyword,
+      dateFilter
+    }
+  }, [dateFilter, diaries, searchKeyword])
 
   useEffect(() => {
     const searchTimer = window.setTimeout(() => {
       /*
-       * 搜索框变化只刷新列表数据，保留当前页面和编辑器状态。
-       * 只有第一次进入列表页时展示整页读取 loading。
+       * 搜索框变化只刷新列表数据；缓存命中后切回页面不再展示整页 loading。
        */
       void loadDiaries(searchKeyword, { showPageLoading: !hasLoadedDiariesRef.current })
     }, 180)
@@ -195,14 +232,17 @@ function DiaryListPage() {
     })
   }
 
-  const handleDiarySaved = useCallback((updatedDiary: Diary) => {
-    /*
-     * 右侧编辑器保存成功后，直接替换左侧列表中的同一条日记元数据。
-     * 后台刷新只校准搜索结果和数据库排序，不再触发列表页读取 loading。
-     */
-    setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
-    void loadDiaries(searchKeyword, { showPageLoading: false })
-  }, [loadDiaries, searchKeyword])
+  const handleDiarySaved = useCallback(
+    (updatedDiary: Diary) => {
+      /*
+       * 右侧编辑器保存成功后，直接替换左侧列表中的同一条日记元数据。
+       * 后台刷新只校准搜索结果和数据库排序，不再触发列表页读取 loading。
+       */
+      setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
+      void loadDiaries(searchKeyword, { showPageLoading: false })
+    },
+    [loadDiaries, searchKeyword]
+  )
 
   /*
    * 日记列表页是应用打开后的默认页面。

@@ -16,10 +16,13 @@ type TimelineDiary = Diary & {
   markdown: string
 }
 
+let timelineDiaryCache: TimelineDiary[] | null = null
+
 function TimelinePage() {
   const navigate = useNavigate()
-  const [diaries, setDiaries] = useState<TimelineDiary[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cachedTimelineDiaries = timelineDiaryCache
+  const [diaries, setDiaries] = useState<TimelineDiary[]>(() => cachedTimelineDiaries ?? [])
+  const [isLoading, setIsLoading] = useState(!cachedTimelineDiaries)
   const [errorMessage, setErrorMessage] = useState('')
 
   const groupedDiaries = useMemo(() => {
@@ -54,50 +57,54 @@ function TimelinePage() {
     let cancelled = false
 
     const loadTimelineDiaries = async () => {
-      setIsLoading(true)
+      const shouldShowLoading = !timelineDiaryCache
+
+      if (shouldShowLoading) {
+        setIsLoading(true)
+      }
+
       setErrorMessage('')
 
       try {
+        let nextDiaries: TimelineDiary[]
+
         if (!window.diaryAPI) {
           /*
            * Web 调试环境没有 Electron preload API，复用内存示例数据生成时光预览。
            */
           const previewData = buildWebPreviewData()
-          const previewDiaries = previewData.diaries.map(diary => ({
+          nextDiaries = previewData.diaries.map(diary => ({
             ...diary,
             markdown: previewData.markdownById[diary.id] ?? ''
           }))
+        } else {
+          /*
+           * 列表 API 只返回元数据；正文按 id 读取 Markdown 文件后在前端动态生成摘要。
+           */
+          const diaryList = await window.diaryAPI.getDiaryList({ limit: TIMELINE_LIMIT })
+          const detailResults = await Promise.allSettled(diaryList.map(diary => window.diaryAPI.getDiaryById(diary.id)))
 
-          if (!cancelled) {
-            setDiaries(previewDiaries)
+          if (cancelled) {
+            return
           }
 
-          return
-        }
+          const markdownById = new Map<string, string>()
+          detailResults.forEach(result => {
+            if (result.status === 'fulfilled' && result.value) {
+              markdownById.set(result.value.id, result.value.markdown)
+            }
+          })
 
-        /*
-         * 列表 API 只返回元数据；正文按 id 读取 Markdown 文件后在前端动态生成摘要。
-         */
-        const diaryList = await window.diaryAPI.getDiaryList({ limit: TIMELINE_LIMIT })
-        const detailResults = await Promise.allSettled(diaryList.map(diary => window.diaryAPI.getDiaryById(diary.id)))
-
-        if (cancelled) {
-          return
-        }
-
-        const markdownById = new Map<string, string>()
-        detailResults.forEach(result => {
-          if (result.status === 'fulfilled' && result.value) {
-            markdownById.set(result.value.id, result.value.markdown)
-          }
-        })
-
-        setDiaries(
-          diaryList.map(diary => ({
+          nextDiaries = diaryList.map(diary => ({
             ...diary,
             markdown: markdownById.get(diary.id) ?? ''
           }))
-        )
+        }
+
+        if (!cancelled) {
+          setDiaries(nextDiaries)
+          timelineDiaryCache = nextDiaries
+        }
       } catch (error) {
         if (!cancelled) {
           console.error('Failed to load timeline diaries:', error)
@@ -105,7 +112,9 @@ function TimelinePage() {
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false)
+          if (shouldShowLoading) {
+            setIsLoading(false)
+          }
         }
       }
     }

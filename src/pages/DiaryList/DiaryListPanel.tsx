@@ -3,7 +3,7 @@ import { Button, Dropdown, Input } from 'antd'
 import type { MenuProps } from 'antd'
 import type { ChangeEvent, CompositionEvent, KeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
 import { formatWeather } from '../../../shared/weather'
@@ -35,6 +35,7 @@ function DiaryListPanel({
   onEditDiary,
   onSearchKeywordChange
 }: DiaryListPanelProps) {
+  const navigate = useNavigate()
   const isComposingSearchRef = useRef(false)
   const [searchInputValue, setSearchInputValue] = useState(searchKeyword)
   const groupedDiaries = useMemo(() => {
@@ -152,21 +153,24 @@ function DiaryListPanel({
                 {group.diaries.map(diary => {
                   return (
                     <li key={diary.id} className={styles.diaryListItemWrapper}>
-                      <NavLink
-                        to={`/list/${diary.id}`}
-                        className={({ isActive }) => {
-                          /*
-                           * NavLink 的 isActive 类似 Vue Router 的 active，由当前路由自动计算选中态。
-                           */
-                          return isActive || diary.id === selectedDiaryId
-                            ? `${styles.diaryListItem} ${styles.diaryListItemActive}`
-                            : styles.diaryListItem
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={
+                          diary.id === selectedDiaryId ? `${styles.diaryListItem} ${styles.diaryListItemActive}` : styles.diaryListItem
+                        }
+                        onClick={() => navigate(`/list/${diary.id}`)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            navigate(`/list/${diary.id}`)
+                          }
                         }}
                       >
                         <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
                         <div className={styles.diaryListTitle}>{diary.title}</div>
                         <div className={`${styles.diaryListSummary} mt-8`}>{buildDiaryMetaSummary(diary)}</div>
-                      </NavLink>
+                      </div>
                       <div className={styles.diaryListActions}>
                         <Dropdown
                           trigger={['click']}
