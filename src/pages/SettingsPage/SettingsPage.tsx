@@ -6,7 +6,7 @@ import {
   ExportOutlined,
   FolderOpenOutlined,
   FolderAddOutlined,
-  UndoOutlined,
+  UndoOutlined
 } from '@ant-design/icons'
 import { Alert, App as AntdApp, Button, Card, Form, Input, Modal, Space } from 'antd'
 import { useEffect, useState } from 'react'
@@ -148,10 +148,10 @@ function SettingsPage() {
         content: (
           <div>
             <p>你选择的新目录：</p>
-            <p><code style={{ wordBreak: 'break-all' }}>{newDirectory}</code></p>
-            <p style={{ marginTop: 12, color: 'var(--color-text-secondary)' }}>
-              已有笔记文件将迁移到新目录，数据库文件不受影响。
+            <p>
+              <code style={{ wordBreak: 'break-all' }}>{newDirectory}</code>
             </p>
+            <p style={{ marginTop: 12, color: 'var(--color-text-secondary)' }}>已有笔记文件将迁移到新目录，数据库文件不受影响。</p>
           </div>
         ),
         okText: '确认迁移',
@@ -187,7 +187,7 @@ function SettingsPage() {
           /*
            * 取消时不清除选择，用户可以再次点击确认。
            */
-        },
+        }
       })
     } catch {
       message.error('选择目录失败')
@@ -243,7 +243,7 @@ function SettingsPage() {
         } finally {
           setIsMigratingNotes(false)
         }
-      },
+      }
     })
   }
 
@@ -301,7 +301,10 @@ function SettingsPage() {
                     aria-pressed={isActive}
                     onClick={() => handleThemeChange(theme.id)}
                   >
-                    <span className={styles.themePreview} style={{ '--theme-primary': theme.colors.primary, '--theme-page': theme.colors.page } as CSSProperties}>
+                    <span
+                      className={styles.themePreview}
+                      style={{ '--theme-primary': theme.colors.primary, '--theme-page': theme.colors.page } as CSSProperties}
+                    >
                       {isActive ? <CheckOutlined /> : null}
                     </span>
                     <span className={styles.themeText}>
@@ -318,7 +321,7 @@ function SettingsPage() {
             title={
               <Space size={8}>
                 <FolderOpenOutlined />
-                存储位置
+                日记存储位置
               </Space>
             }
             extra={
@@ -329,16 +332,7 @@ function SettingsPage() {
                   disabled={!window.settingsAPI || Boolean(settingsError)}
                   onClick={handleSelectDirectory}
                 >
-                  选择目录
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<FolderOpenOutlined />}
-                  loading={isOpeningStorageRoot}
-                  disabled={!storageInfo || Boolean(settingsError)}
-                  onClick={handleOpenNotesDirectory}
-                >
-                  打开日记目录
+                  修改目录
                 </Button>
               </Space>
             }
@@ -351,6 +345,7 @@ function SettingsPage() {
               <Form.Item label="日记文件目录">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input readOnly value={storageInfo?.notesPath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
+
                   <Button
                     icon={<CopyOutlined />}
                     disabled={!storageInfo?.notesPath}
@@ -358,21 +353,24 @@ function SettingsPage() {
                   >
                     复制
                   </Button>
+                  <Button
+                    icon={<FolderOpenOutlined />}
+                    loading={isOpeningStorageRoot}
+                    disabled={!storageInfo || Boolean(settingsError)}
+                    onClick={handleOpenNotesDirectory}
+                  >
+                    打开目录
+                  </Button>
                 </Space.Compact>
               </Form.Item>
               {isCustomNotesPath && (
                 <Form.Item>
-                  <Button
-                    icon={<UndoOutlined />}
-                    loading={isMigratingNotes}
-                    onClick={handleResetDirectory}
-                    size="small"
-                  >
+                  <Button icon={<UndoOutlined />} loading={isMigratingNotes} onClick={handleResetDirectory} size="small">
                     恢复默认目录
                   </Button>
                 </Form.Item>
               )}
-              <Form.Item label="数据库文件">
+              {/* <Form.Item label="数据库文件">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input readOnly value={storageInfo?.databasePath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
                   <Button
@@ -383,7 +381,7 @@ function SettingsPage() {
                     复制
                   </Button>
                 </Space.Compact>
-              </Form.Item>
+              </Form.Item> */}
             </Form>
           </Card>
 
