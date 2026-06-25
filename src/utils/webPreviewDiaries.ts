@@ -6,7 +6,7 @@ const WEB_PREVIEW_DIARY_ID_PREFIX = 'web-preview-diary'
  * 构建 Web 预览日记
  * 补齐 Diary 类型需要的固定字段
  */
-function createWebPreviewDiary(input: { id: string; title: string; markdown: string; createdAt: number; tags?: string[]; mood?: string }): {
+function createWebPreviewDiary(input: { id: string; title: string; markdown: string; createdAt: number; tags?: string[]; mood?: string; weather?: string }): {
   diary: Diary
   markdown: string
 } {
@@ -20,6 +20,7 @@ function createWebPreviewDiary(input: { id: string; title: string; markdown: str
       updatedAt: input.createdAt,
       tags: input.tags,
       mood: input.mood,
+      weather: input.weather,
       deleted: false
     },
     markdown: input.markdown
@@ -45,7 +46,8 @@ export function buildWebPreviewData(): { diaries: Diary[]; markdownById: Record<
 今天最明显的感受是：当眼前的东西变少，脑子里的声音也会变小。晚上想继续把这份清爽留给明天。`,
       createdAt: now,
       tags: ['生活', '整理'],
-      mood: '平静'
+      mood: '平静',
+      weather: '晴'
     }),
     createWebPreviewDiary({
       id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-yesterday`,
@@ -57,7 +59,8 @@ export function buildWebPreviewData(): { diaries: Diary[]; markdownById: Record<
 回来时想起一句话：有些答案不是想出来的，是走出来的。`,
       createdAt: now - dayMs,
       tags: ['散步'],
-      mood: '松弛'
+      mood: '松弛',
+      weather: '雨'
     }),
     createWebPreviewDiary({
       id: `${WEB_PREVIEW_DIARY_ID_PREFIX}-last-week`,
@@ -70,7 +73,8 @@ export function buildWebPreviewData(): { diaries: Diary[]; markdownById: Record<
 - 再记录答案
 - 最后记录自己的变化`,
       createdAt: now - 8 * dayMs,
-      tags: ['阅读', '记录']
+      tags: ['阅读', '记录'],
+      weather: '多云'
     })
   ]
 

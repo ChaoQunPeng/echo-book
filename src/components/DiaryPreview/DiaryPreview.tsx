@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
+import { formatWeather } from '../../../shared/weather'
 import styles from './DiaryPreview.module.scss'
 
 type DiaryPreviewProps = {
@@ -37,7 +38,8 @@ function DiaryPreview({
             <h2>{diary.title}</h2>
             <div className={styles.diaryPreviewMeta}>
               <p>{formatFullCreatedAt(diary.createdAt)}</p>
-              {diary.mood ? <span>心情：{formatMood(diary.mood)?.name}</span> : null}
+              {diary.mood ? <span>心情：{formatMood(diary.mood)?.name ?? diary.mood}</span> : null}
+              {diary.weather ? <span>天气：{formatWeather(diary.weather)?.name ?? diary.weather}</span> : null}
               {diary.tags?.length ? <span>标签：{diary.tags.join(' / ')}</span> : null}
             </div>
           </div>

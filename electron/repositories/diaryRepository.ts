@@ -15,6 +15,7 @@ interface DiaryRow {
   created_at: number;
   updated_at: number;
   mood: string | null;
+  weather: string | null;
   tags: string;
   deleted: 0 | 1;
 }
@@ -31,6 +32,7 @@ export interface CreateDiaryRecord {
   updatedAt: number;
   tags: string[];
   mood?: string;
+  weather?: string;
 }
 
 /**
@@ -45,6 +47,7 @@ export interface UpdateDiaryRecord {
   createdAt?: number;
   tags?: string[];
   mood?: string | null;
+  weather?: string | null;
   updatedAt: number;
 }
 
@@ -78,6 +81,7 @@ export class DiaryRepository {
             created_at,
             updated_at,
             mood,
+            weather,
             tags,
             deleted
           )
@@ -89,6 +93,7 @@ export class DiaryRepository {
             @createdAt,
             @updatedAt,
             @mood,
+            @weather,
             @tags,
             0
           )
@@ -98,6 +103,7 @@ export class DiaryRepository {
         ...record,
         tags: stringifyTags(record.tags),
         mood: record.mood ?? null,
+        weather: record.weather ?? null,
       });
 
     const createdDiary = this.getDiaryById(record.id);
@@ -138,6 +144,11 @@ export class DiaryRepository {
     if (record.mood !== undefined) {
       sets.push("mood = @mood");
       params.mood = record.mood;
+    }
+
+    if (record.weather !== undefined) {
+      sets.push("weather = @weather");
+      params.weather = record.weather;
     }
 
     if (record.tags !== undefined) {
@@ -193,6 +204,7 @@ export class DiaryRepository {
             created_at,
             updated_at,
             mood,
+            weather,
             tags,
             deleted
           FROM diaries
@@ -248,6 +260,7 @@ export class DiaryRepository {
             d.created_at,
             d.updated_at,
             d.mood,
+            d.weather,
             d.tags,
             d.deleted
           FROM diaries d
@@ -339,6 +352,7 @@ export class DiaryRepository {
             d.created_at,
             d.updated_at,
             d.mood,
+            d.weather,
             d.tags,
             d.deleted
           FROM diaries d
@@ -400,6 +414,7 @@ function mapDiaryRow(row: DiaryRow): Diary {
     updatedAt: row.updated_at,
     tags: parseStoredTags(row.tags),
     mood: row.mood ?? undefined,
+    weather: row.weather ?? undefined,
     deleted: row.deleted === 1,
   };
 }

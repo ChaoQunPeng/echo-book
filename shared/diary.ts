@@ -21,6 +21,7 @@ export interface Diary {
   updatedAt: number;
   tags?: string[];
   mood?: string;
+  weather?: string;
   deleted: boolean;
 }
 
@@ -46,6 +47,7 @@ export interface CreateDiaryInput {
   diaryDate?: string;
   tags?: string[];
   mood?: string;
+  weather?: string;
 }
 
 /**
@@ -61,6 +63,7 @@ export interface UpdateDiaryInput {
   diaryDate?: string;
   tags?: string[];
   mood?: string | null;
+  weather?: string | null;
 }
 
 /**
