@@ -33,6 +33,8 @@ type LoadDiariesOptions = {
 
 type DiaryListCache = {
   diaries: Diary[]
+  fullDiaries: Diary[]
+  hasAnyDiary: boolean
   searchKeyword: string
   dateFilter: DateFilterValue
 }
@@ -44,8 +46,13 @@ function DiaryListPage() {
   const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
   const { modal } = AntdApp.useApp()
   const cachedList = diaryListCache
+  const cachedFullDiaries = cachedList?.fullDiaries ?? (cachedList?.searchKeyword.trim() ? [] : cachedList?.diaries ?? [])
+  const cachedHasAnyDiary = cachedList?.hasAnyDiary ?? (cachedFullDiaries.length > 0)
   const hasLoadedDiariesRef = useRef(Boolean(cachedList))
+  const fullDiariesRef = useRef<Diary[]>(cachedFullDiaries)
+  const hasAnyDiaryRef = useRef(cachedHasAnyDiary)
   const [diaries, setDiaries] = useState<Diary[]>(() => cachedList?.diaries ?? [])
+  const [hasAnyDiary, setHasAnyDiary] = useState(cachedHasAnyDiary)
   const [searchKeyword, setSearchKeyword] = useState(() => cachedList?.searchKeyword ?? '')
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(() => cachedList?.dateFilter ?? 'all')
   const [isLoading, setIsLoading] = useState(!cachedList)
@@ -105,9 +112,22 @@ function DiaryListPage() {
           nextDiaries = keyword ? await window.diaryAPI.searchDiary(keyword) : await window.diaryAPI.getDiaryList({ limit: 100 })
         }
 
+        /*
+         * 空搜索结果只代表当前视图为空；无关键词列表才代表库里是否真的有日记。
+         */
+        const nextHasAnyDiary = keyword ? hasAnyDiaryRef.current || nextDiaries.length > 0 : nextDiaries.length > 0
+
+        if (!keyword) {
+          fullDiariesRef.current = nextDiaries
+        }
+
+        hasAnyDiaryRef.current = nextHasAnyDiary
         setDiaries(nextDiaries)
+        setHasAnyDiary(nextHasAnyDiary)
         diaryListCache = {
           diaries: nextDiaries,
+          fullDiaries: fullDiariesRef.current,
+          hasAnyDiary: nextHasAnyDiary,
           searchKeyword: nextSearchKeyword,
           dateFilter: dateFilterRef.current
         }
@@ -140,10 +160,12 @@ function DiaryListPage() {
      */
     diaryListCache = {
       diaries,
+      fullDiaries: fullDiariesRef.current,
+      hasAnyDiary,
       searchKeyword,
       dateFilter
     }
-  }, [dateFilter, diaries, searchKeyword])
+  }, [dateFilter, diaries, hasAnyDiary, searchKeyword])
 
   useEffect(() => {
     const searchTimer = window.setTimeout(() => {
@@ -176,6 +198,19 @@ function DiaryListPage() {
       navigate(`/list/${filteredDiaries[0].id}`, { replace: true })
     }
   }, [filteredDiaries, isLoading, navigate, routeDiaryId])
+
+  const handleSearchKeywordChange = useCallback((nextKeyword: string) => {
+    /*
+     * 清空搜索时先恢复最近一次全量列表，避免等待异步刷新期间误入“还没有日记”状态。
+     */
+    if (!nextKeyword.trim() && fullDiariesRef.current.length > 0) {
+      setDiaries(fullDiariesRef.current)
+      setHasAnyDiary(true)
+      hasAnyDiaryRef.current = true
+    }
+
+    setSearchKeyword(nextKeyword)
+  }, [])
 
   const handleCreateDiary = async () => {
     /*
@@ -255,7 +290,7 @@ function DiaryListPage() {
       <div className={styles.diaryListPageContent}>
         {isLoading ? <p className={styles.diaryListPageEmpty}>正在读取日记...</p> : null}
 
-        {!isLoading && diaries.length === 0 && !hasActiveSearch ? (
+        {!isLoading && !hasAnyDiary && !hasActiveSearch ? (
           <div className={styles.diaryListPageEmptyState}>
             {/*
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
@@ -268,7 +303,7 @@ function DiaryListPage() {
           </div>
         ) : null}
 
-        {!isLoading && (diaries.length > 0 || hasActiveSearch) ? (
+        {!isLoading && (hasAnyDiary || hasActiveSearch) ? (
           <div className={styles.diarySplitLayout}>
             <DiaryListPanel
               dateFilter={dateFilter}
@@ -280,7 +315,7 @@ function DiaryListPage() {
               onDateFilterChange={setDateFilter}
               onDeleteDiary={handleDeleteDiary}
               onEditDiary={diary => navigate(`/editor/${diary.id}`)}
-              onSearchKeywordChange={setSearchKeyword}
+              onSearchKeywordChange={handleSearchKeywordChange}
             />
 
             {selectedDiary ? (
