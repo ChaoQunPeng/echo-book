@@ -15,12 +15,25 @@ const DATABASE_DIRECTORY_NAME = "database";
 const NOTES_DIRECTORY_NAME = "notes";
 
 /**
+ * 自定义 notes 路径在 settings 表中的 key。
+ */
+const CUSTOM_NOTES_PATH_KEY = "custom_notes_path";
+
+/**
  * 主进程内的数据库单例。
  *
  * better-sqlite3 是同步 API，但它运行在 Electron main process 中；
  * renderer 侧只通过 IPC 间接调用，因此不会把 Node.js / SQLite 能力泄漏给页面。
  */
 let database: Database.Database | null = null;
+
+/**
+ * 自定义 notes 目录的内存缓存。
+ *
+ * 启动时从 settings 表读入，后续 set/reset 操作同步更新 settings 表 + 内存。
+ * 这样 getNotesPath() 不需要依赖 getDatabase()，避免循环依赖。
+ */
+let customNotesPath: string | null = null;
 
 /**
  * 获取应用自己的数据根目录。
@@ -44,12 +57,23 @@ export function getDatabaseDirectoryPath(): string {
 }
 
 /**
- * 获取日记 Markdown 文件目录的绝对路径。
+ * 获取默认的日记 Markdown 文件目录路径（userData/notes）。
+ */
+export function getDefaultNotesPath(): string {
+  return path.join(getStorageRootPath(), NOTES_DIRECTORY_NAME);
+}
+
+/**
+ * 获取当前日记 Markdown 文件目录的绝对路径。
  *
- * notes 继续作为 userData 下的独立目录，和 database 并列，方便用户按文件夹备份或查看。
+ * 如果用户设置了自定义目录，返回自定义路径；否则返回默认的 userData/notes。
  */
 export function getNotesPath(): string {
-  return path.join(getStorageRootPath(), NOTES_DIRECTORY_NAME);
+  if (customNotesPath) {
+    return customNotesPath;
+  }
+
+  return getDefaultNotesPath();
 }
 
 /**
@@ -57,6 +81,53 @@ export function getNotesPath(): string {
  */
 export function getDatabasePath(): string {
   return path.join(getDatabaseDirectoryPath(), DATABASE_FILE_NAME);
+}
+
+/**
+ * 从 settings 表读取自定义 notes 路径并缓存到内存。
+ *
+ * 在数据库初始化完成后调用，确保 getNotesPath() 能拿到用户自定义路径。
+ */
+export function loadCustomNotesPathFromDb(): void {
+  const db = getDatabase();
+  const row = db
+    .prepare("SELECT value FROM settings WHERE key = @key")
+    .get({ key: CUSTOM_NOTES_PATH_KEY }) as { value: string } | undefined;
+
+  customNotesPath = row?.value ?? null;
+}
+
+/**
+ * 获取当前自定义 notes 路径（可能为 null）。
+ */
+export function getCustomNotesPathFromMemory(): string | null {
+  return customNotesPath;
+}
+
+/**
+ * 设置自定义 notes 路径并持久化到 settings 表。
+ */
+export function setCustomNotesPath(newPath: string): void {
+  const db = getDatabase();
+  db.prepare(
+    `
+      INSERT INTO settings (key, value)
+      VALUES (@key, @value)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `,
+  ).run({ key: CUSTOM_NOTES_PATH_KEY, value: newPath });
+
+  customNotesPath = newPath;
+}
+
+/**
+ * 重置自定义 notes 路径为默认值（从 settings 表中删除）。
+ */
+export function resetCustomNotesPath(): void {
+  const db = getDatabase();
+  db.prepare("DELETE FROM settings WHERE key = @key").run({ key: CUSTOM_NOTES_PATH_KEY });
+
+  customNotesPath = null;
 }
 
 /**

@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import fs from "node:fs";
-import { getDatabase, getNotesPath } from "./connection.js";
+import { getDatabase, getNotesPath, loadCustomNotesPathFromDb } from "./connection.js";
+import { migrateLegacyFilepaths } from "../repositories/diaryRepository.js";
 
 const DB_VERSION = "5";
 
@@ -12,14 +13,21 @@ const DB_VERSION = "5";
 export function initializeDatabase(db?: Database.Database): void {
   const targetDb = db ?? getDatabase();
 
-  if (!db) {
-    ensureStorageDirectories();
-  }
-
   targetDb.pragma("trusted_schema = ON");
   resetIncompatibleSchema(targetDb);
   createCurrentSchema(targetDb);
   initializeSettings(targetDb);
+
+  if (!db) {
+    /*
+     * settings 表初始化后立刻读取自定义 notes 路径，确保 ensureStorageDirectories
+     * 根据用户自定义目录创建（而非默认目录）。
+     */
+    loadCustomNotesPathFromDb();
+    ensureStorageDirectories();
+  }
+
+  migrateLegacyFilepaths(targetDb);
 }
 
 function ensureStorageDirectories(): void {

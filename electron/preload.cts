@@ -72,6 +72,26 @@ const settingsAPI: SettingsApi = {
   openStorageRoot() {
     return ipcRenderer.invoke("settings:openStorageRoot");
   },
+
+  openNotesDirectory() {
+    return ipcRenderer.invoke("settings:openNotesDirectory");
+  },
+
+  selectDirectory() {
+    return ipcRenderer.invoke("settings:selectDirectory");
+  },
+
+  setCustomNotesPath(path: string) {
+    return ipcRenderer.invoke("settings:setCustomNotesPath", path);
+  },
+
+  resetCustomNotesPath() {
+    return ipcRenderer.invoke("settings:resetCustomNotesPath");
+  },
+
+  migrateNotes(newNotesPath: string) {
+    return ipcRenderer.invoke("settings:migrateNotes", newNotesPath);
+  },
 };
 
 /**

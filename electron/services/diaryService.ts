@@ -13,7 +13,7 @@ import type {
 } from "../../shared/diary.js";
 import { DEFAULT_MOOD } from "../../shared/moods.js";
 import { formatWeather } from "../../shared/weather.js";
-import { getStorageRootPath } from "../db/connection.js";
+import { getNotesPath } from "../db/connection.js";
 import type { DiaryRepository, DiarySearchIndexRecord } from "../repositories/diaryRepository.js";
 import type { TagRepository } from "../repositories/tagRepository.js";
 import { normalizeTagNames } from "./tagService.js";
@@ -56,7 +56,7 @@ export class DiaryService {
    * 创建日记。
    *
    * id 使用 crypto.randomUUID() 生成，created_at / updated_at 使用毫秒时间戳。
-   * Markdown 文件写在 userData/notes 下，SQLite 只保存相对 filepath。
+   * Markdown 文件写在 getNotesPath() 下，SQLite 只保存相对于 notes 目录的 filepath。
    */
   public createDiary(input: CreateDiaryInput): DiaryDetail {
     const now = Date.now();
@@ -484,13 +484,19 @@ function formatTimestampDate(timestamp: number): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * 生成相对于 notes 目录的文件路径。
+ *
+ * 格式为 YYYY/MM/YYYY_MM_DD_id.md，不再包含 notes/ 前缀，
+ * 因为 resolveDiaryFilePath 会基于 getNotesPath() 解析。
+ */
 function generateFilePath(createdAt: number, id: string): string {
   const date = new Date(createdAt);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
 
-  return `notes/${year}/${month}/${year}_${month}_${day}_${id}.md`;
+  return `${year}/${month}/${year}_${month}_${day}_${id}.md`;
 }
 
 function buildDiaryMarkdownFile(input: BuildDiaryMarkdownFileInput): string {
@@ -681,10 +687,16 @@ function writeDiaryFile(filepath: string, markdown: string): void {
   fs.writeFileSync(absolutePath, markdown, "utf8");
 }
 
+/**
+ * 将相对路径解析为绝对路径。
+ *
+ * filepath 是相对于 getNotesPath() 的路径（例如 YYYY/MM/YYYY_MM_DD_id.md），
+ * 这里拼接后做 path traversal 防护。
+ */
 function resolveDiaryFilePath(filepath: string): string {
-  const storageRoot = getStorageRootPath();
-  const absolutePath = path.resolve(storageRoot, filepath);
-  const relativePath = path.relative(storageRoot, absolutePath);
+  const notesPath = getNotesPath();
+  const absolutePath = path.resolve(notesPath, filepath);
+  const relativePath = path.relative(notesPath, absolutePath);
 
   if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
     throw new Error("Invalid diary filepath.");
