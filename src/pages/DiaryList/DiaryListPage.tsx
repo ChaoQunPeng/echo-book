@@ -2,7 +2,7 @@ import { PlusOutlined } from '@ant-design/icons'
 import { App as AntdApp, Empty } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import EchoButton from '../../components/EchoButton'
 import { createDefaultDiary } from '../../utils/diaryCreation'
@@ -33,10 +33,10 @@ type LoadDiariesOptions = {
 
 function DiaryListPage() {
   const navigate = useNavigate()
+  const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
   const { modal } = AntdApp.useApp()
   const hasLoadedDiariesRef = useRef(false)
   const [diaries, setDiaries] = useState<Diary[]>([])
-  const [selectedDiaryId, setSelectedDiaryId] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [dateFilter, setDateFilter] = useState<DateFilterValue>('all')
   const [isLoading, setIsLoading] = useState(true)
@@ -57,8 +57,8 @@ function DiaryListPage() {
   }, [dateFilter, diaries])
 
   const selectedDiary = useMemo(() => {
-    return filteredDiaries.find(diary => diary.id === selectedDiaryId) ?? null
-  }, [filteredDiaries, selectedDiaryId])
+    return filteredDiaries.find(diary => diary.id === routeDiaryId) ?? null
+  }, [filteredDiaries, routeDiaryId])
 
   /**
    * 加载日记列表数据
@@ -121,17 +121,24 @@ function DiaryListPage() {
 
   useEffect(() => {
     /*
-     * 搜索或筛选后如果当前选中项不可见，自动选中第一条结果。
-     * 没有结果时清空右侧编辑器，避免展示和左侧列表不一致的内容。
+     * 选中项由 /list/:diaryId 控制；列表变化时只修正路由，不再维护本地选中状态。
      */
-    setSelectedDiaryId(currentDiaryId => {
-      if (filteredDiaries.length === 0) {
-        return ''
+    if (isLoading) {
+      return
+    }
+
+    if (filteredDiaries.length === 0) {
+      if (routeDiaryId) {
+        navigate('/list', { replace: true })
       }
 
-      return filteredDiaries.some(diary => diary.id === currentDiaryId) ? currentDiaryId : filteredDiaries[0].id
-    })
-  }, [filteredDiaries])
+      return
+    }
+
+    if (!routeDiaryId || !filteredDiaries.some(diary => diary.id === routeDiaryId)) {
+      navigate(`/list/${filteredDiaries[0].id}`, { replace: true })
+    }
+  }, [filteredDiaries, isLoading, navigate, routeDiaryId])
 
   const handleCreateDiary = async () => {
     /*
@@ -229,12 +236,11 @@ function DiaryListPage() {
               diaries={filteredDiaries}
               currentDateFilterLabel={currentDateFilterLabel}
               searchKeyword={searchKeyword}
-              selectedDiaryId={selectedDiaryId}
+              selectedDiaryId={routeDiaryId ?? ''}
               onDateFilterChange={setDateFilter}
               onDeleteDiary={handleDeleteDiary}
               onEditDiary={diary => navigate(`/editor/${diary.id}`)}
               onSearchKeywordChange={setSearchKeyword}
-              onSelectDiary={setSelectedDiaryId}
             />
 
             {selectedDiary ? (

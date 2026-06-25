@@ -157,11 +157,21 @@
   list-style: none;
 }
 
+.diaryListItemWrapper {
+  /*
+   * 列表项外壳只负责定位右上角操作按钮，真正选中态交给 NavLink。
+   */
+  position: relative;
+}
+
 .diaryListItem {
   position: relative;
+  display: block;
   padding: 24px 56px 24px 24px;
   background: #ffffff;
+  color: inherit;
   cursor: pointer;
+  text-decoration: none;
   transition: all 160ms ease, color 160ms ease;
 }
 

@@ -35,6 +35,8 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
                */}
               <Route path="today" element={<Navigate to="/list" replace />} />
               <Route path="list" element={<DiaryListPage />} />
+              {/* 日记列表的选中项交给路由参数维护，刷新和前进后退都能保留当前日记。 */}
+              <Route path="list/:diaryId" element={<DiaryListPage />} />
               {/* 时光页只负责浏览和回顾历史记录，打开日记时进入内容页。 */}
               <Route path="timeline" element={<TimelinePage />} />
               {/*

@@ -3,6 +3,7 @@ import { Button, Dropdown, Input } from 'antd'
 import type { MenuProps } from 'antd'
 import type { ChangeEvent, CompositionEvent, KeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
 import styles from './DiaryListPage.module.scss'
@@ -19,7 +20,6 @@ type DiaryListPanelProps = {
   onDeleteDiary: (diary: Diary) => void
   onEditDiary: (diary: Diary) => void
   onSearchKeywordChange: (keyword: string) => void
-  onSelectDiary: (diaryId: string) => void
 }
 
 function DiaryListPanel({
@@ -32,8 +32,7 @@ function DiaryListPanel({
   onDateFilterChange,
   onDeleteDiary,
   onEditDiary,
-  onSearchKeywordChange,
-  onSelectDiary
+  onSearchKeywordChange
 }: DiaryListPanelProps) {
   const isComposingSearchRef = useRef(false)
   const [searchInputValue, setSearchInputValue] = useState(searchKeyword)
@@ -150,14 +149,23 @@ function DiaryListPanel({
               <div className={styles.groupLabel}>{group.label}</div>
               <ul className={styles.diaryList}>
                 {group.diaries.map(diary => {
-                  const isSelected = diary.id === selectedDiaryId
-
                   return (
-                    <li
-                      key={diary.id}
-                      className={isSelected ? `${styles.diaryListItem} ${styles.diaryListItemActive}` : styles.diaryListItem}
-                      onClick={() => onSelectDiary(diary.id)}
-                    >
+                    <li key={diary.id} className={styles.diaryListItemWrapper}>
+                      <NavLink
+                        to={`/list/${diary.id}`}
+                        className={({ isActive }) => {
+                          /*
+                           * NavLink 的 isActive 类似 Vue Router 的 active，由当前路由自动计算选中态。
+                           */
+                          return isActive || diary.id === selectedDiaryId
+                            ? `${styles.diaryListItem} ${styles.diaryListItemActive}`
+                            : styles.diaryListItem
+                        }}
+                      >
+                        <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
+                        <div className={styles.diaryListTitle}>{diary.title}</div>
+                        <div className={`${styles.diaryListSummary} mt-8`}>{buildDiaryMetaSummary(diary)}</div>
+                      </NavLink>
                       <div className={styles.diaryListActions}>
                         <Dropdown
                           trigger={['click']}
@@ -178,7 +186,7 @@ function DiaryListPanel({
                             ],
                             onClick: ({ key, domEvent }) => {
                               /*
-                               * 菜单点击不应触发 li 的选中事件，避免操作时预览区跳动。
+                               * 菜单点击不进入当前日记路由，只执行编辑或删除动作。
                                */
                               domEvent.stopPropagation()
 
@@ -201,9 +209,6 @@ function DiaryListPanel({
                           />
                         </Dropdown>
                       </div>
-                      <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
-                      <div className={styles.diaryListTitle}>{diary.title}</div>
-                      <div className={`${styles.diaryListSummary} mt-8`}>{buildDiaryMetaSummary(diary)}</div>
                     </li>
                   )
                 })}
