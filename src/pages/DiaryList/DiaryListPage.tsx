@@ -8,6 +8,7 @@ import EchoButton from '../../components/EchoButton'
 import { createDefaultDiary } from '../../utils/diaryCreation'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import EditorPage from '../EditorPage'
+import DiaryListLoading from './DiaryListLoading'
 import DiaryListPanel from './DiaryListPanel'
 import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
@@ -47,7 +48,7 @@ function DiaryListPage() {
   const { modal } = AntdApp.useApp()
   const cachedList = diaryListCache
   const cachedFullDiaries = cachedList?.fullDiaries ?? (cachedList?.searchKeyword.trim() ? [] : cachedList?.diaries ?? [])
-  const cachedHasAnyDiary = cachedList?.hasAnyDiary ?? (cachedFullDiaries.length > 0)
+  const cachedHasAnyDiary = cachedList?.hasAnyDiary ?? cachedFullDiaries.length > 0
   const hasLoadedDiariesRef = useRef(Boolean(cachedList))
   const fullDiariesRef = useRef<Diary[]>(cachedFullDiaries)
   const hasAnyDiaryRef = useRef(cachedHasAnyDiary)
@@ -288,7 +289,7 @@ function DiaryListPage() {
       {errorMessage ? <p className={styles.diaryListPageError}>{errorMessage}</p> : null}
 
       <div className={styles.diaryListPageContent}>
-        {isLoading ? <p className={styles.diaryListPageEmpty}>正在读取日记...</p> : null}
+        {isLoading ? <DiaryListLoading /> : null}
 
         {!isLoading && !hasAnyDiary && !hasActiveSearch ? (
           <div className={styles.diaryListPageEmptyState}>

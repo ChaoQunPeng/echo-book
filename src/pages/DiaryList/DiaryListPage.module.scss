@@ -18,9 +18,55 @@
   min-height: 0;
 }
 
-.diaryListPageEmpty,
 .diaryListPageEmptyState {
   color: rgba(25, 28, 29, 0.66);
+}
+
+.diaryListLoading {
+  /*
+   * 加载态使用 antd Skeleton，先把列表页最终结构占住。
+   */
+  height: 100%;
+  min-height: 360px;
+  background: var(--echo-color-page);
+}
+
+.diaryListLoadingLayout {
+  display: flex;
+  height: 100%;
+}
+
+.diaryListLoadingPanel {
+  width: 320px;
+  border-right: 1px solid rgba(15, 82, 56, 0.12);
+  background: #ffffff;
+}
+
+.diaryListLoadingToolbar {
+  display: grid;
+  grid-template-columns: 1fr 32px;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid rgba(25, 28, 29, 0.08);
+}
+
+.diaryListLoadingItems {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 24px;
+}
+
+.diaryListLoadingItem {
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(25, 28, 29, 0.06);
+}
+
+.diaryListLoadingEditor {
+  flex: 1;
+  min-width: 0;
+  padding: 44px 56px;
+  background: #ffffff;
 }
 
 .diaryListPageEmptyState {
