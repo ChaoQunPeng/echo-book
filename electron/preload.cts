@@ -73,6 +73,10 @@ const settingsAPI: SettingsApi = {
     return ipcRenderer.invoke("settings:openStorageRoot");
   },
 
+  openNotesDirectory() {
+    return ipcRenderer.invoke("settings:openNotesDirectory");
+  },
+
   selectDirectory() {
     return ipcRenderer.invoke("settings:selectDirectory");
   },

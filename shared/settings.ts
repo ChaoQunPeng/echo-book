@@ -2,7 +2,7 @@
  * @Author: PengChaoQun 1152684231@qq.com
  * @Date: 2026-06-18 12:29:52
  * @LastEditors: PengChaoQun 1152684231@qq.com
- * @LastEditTime: 2026-06-25 10:22:02
+ * @LastEditTime: 2026-06-25 10:31:41
  * @FilePath: /echo-book/shared/settings.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -75,6 +75,11 @@ export interface SettingsApi {
    * 实际路径仍由 main process 根据 Electron userData 目录计算，减少误开系统路径的风险。
    */
   openStorageRoot(): Promise<void>;
+
+  /**
+   * 打开当前日记文件存放目录（可能是自定义的 notes 目录）。
+   */
+  openNotesDirectory(): Promise<void>;
 
   /**
    * 弹出系统目录选择对话框，让用户选择一个文件夹作为日记存放目录。

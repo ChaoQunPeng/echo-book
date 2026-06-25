@@ -73,23 +73,23 @@ function SettingsPage() {
     }
   }, [])
 
-  const handleOpenStorageRoot = () => {
+  const handleOpenNotesDirectory = () => {
     /*
      * 打开目录只调用受控业务 API，不从 renderer 传任意路径。
      */
     if (!window.settingsAPI) {
-      setSettingsError('请通过 Electron 启动应用后打开存储目录')
+      setSettingsError('请通过 Electron 启动应用后打开日记目录')
       return
     }
 
     setIsOpeningStorageRoot(true)
     window.settingsAPI
-      .openStorageRoot()
+      .openNotesDirectory()
       .then(() => {
         setSettingsError('')
       })
       .catch(() => {
-        setSettingsError('打开存储目录失败')
+        setSettingsError('打开日记目录失败')
       })
       .finally(() => {
         setIsOpeningStorageRoot(false)
@@ -336,9 +336,9 @@ function SettingsPage() {
                   icon={<FolderOpenOutlined />}
                   loading={isOpeningStorageRoot}
                   disabled={!storageInfo || Boolean(settingsError)}
-                  onClick={handleOpenStorageRoot}
+                  onClick={handleOpenNotesDirectory}
                 >
-                  打开存储目录
+                  打开日记目录
                 </Button>
               </Space>
             }

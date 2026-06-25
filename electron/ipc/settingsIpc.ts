@@ -28,6 +28,7 @@ const SETTINGS_CHANNELS = {
   getStorageInfo: "settings:getStorageInfo",
   exportBackup: "settings:exportBackup",
   openStorageRoot: "settings:openStorageRoot",
+  openNotesDirectory: "settings:openNotesDirectory",
   selectDirectory: "settings:selectDirectory",
   setCustomNotesPath: "settings:setCustomNotesPath",
   resetCustomNotesPath: "settings:resetCustomNotesPath",
@@ -254,6 +255,18 @@ export function registerSettingsIpcHandlers(): void {
     /*
      * shell.openPath 成功时返回空字符串，失败时返回平台相关错误文本。
      * 抛出 Error 可以让 renderer 侧统一走 Promise rejection，并显示用户可读提示。
+     */
+    if (errorMessage) {
+      throw new Error(errorMessage);
+    }
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.openNotesDirectory, async (): Promise<void> => {
+    const { notesPath } = getStorageInfo();
+    const errorMessage = await shell.openPath(notesPath);
+
+    /*
+     * 打开当前日记存放目录（可能是自定义目录）。
      */
     if (errorMessage) {
       throw new Error(errorMessage);
