@@ -1,4 +1,4 @@
-import { EditOutlined, FieldTimeOutlined, QuestionCircleOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
+import { EditOutlined, ExportOutlined, FieldTimeOutlined, QuestionCircleOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button, Divider } from 'antd'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -33,6 +33,7 @@ function AppSidebar() {
   const { message } = AntdApp.useApp()
   const navigate = useNavigate()
   const [isCreatingDiary, setIsCreatingDiary] = useState(false)
+  const [isExportingBackup, setIsExportingBackup] = useState(false)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
 
   const handleCreateDiary = async () => {
@@ -60,6 +61,35 @@ function AppSidebar() {
      * 关于入口放在侧边栏内部，状态也跟着侧边栏聚合。
      */
     setIsAboutOpen(true)
+  }
+
+  const handleExportBackup = () => {
+    /*
+     * 备份导出放在全局侧边栏，方便用户从任意页面发起。
+     */
+    if (isExportingBackup) {
+      return
+    }
+
+    if (!window.settingsAPI) {
+      message.error('请通过 Electron 启动应用后导出备份')
+      return
+    }
+
+    setIsExportingBackup(true)
+    window.settingsAPI
+      .exportBackup()
+      .then(result => {
+        if (!result.canceled) {
+          message.success('导出完成')
+        }
+      })
+      .catch(() => {
+        message.error('导出备份失败')
+      })
+      .finally(() => {
+        setIsExportingBackup(false)
+      })
   }
 
   return (
@@ -90,7 +120,7 @@ function AppSidebar() {
         <div className="ml-24 mr-24">
           <Divider className="mt-12! mb-32!" />
           <Button
-            className="pr-26!"
+            className="pr-26! mb-24"
             shape="round"
             type="primary"
             block
@@ -100,6 +130,20 @@ function AppSidebar() {
             onClick={handleCreateDiary}
           >
             <span>新日记</span>
+          </Button>
+
+          <Button
+            className="pr-24!"
+            shape="round"
+            block
+            color="primary"
+            variant="outlined"
+            size="large"
+            icon={<ExportOutlined className="text-size-14!" />}
+            loading={isExportingBackup}
+            onClick={handleExportBackup}
+          >
+            <span>导出</span>
           </Button>
         </div>
 
@@ -130,10 +174,7 @@ function AppSidebar() {
 
 function SidebarNavLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => (isActive ? `${styles.sideMenuItem} ${styles.sideMenuItemActive}` : styles.sideMenuItem)}
-    >
+    <NavLink to={to} className={({ isActive }) => (isActive ? `${styles.sideMenuItem} ${styles.sideMenuItemActive}` : styles.sideMenuItem)}>
       {children}
     </NavLink>
   )

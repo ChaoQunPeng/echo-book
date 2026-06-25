@@ -1,13 +1,4 @@
-import {
-  BgColorsOutlined,
-  CheckOutlined,
-  CopyOutlined,
-  DatabaseOutlined,
-  ExportOutlined,
-  FolderOpenOutlined,
-  FolderAddOutlined,
-  UndoOutlined
-} from '@ant-design/icons'
+import { BgColorsOutlined, CheckOutlined, CopyOutlined, FolderOpenOutlined, FolderAddOutlined, UndoOutlined } from '@ant-design/icons'
 import { Alert, App as AntdApp, Button, Card, Form, Input, Modal, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -25,7 +16,6 @@ function SettingsPage() {
   const [settingsError, setSettingsError] = useState('')
   const [isLoadingStorageInfo, setIsLoadingStorageInfo] = useState(true)
   const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
-  const [isExportingBackup, setIsExportingBackup] = useState(false)
   const [isSelectingDirectory, setIsSelectingDirectory] = useState(false)
   const [isMigratingNotes, setIsMigratingNotes] = useState(false)
 
@@ -93,35 +83,6 @@ function SettingsPage() {
       })
       .finally(() => {
         setIsOpeningStorageRoot(false)
-      })
-  }
-
-  const handleExportBackup = () => {
-    /*
-     * 导出保存位置由 main process 打开系统保存对话框选择。
-     */
-    if (isExportingBackup) {
-      return
-    }
-
-    if (!window.settingsAPI) {
-      message.error('请通过 Electron 启动应用后导出备份')
-      return
-    }
-
-    setIsExportingBackup(true)
-    window.settingsAPI
-      .exportBackup()
-      .then(result => {
-        if (!result.canceled) {
-          message.success('导出完成')
-        }
-      })
-      .catch(() => {
-        message.error('导出备份失败')
-      })
-      .finally(() => {
-        setIsExportingBackup(false)
       })
   }
 
@@ -304,12 +265,11 @@ function SettingsPage() {
                     <span
                       className={styles.themePreview}
                       style={{ '--theme-primary': theme.colors.primary, '--theme-page': theme.colors.page } as CSSProperties}
-                    >
-                      {isActive ? <CheckOutlined /> : null}
-                    </span>
-                    <span className={styles.themeText}>
+                    ></span>
+                    <span className={`${styles.themeText}`}>
                       <span className={styles.themeName}>{theme.label}</span>
-                      <span className={styles.themeDescription}>{theme.description}</span>
+                      {/* <span className={styles.themeDescription}>{theme.description}</span> */}
+                      {isActive ? <CheckOutlined /> : null}
                     </span>
                   </button>
                 )
@@ -383,19 +343,6 @@ function SettingsPage() {
                 </Space.Compact>
               </Form.Item> */}
             </Form>
-          </Card>
-
-          <Card
-            title={
-              <Space size={8}>
-                <DatabaseOutlined />
-                数据管理
-              </Space>
-            }
-          >
-            <Button type="primary" icon={<ExportOutlined />} loading={isExportingBackup} onClick={handleExportBackup}>
-              导出备份
-            </Button>
           </Card>
         </div>
       </div>

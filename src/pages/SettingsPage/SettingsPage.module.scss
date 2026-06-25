@@ -68,11 +68,8 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background:
-    linear-gradient(135deg, var(--theme-primary) 0 50%, transparent 50%),
-    var(--theme-page);
-  border: 1px solid color-mix(in srgb, var(--theme-primary) 24%, transparent);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--theme-primary) 0 50%, transparent 50%), var(--theme-page);
+  border: 1px solid #f0f0f0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -82,7 +79,6 @@
 .themeText {
   min-width: 0;
   display: flex;
-  flex-direction: column;
   gap: 4px;
 }
 
