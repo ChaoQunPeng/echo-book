@@ -54,13 +54,13 @@
 
 .themeOption:hover {
   border-color: var(--echo-color-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--echo-color-primary) 12%, transparent);
+  // box-shadow: 0 8px 24px color-mix(in srgb, var(--echo-color-primary) 12%, transparent);
   transform: translateY(-1px);
 }
 
 .themeOptionActive {
   border-color: var(--echo-color-primary);
-  box-shadow: 0 0 0 2px var(--echo-color-primary-10);
+  // box-shadow: 0 0 0 2px var(--echo-color-primary-10);
 }
 
 .themePreview {
@@ -68,7 +68,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-primary) 0 50%, transparent 50%), var(--theme-page);
+  background: linear-gradient(135deg, var(--theme-primary) 0 50%, white 50%), var(--theme-page);
   border: 1px solid #f0f0f0;
   display: inline-flex;
   align-items: center;

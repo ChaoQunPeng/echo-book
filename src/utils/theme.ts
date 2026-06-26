@@ -10,6 +10,7 @@ export type EchoTheme = {
    */
   colorPrimaryBg?: string
   colorPrimaryBgHover?: string
+  colorBgBase?: string
 }
 
 /*
@@ -28,111 +29,139 @@ const COLOR_TEXT_BASE = '#1f1f1f'
 export const ECHO_THEMES: EchoTheme[] = [
   {
     id: 'dust-red',
+    // 原名：薄暮
     name: '薄暮',
-    descriptions: '斗志、奔放',
+    descriptions: '沉静、热烈',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#cf1322',
     colorInfo: '#cf1322'
   },
-  {
-    id: 'volcano',
-    name: '火山',
-    descriptions: '醒目、澎湃',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#d4380d',
-    colorInfo: '#d4380d'
-  },
-  {
-    id: 'sunset-orange',
-    name: '日暮',
-    descriptions: '温暖、欢快',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#d46b08',
-    colorInfo: '#d46b08'
-  },
-  {
-    id: 'lime',
-    name: '青柠',
-    descriptions: '自然、生机',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#7cb305',
-    colorInfo: '#7cb305'
-  },
-  {
-    id: 'calendula-gold',
-    name: '金盏花',
-    descriptions: '活力、积极',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#d48806',
-    colorInfo: '#d48806'
-  },
-  {
-    id: 'sunrise-yellow',
-    name: '日出',
-    descriptions: '出生、阳光',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#d4b106',
-    colorInfo: '#d4b106'
-  },
+  // {
+  //   id: 'moonlight',
+  //   name: '月夜',
+  //   descriptions: '宁静、安然',
+
+  //   colorTextBase: '#ffffff',
+
+  //   colorBgBase: '#141414',
+
+  //   colorPrimary: '#7c9eff',
+
+  //   colorInfo: '#7c9eff'
+  // },
+  // {
+  //   id: 'lime',
+  //   // 原名：青柠
+  //   name: '青柠',
+  //   descriptions: '清新、生机',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#7cb305',
+  //   colorInfo: '#7cb305'
+  // },
+  // {
+  //   id: 'volcano',
+  //   // 原名：火山
+  //   name: '赤焰',
+  //   descriptions: '澎湃、勇敢',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#d4380d',
+  //   colorInfo: '#d4380d'
+  // },
   {
     id: 'polar-green',
-    name: '极光绿',
-    descriptions: '健康、创新',
+    // 原名：极光绿
+    name: '森林',
+    descriptions: '自然、宁静',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#389e0d',
     colorInfo: '#389e0d'
   },
   {
-    id: 'cyan',
-    name: '明青',
-    descriptions: '希望、坚强',
+    id: 'sunset-orange',
+    // 原名：日暮
+    name: '日暮',
+    descriptions: '温暖、治愈',
     colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#08979c',
-    colorInfo: '#08979c'
+    colorPrimary: '#d46b08',
+    colorInfo: '#d46b08'
   },
+  // {
+  //   id: 'cyan',
+  //   // 原名：明青
+  //   name: '青明',
+  //   descriptions: '清澈、平和',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#08979c',
+  //   colorInfo: '#08979c'
+  // },
   {
     id: 'daybreak-blue',
+    // 原名：拂晓蓝
     name: '拂晓蓝',
-    descriptions: '包容、科技、普惠',
+    descriptions: '安稳、包容',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#0958d9',
     colorInfo: '#0958d9'
   },
-  {
-    id: 'geek-blue',
-    name: '极客蓝',
-    descriptions: '探索、钻研',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#1d39c4',
-    colorInfo: '#1d39c4'
-  },
+
   {
     id: 'purple',
+    // 原名：酱紫
     name: '酱紫',
     descriptions: '优雅、浪漫',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#531dab',
     colorInfo: '#531dab'
   },
-  {
-    id: 'magenta',
-    name: '法式洋红',
-    descriptions: '明快、感性',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#c41d7f',
-    colorInfo: '#c41d7f'
-  },
+
   {
     id: 'monochrome',
-    name: '黑白',
-    descriptions: '克制、清晰',
+    // 原名：黑白
+    name: '墨白',
+    descriptions: '克制、纯粹',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#1f1f1f',
     colorInfo: '#1f1f1f',
     colorPrimaryBg: '#dfdfdf',
     colorPrimaryBgHover: '#dfdfdf'
-  },
-]
+  }
+  // {
+  //   id: 'calendula-gold',
+  //   // 原名：金盏花
+  //   name: '金穗',
+  //   descriptions: '明亮、活力',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#d48806',
+  //   colorInfo: '#d48806'
+  // },
+  // {
+  //   id: 'sunrise-yellow',
+  //   // 原名：日出
+  //   name: '日出',
+  //   descriptions: '阳光、希望',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#d4b106',
+  //   colorInfo: '#d4b106'
+  // },
+  // {
+  //   id: 'geek-blue',
+  //   // 原名：极客蓝
+  //   name: '极客蓝',
+  //   descriptions: '专注、探索',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#1d39c4',
+  //   colorInfo: '#1d39c4'
+  // },
+  // {
+  //   id: 'magenta',
+  //   // 原名：法式洋红
+  //   name: '洋红',
+  //   descriptions: '灵动、感性',
+  //   colorTextBase: COLOR_TEXT_BASE,
+  //   colorPrimary: '#c41d7f',
+  //   colorInfo: '#c41d7f'
+  // },
+];
 
 function hexToRgbString(hex: string): string {
   /*
