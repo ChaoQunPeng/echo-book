@@ -1,5 +1,5 @@
 import { BgColorsOutlined, CheckOutlined, CopyOutlined, FolderOpenOutlined, FolderAddOutlined, UndoOutlined } from '@ant-design/icons'
-import { Alert, App as AntdApp, Button, Card, Form, Input, Modal, Space } from 'antd'
+import { Alert, App as AntdApp, Button, Card, Form, Input, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { StorageInfo } from '../../../shared/settings'
@@ -10,7 +10,10 @@ import type { EchoThemeId } from '../../utils/theme'
 import styles from './SettingsPage.module.scss'
 
 function SettingsPage() {
-  const { message } = AntdApp.useApp()
+  /*
+   * 使用 App 上下文里的反馈 API，让弹窗继承当前 ConfigProvider 主题。
+   */
+  const { message, modal } = AntdApp.useApp()
   const { themeId, setThemeId } = useEchoTheme()
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null)
   const [settingsError, setSettingsError] = useState('')
@@ -104,7 +107,7 @@ function SettingsPage() {
       /*
        * 确认迁移：将旧目录下的笔记文件搬到新目录。
        */
-      Modal.confirm({
+      modal.confirm({
         title: '修改日记存放目录',
         content: (
           <div>
@@ -162,7 +165,7 @@ function SettingsPage() {
       return
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: '恢复默认目录',
       content: '日记文件将恢复到默认的应用数据目录下。已有笔记将从当前自定义目录迁移回默认位置。',
       okText: '确认恢复',
@@ -233,8 +236,6 @@ function SettingsPage() {
     setThemeId(nextThemeId)
     message.success('主题已更新')
   }
-
-  const isCustomNotesPath = storageInfo?.customNotesPath != null
 
   return (
     <section className={styles.settingsPage}>
@@ -316,31 +317,29 @@ function SettingsPage() {
                   </Button>
                 </Space.Compact>
               </Form.Item>
-              {isCustomNotesPath && (
-                <Form.Item>
-                  <Button
-                    className="mr-16"
-                    color="primary"
-                    variant="outlined"
-                    icon={<UndoOutlined />}
-                    loading={isMigratingNotes}
-                    onClick={handleResetDirectory}
-                  >
-                    恢复默认目录
-                  </Button>
+              <Form.Item>
+                <Button
+                  className="mr-16"
+                  color="primary"
+                  variant="outlined"
+                  icon={<UndoOutlined />}
+                  loading={isMigratingNotes}
+                  onClick={handleResetDirectory}
+                >
+                  恢复默认目录
+                </Button>
 
-                  <Button
-                    icon={<FolderAddOutlined />}
-                    color="primary"
-                    variant="outlined"
-                    loading={isSelectingDirectory || isMigratingNotes}
-                    disabled={!window.settingsAPI || Boolean(settingsError)}
-                    onClick={handleSelectDirectory}
-                  >
-                    修改目录
-                  </Button>
-                </Form.Item>
-              )}
+                <Button
+                  icon={<FolderAddOutlined />}
+                  color="primary"
+                  variant="outlined"
+                  loading={isSelectingDirectory || isMigratingNotes}
+                  disabled={!window.settingsAPI || Boolean(settingsError)}
+                  onClick={handleSelectDirectory}
+                >
+                  修改目录
+                </Button>
+              </Form.Item>
               {/* <Form.Item label="数据库文件">
                 <Space.Compact style={{ width: '100%' }}>
                   <Input readOnly value={storageInfo?.databasePath ?? (isLoadingStorageInfo ? '读取中...' : '')} />

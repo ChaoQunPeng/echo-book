@@ -2,7 +2,7 @@ import { App as AntdApp, ConfigProvider } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { EchoThemeContext } from './contexts/EchoThemeContext'
-import { ECHO_THEME_LAYOUT_BG, applyEchoTheme, getEchoTheme, persistEchoThemeId, readStoredEchoThemeId } from './utils/theme'
+import { applyEchoTheme, getEchoTheme, persistEchoThemeId, readStoredEchoThemeId } from './utils/theme'
 
 function App() {
   const [themeId, setThemeId] = useState(readStoredEchoThemeId)
