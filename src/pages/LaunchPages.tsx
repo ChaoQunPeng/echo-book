@@ -1,5 +1,7 @@
 import { Button, Typography } from 'antd'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import logoUrl from '../assets/logo.svg'
+import styles from '../layouts/AppShellLayout.module.scss'
 
 const WELCOME_COMPLETED_STORAGE_KEY = 'echo-diary-welcome-completed'
 const HOME_PATH = '/list'
@@ -31,7 +33,7 @@ const WELCOME_MOTION_STYLES = `
   }
 }
 
-.echo-welcome-title,
+.echo-welcome-logo,
 .echo-welcome-slogan,
 .echo-welcome-button {
   opacity: 0;
@@ -39,8 +41,11 @@ const WELCOME_MOTION_STYLES = `
   animation-fill-mode: both;
 }
 
-.echo-welcome-title {
+.echo-welcome-logo {
   animation: echoWelcomeIn 1600ms ease-in-out 220ms both;
+  width: 140px;
+  height: auto;
+  display: block;
 }
 
 .echo-welcome-slogan {
@@ -52,7 +57,7 @@ const WELCOME_MOTION_STYLES = `
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .echo-welcome-title,
+  .echo-welcome-logo,
   .echo-welcome-slogan,
   .echo-welcome-button {
     opacity: 1;
@@ -131,9 +136,8 @@ export function WelcomePage() {
 
       <section className="mx-auto flex min-h-screen w-full max-w-560 items-center justify-center py-56">
         <div className="flex flex-col items-center text-center">
-          <Typography.Title level={1} className="echo-welcome-title !mb-18 !text-size-48 !font-medium !leading-none !text-foreground">
-            爱可
-          </Typography.Title>
+          {/* 欢迎页复用品牌 logo 资源，避免首页标题和侧边栏品牌露出不一致。 */}
+          <img className={`${styles.logoImage} echo-welcome-logo mb-18!`} src={logoUrl} alt="爱可日记" />
           <Typography.Text className="echo-welcome-slogan text-size-17 font-normal text-black-65">陪你记下每一天</Typography.Text>
 
           <Button

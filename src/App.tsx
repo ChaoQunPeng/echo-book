@@ -2,7 +2,13 @@ import { App as AntdApp, ConfigProvider } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { EchoThemeContext } from './contexts/EchoThemeContext'
-import { applyEchoTheme, getEchoTheme, persistEchoThemeId, readStoredEchoThemeId } from './utils/theme'
+import {
+  ECHO_THEME_LAYOUT_BG,
+  applyEchoTheme,
+  getEchoTheme,
+  persistEchoThemeId,
+  readStoredEchoThemeId
+} from './utils/theme'
 
 function App() {
   const [themeId, setThemeId] = useState(readStoredEchoThemeId)
@@ -19,9 +25,15 @@ function App() {
   const appTheme = useMemo(() => {
     return {
       token: {
-        colorPrimary: activeTheme.colors.primary,
-        colorTextBase: activeTheme.colors.text,
-        colorBgLayout: activeTheme.colors.page
+        /*
+         * Antd 组件直接消费新版主题 token，非 antd 区域由 applyEchoTheme 同步 CSS 变量。
+         */
+        colorPrimary: activeTheme.colorPrimary,
+        colorInfo: activeTheme.colorInfo,
+        colorPrimaryBg: activeTheme.colorPrimaryBg,
+        colorPrimaryBgHover: activeTheme.colorPrimaryBgHover,
+        colorTextBase: activeTheme.colorTextBase,
+        colorBgLayout: ECHO_THEME_LAYOUT_BG
       },
       components: {
         Button: {

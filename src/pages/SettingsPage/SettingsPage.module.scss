@@ -78,18 +78,32 @@
 
 .themeText {
   min-width: 0;
-  display: flex;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px;
+  align-items: center;
 }
 
 .themeName {
+  /*
+   * 主题名和描述分两行展示，选中图标固定在右侧，避免长描述挤压布局。
+   */
+  grid-column: 1;
   font-size: 15px;
   font-weight: 600;
 }
 
 .themeDescription {
+  grid-column: 1;
   color: var(--echo-color-text-black-65);
   font-size: 13px;
+}
+
+.themeText :global(.anticon) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--echo-color-primary);
 }
 
 .settingsAlert {
