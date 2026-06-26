@@ -11,7 +11,7 @@
 }
 
 .aboutDialog {
-  padding: 30px 56px 52px 52px;
+  padding: 40px 0 42px 32px;
 }
 
 .aboutInner {
@@ -33,4 +33,21 @@
   flex-direction: column;
   gap: 32px;
   margin-top: 30px;
+}
+
+.principleTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.principleMarker {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--about-accent); /* 使用主题主色作为标题点缀。 */
 }

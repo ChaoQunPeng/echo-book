@@ -32,7 +32,8 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
     '--about-bg': token.colorBgElevated,
     '--about-text': token.colorText,
     '--about-text-secondary': token.colorTextSecondary,
-    '--about-text-tertiary': token.colorTextTertiary
+    '--about-text-tertiary': token.colorTextTertiary,
+    '--about-accent': token.colorPrimary
   } as CSSProperties
 
   return (
@@ -56,17 +57,21 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           <Typography.Title level={2} className="mt-4!">
             关于爱可日记
           </Typography.Title>
-          <div className="mb-12">记录值得被珍藏，而不是被锁住</div>
+          <div className="mb-12">记录值得被珍藏，而不是被锁住。</div>
 
-          <div>爱可日记是一款本地优先的日记应用， 你的回忆，值得被珍藏，也值得被带走</div>
+          {/* <div>爱可日记是一款本地优先的日记应用：</div> */}
 
           {/* 只用字号、字重和颜色建立层级，不额外做块状分隔。 */}
           <div className={styles.aboutPrinciples}>
             {aboutPrinciples.map(principle => (
               <div key={principle.title} className="">
-                <div className="font-bold mb-8 text-size-18">{principle.title}</div>
-                <div className="text-black-65! mb-4">{principle.description}</div>
-                <div className="text-black-65! mb-4">{principle.note}</div>
+                <div className={styles.principleTitle}>
+                  {/* 小方块用于给原则标题增加轻量装饰。 */}
+                  <span className={styles.principleMarker} aria-hidden="true" />
+                  <span>{principle.title}</span>
+                </div>
+                <div className="text-black-65! mb-4 ml-18">{principle.description}</div>
+                <div className="text-black-65! mb-4 ml-18">{principle.note}</div>
               </div>
             ))}
           </div>
