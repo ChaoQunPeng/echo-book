@@ -66,6 +66,19 @@
   border-inline-start-color: rgba(15, 82, 56, 0.18);
 }
 
+.timelineDate {
+  /*
+   * 左侧日期独立成列，避免 Timeline title 被内容撑开。
+   */
+  display: block;
+  padding-top: 6px;
+  color: rgba(25, 28, 29, 0.5);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .timelineCard {
   // max-width: 720px;
   margin-bottom: 18px;
@@ -98,12 +111,6 @@
   line-height: 1.35;
   color: var(--echo-color-text);
   transition: all 160ms ease, border-color 160ms ease;
-}
-
-.timelineCard time {
-  display: block;
-  color: rgba(25, 28, 29, 0.5);
-  font-size: 12px;
 }
 
 .timelineCard p {

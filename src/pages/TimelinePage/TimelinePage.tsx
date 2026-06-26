@@ -152,9 +152,17 @@ function TimelinePage() {
                 <h2>{group.label}</h2>
                 <Timeline
                   className={styles.timeline}
-                  titleSpan={100}
+                  titleSpan="128px"
                   items={group.diaries.map(diary => ({
-                    children: <TimelineDiaryCard diary={diary} onOpenDiary={handleOpenDiary} />
+                    /*
+                     * 使用 Timeline 的 title/content 分栏能力，让日期固定在左侧，日记内容显示在右侧。
+                     */
+                    title: (
+                      <time className={styles.timelineDate} dateTime={new Date(diary.createdAt).toISOString()}>
+                        {formatCreatedAt(diary.createdAt)}
+                      </time>
+                    ),
+                    content: <TimelineDiaryCard diary={diary} onOpenDiary={handleOpenDiary} />
                   }))}
                 />
               </section>
@@ -199,12 +207,7 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       onKeyDown={handleCardKeyDown}
     >
       <h3>{title}</h3>
-      <div className="flex items-center">
-        <time className="mr-12" dateTime={new Date(diary.createdAt).toISOString()}>
-          {formatCreatedAt(diary.createdAt)}
-        </time>
-        <span className={styles.timelineCardMood}>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
-      </div>
+      <span className={styles.timelineCardMood}>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
       <p>{summary}</p>
       {diary.tags?.length ? (
         <div className={styles.timelineTags}>
