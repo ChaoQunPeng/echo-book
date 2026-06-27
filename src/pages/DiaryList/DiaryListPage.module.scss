@@ -1,0 +1,6 @@
+/*
+ * 列表页内嵌编辑器隐藏 header 后，标题输入框需要保留顶部留白。
+ */
+.embeddedEditor :global(.ant-input-affix-wrapper) {
+  margin-top: 20px;
+}

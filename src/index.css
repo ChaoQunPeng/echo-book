@@ -8,19 +8,29 @@
 
 @theme {
   --spacing: 1px;
-
   /*
    * 注册项目颜色，类名会变成 `text-primary`、`bg-primary` 这类写法。
    */
   --color-primary: var(--echo-color-primary);
-  --color-primary-soft: var(--echo-color-primary-10);
   --color-page: var(--echo-color-page);
   --color-foreground: var(--echo-color-text);
-  /* 黑色文本透明度层级，用于弱化不同优先级的文字。 */
   --color-black: var(--echo-color-text);
   --color-black-45: var(--echo-color-text-black-45);
   --color-black-65: var(--echo-color-text-black-65);
   --color-black-85: var(--echo-color-text-black-85);
+}
+
+@layer base {
+  /*
+   * Tailwind 4 的 border 工具类默认只设置宽度和样式，这里统一补项目默认边框色。
+   */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--echo-border-color, #f5f5f5);
+  }
 }
 
 /* 字体大小 */

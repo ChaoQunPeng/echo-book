@@ -7,7 +7,7 @@ function DiaryListLoading() {
   return (
     <div className="h-full min-h-360 bg-page" aria-busy="true" aria-live="polite">
       <div className="flex h-full">
-        <aside className="w-320 border-r border-[rgba(15,82,56,0.12)] bg-white">
+        <aside className="w-320 border-r bg-white">
           <div className="grid grid-cols-[1fr_32px] gap-10 border-b border-[rgba(25,28,29,0.08)] p-12">
             <Skeleton.Input active block size="small" />
             <Skeleton.Button active shape="circle" size="small" />

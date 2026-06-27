@@ -1,0 +1,15 @@
+/*
+ * 主题预览块需要复合 background 和运行时 CSS 变量，用 CSS Module 保持 JSX 可读。
+ */
+.themePreview {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f0f0f0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--theme-primary) 0 50%, white 50%), var(--theme-page);
+  font-size: 16px;
+}

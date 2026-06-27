@@ -222,7 +222,7 @@ export function applyEchoTheme(themeId: string): EchoTheme {
   root.style.setProperty('--echo-color-text-black-45', `rgb(${hexToRgbString(theme.colorTextBase)} / 45%)`)
   root.style.setProperty('--echo-color-text-black-65', `rgb(${hexToRgbString(theme.colorTextBase)} / 65%)`)
   root.style.setProperty('--echo-color-text-black-85', `rgb(${hexToRgbString(theme.colorTextBase)} / 85%)`)
-  root.style.setProperty('--echo-border-color', `color-mix(in srgb, ${theme.colorPrimary} 12%, transparent)`)
+  root.style.setProperty('--echo-border-color', `#d9d9d9`)
 
   return theme
 }

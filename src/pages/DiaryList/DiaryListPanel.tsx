@@ -107,7 +107,7 @@ function DiaryListPanel({
   }
 
   return (
-    <aside className="flex w-320 flex-col overflow-hidden border-r border-[rgba(15,82,56,0.12)] bg-page">
+    <aside className="flex w-320 flex-col overflow-hidden border-r bg-page">
       <div className="flex flex-[0_0_auto] gap-10 border-b border-[rgba(25,28,29,0.08)] bg-white p-12">
         <Input
           allowClear
@@ -156,16 +156,14 @@ function DiaryListPanel({
                       <div
                         role="button"
                         tabIndex={0}
-                        className={
-                          [
-                            'relative block cursor-pointer bg-white py-24 pl-24 pr-56 text-inherit no-underline transition-all duration-[160ms] ease-in-out hover:border-l-[3px] hover:border-primary hover:bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]',
-                            diary.id === selectedDiaryId
-                              ? 'border-l-[3px] border-primary bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]'
-                              : ''
-                          ]
-                            .filter(Boolean)
-                            .join(' ')
-                        }
+                        className={[
+                          'relative block cursor-pointer bg-white py-24 pl-24 pr-56 text-inherit no-underline transition-all duration-[160ms] ease-in-out hover:border-l-[3px] hover:border-primary hover:bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]',
+                          diary.id === selectedDiaryId
+                            ? 'border-l-[3px] border-primary bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]'
+                            : ''
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                         onClick={() => navigate(`/list/${diary.id}`)}
                         onKeyDown={event => {
                           if (event.key === 'Enter' || event.key === ' ') {

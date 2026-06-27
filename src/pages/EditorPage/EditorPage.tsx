@@ -6,6 +6,7 @@ import {
   DownOutlined,
   EditOutlined,
   FontSizeOutlined,
+  FormOutlined,
   ItalicOutlined,
   OrderedListOutlined,
   PictureOutlined,
@@ -56,6 +57,7 @@ type SelectableTag = Pick<TagLibraryItem, 'name' | 'color'>
 type EditorPageProps = {
   diaryId?: string
   embedded?: boolean
+  showHeader?: boolean
   className?: string
   onDiarySaved?: (diary: Diary) => void
 }
@@ -226,7 +228,7 @@ function createDiaryImageNodeView({ node, extension, editor, getPos }: NodeViewR
   }
 }
 
-function EditorPage({ diaryId: providedDiaryId, embedded = false, className = '', onDiarySaved }: EditorPageProps) {
+function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = true, className = '', onDiarySaved }: EditorPageProps) {
   const navigate = useNavigate()
   const { diaryId: routeDiaryId } = useParams<{ diaryId: string }>()
   /*
@@ -1009,27 +1011,29 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
    */
   return (
     <section className={['flex h-full flex-col', className].filter(Boolean).join(' ')}>
-      <header className="flex p-12">
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-12">
-          {/*
-           * 内嵌在列表页时不显示返回入口，避免右侧编辑器影响左侧列表导航。
-           */}
-          {!embedded ? (
-            <Button variant="text" type="text" onClick={() => navigate(-1)}>
-              <ArrowLeftOutlined /> 返回
-            </Button>
-          ) : null}
-        </div>
-      </header>
+      {showHeader ? (
+        <header className="flex p-12">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-12">
+            {/*
+             * 内嵌在列表页时不显示返回入口，避免右侧编辑器影响左侧列表导航。
+             */}
+            {!embedded ? (
+              <Button variant="text" type="text" onClick={() => navigate(-1)}>
+                <ArrowLeftOutlined /> 返回
+              </Button>
+            ) : null}
+          </div>
+        </header>
+      ) : null}
 
-      <div className="ml-16">
+      <div className="ml-12">
         <Input
-          className="mb-12 h-52 pl-0 text-size-20"
+          className="h-52 pl-0 pt-0! text-size-22!"
           value={title}
           variant="borderless"
           placeholder="给这一天起个名字"
           size="large"
-          prefix={<EditOutlined className="mr-10 text-black-65!" />}
+          prefix={<FormOutlined className="mr-8 text-black-65! text-size-18" />}
           onChange={event => {
             setTitle(event.target.value)
             markExistingDiaryChanged()
@@ -1037,7 +1041,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-12 border-b border-primary-soft pb-12 pl-12 pr-20">
+      <div className="flex flex-wrap items-center gap-12 border-b border-primary-soft pb-16 pl-20 pr-20">
         <Popover
           content={moodPopoverContent}
           trigger="click"
@@ -1180,12 +1184,15 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
               </div>
             ) : null}
             <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
-            <EditorContent editor={editor} className="echo-editor-content min-h-[inherit] flex-1 overflow-auto font-[inherit] text-foreground" />
+            <EditorContent
+              editor={editor}
+              className="echo-editor-content min-h-[inherit] flex-1 overflow-auto font-[inherit] text-foreground"
+            />
           </>
         ) : null}
       </div>
 
-      <footer className="flex items-center justify-between border-t border-primary-soft px-20 py-16">
+      <footer className="flex items-center justify-between border-t px-20 py-16">
         <span className="text-size-13 leading-[1.4] text-[rgba(25,28,29,0.62)]" aria-live="polite">
           {saveStatus}
           {lastSavedAt ? ` · 上次保存时间：${formatLastSavedAt(lastSavedAt)}` : ''}

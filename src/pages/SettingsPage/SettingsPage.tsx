@@ -7,6 +7,7 @@ import PageHeader from '../../components/PageHeader'
 import { useEchoTheme } from '../../contexts/EchoThemeContext'
 import { ECHO_THEME_LAYOUT_BG, ECHO_THEMES } from '../../utils/theme'
 import type { EchoThemeId } from '../../utils/theme'
+import styles from './SettingsPage.module.css'
 
 function SettingsPage() {
   /*
@@ -269,7 +270,7 @@ function SettingsPage() {
                     onClick={() => handleThemeChange(theme.id)}
                   >
                     <span
-                      className="inline-flex h-42 w-42 flex-[0_0_42px] items-center justify-center rounded-full border border-[#f0f0f0] bg-[linear-gradient(135deg,var(--theme-primary)_0_50%,white_50%),var(--theme-page)] text-size-16"
+                      className={styles.themePreview}
                       style={
                         {
                           '--theme-primary': theme.colorPrimary,

@@ -10,6 +10,7 @@ import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import EditorPage from '../EditorPage'
 import DiaryListLoading from './DiaryListLoading'
 import DiaryListPanel from './DiaryListPanel'
+import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
 
 const DATE_FILTER_OPTIONS: Array<{ value: DateFilterValue; label: string }> = [
@@ -322,7 +323,13 @@ function DiaryListPage() {
               /*
                * 右侧直接渲染 EditorPage，选中左侧条目后即可编辑当前日记。
                */
-              <EditorPage className="h-full min-h-0 min-w-0 flex-1 overflow-auto" diaryId={selectedDiary.id} embedded onDiarySaved={handleDiarySaved} />
+              <EditorPage
+                className={`${styles.embeddedEditor} h-full min-h-0 min-w-0 flex-1 overflow-auto`}
+                diaryId={selectedDiary.id}
+                embedded
+                showHeader={false}
+                onDiarySaved={handleDiarySaved}
+              />
             ) : (
               <div className="grid flex-1 place-items-center text-[rgba(25,28,29,0.62)]">
                 <Empty description="左侧选中后，这里会展示编辑器。" />

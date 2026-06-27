@@ -1,0 +1,19 @@
+/*
+ * 侧边栏菜单项由链接和按钮混合组成，颜色统一在组件样式里兜住。
+ */
+.navItem {
+  color: var(--echo-color-text, #1f1f1f);
+  transition:
+    background-color 160ms ease-in-out,
+    color 160ms ease-in-out;
+}
+
+.navItem:hover {
+  background-color: color-mix(in srgb, var(--echo-color-primary, #cf1322) 10%, transparent);
+  color: var(--echo-color-primary, #cf1322);
+}
+
+.navItemActive {
+  color: var(--echo-color-primary, #cf1322);
+  font-weight: 700;
+}

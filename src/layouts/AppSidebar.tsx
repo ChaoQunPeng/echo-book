@@ -1,11 +1,12 @@
 import { EditOutlined, ExportOutlined, FieldTimeOutlined, QuestionCircleOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
-import { App as AntdApp, Button, Divider } from 'antd'
+import { App as AntdApp, Button } from 'antd'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import logoUrl from '../assets/logo.svg'
 import AboutDialog from '../components/AboutDialog'
 import { createDefaultDiary } from '../utils/diaryCreation'
+import styles from './AppSidebar.module.scss'
 
 const sidebarMenus = [
   {
@@ -103,7 +104,7 @@ function AppSidebar() {
         {/*
          * 主导航只表达页面入口，选中态交给 NavLink 根据路由自动计算。
          */}
-        <nav className="flex flex-col gap-4 px-16 py-8" aria-label="主导航">
+        <nav className="flex flex-col gap-8 px-16 py-8" aria-label="主导航">
           {sidebarMenus.map(menu => {
             const Icon = menu.icon
 
@@ -117,7 +118,8 @@ function AppSidebar() {
         </nav>
 
         <div className="ml-24 mr-24">
-          <Divider className="mt-12! mb-32!" />
+          {/* <Divider className="mt-12! mb-32!" /> */}
+          <div className="border-t mt-12 mb-32"></div>
           <Button
             className="pr-26! mb-24"
             shape="round"
@@ -177,8 +179,9 @@ function SidebarNavLink({ to, children }: { to: string; children: ReactNode }) {
       to={to}
       className={({ isActive }) =>
         [
-          'flex h-42 items-center rounded-full px-12 text-size-16 leading-none text-foreground no-underline transition-all duration-[160ms] ease-in-out hover:bg-primary-soft hover:text-primary',
-          isActive ? 'font-bold text-primary' : ''
+          styles.navItem,
+          'flex h-42 items-center rounded-full px-12 text-size-16 leading-none no-underline',
+          isActive ? styles.navItemActive : ''
         ]
           .filter(Boolean)
           .join(' ')
@@ -192,7 +195,7 @@ function SidebarNavLink({ to, children }: { to: string; children: ReactNode }) {
 function SidebarAction({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <div
-      className="flex h-42 cursor-pointer items-center rounded-full px-12 text-size-16 leading-none text-foreground no-underline transition-all duration-[160ms] ease-in-out hover:bg-primary-soft hover:text-primary"
+      className={`${styles.navItem} flex h-42 cursor-pointer items-center rounded-full px-12 text-size-16 leading-none no-underline`}
       onClick={onClick}
       onKeyDown={event => {
         /*
