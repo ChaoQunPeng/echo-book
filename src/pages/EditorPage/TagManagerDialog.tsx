@@ -3,8 +3,23 @@ import { Button, ColorPicker, Input, Modal, Popconfirm, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
 import type { TagLibraryItem } from '../../../shared/tags'
 
-const DEFAULT_TAG_COLOR = '#237804'
-const TAG_COLOR_OPTIONS = ['#237804', '#1677ff', '#13c2c2', '#722ed1', '#eb2f96', '#fa8c16', '#a0d911', '#8c8c8c']
+const DEFAULT_TAG_COLOR = '#52c41a'
+// 使用 Ant Design 基础色板的 6 号色，保证标签色与组件主色系一致。
+const TAG_COLOR_OPTIONS = [
+  '#f5222d',
+  '#fa541c',
+  '#fa8c16',
+  '#faad14',
+  '#fadb14',
+  '#a0d911',
+  '#52c41a',
+  '#13c2c2',
+  '#1677ff',
+  '#2f54eb',
+  '#722ed1',
+  '#eb2f96',
+  '#666666'
+]
 
 type TagManagerDialogProps = {
   open: boolean
@@ -105,13 +120,7 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
   }
 
   return (
-    <Modal
-      title="管理标签"
-      open={open}
-      onCancel={() => onOpenChange(false)}
-      footer={null}
-      width={640}
-    >
+    <Modal title="管理标签" open={open} onCancel={() => onOpenChange(false)} footer={null} width={640}>
       <div className="grid grid-cols-[minmax(0,1fr)_260px] gap-32 max-[720px]:grid-cols-1">
         <div className="flex min-w-0 flex-col gap-12">
           <p className="text-size-13 text-[rgba(25,28,29,0.7)]">标签库</p>
@@ -205,7 +214,7 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
 }
 
 function TagColorDot({ color }: { color: string }) {
-  return <span className="h-8 w-8 flex-[0_0_auto] rounded-full" style={{ backgroundColor: color }} />
+  return <span className="h-12 w-12 flex-[0_0_auto] rounded-full" style={{ backgroundColor: color }} />
 }
 
 function getErrorMessage(error: unknown): string {

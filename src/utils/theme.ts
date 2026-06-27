@@ -258,6 +258,7 @@ export function persistEchoThemeId(themeId: string) {
 export function applyEchoTheme(themeId: string): EchoTheme {
   const theme = getEchoTheme(themeId)
   const root = document.documentElement
+  const textBaseRgb = hexToRgbString(theme.colorTextBase)
 
   /*
    * 全局 CSS 变量负责非 antd 区域，antd 主题由 App.tsx 同步读取同一份配置。
@@ -266,9 +267,12 @@ export function applyEchoTheme(themeId: string): EchoTheme {
   root.style.setProperty('--echo-color-primary', theme.colorPrimary)
   root.style.setProperty('--echo-color-page', ECHO_THEME_LAYOUT_BG)
   root.style.setProperty('--echo-color-base', theme.colorTextBase)
-  root.style.setProperty('--echo-color-base-45', `rgb(${hexToRgbString(theme.colorTextBase)} / 45%)`)
-  root.style.setProperty('--echo-color-base-65', `rgb(${hexToRgbString(theme.colorTextBase)} / 65%)`)
-  root.style.setProperty('--echo-color-base-85', `rgb(${hexToRgbString(theme.colorTextBase)} / 85%)`)
+  root.style.setProperty('--echo-color-base-hover', `rgb(${textBaseRgb} / 4%)`)
+  root.style.setProperty('--echo-color-base-45', `rgb(${textBaseRgb} / 45%)`)
+  root.style.setProperty('--echo-color-base-65', `rgb(${textBaseRgb} / 65%)`)
+  root.style.setProperty('--echo-color-base-85', `rgb(${textBaseRgb} / 85%)`)
+  root.style.setProperty('--echo-color-primary-soft', `color-mix(in srgb, ${theme.colorPrimary} 8%, transparent)`)
+  root.style.setProperty('--echo-color-primary-surface', `color-mix(in srgb, ${theme.colorPrimary} 5%, #ffffff)`)
   root.style.setProperty('--echo-border-color', `#d9d9d9`)
   root.style.setProperty('--echo-gradient-primary', buildThemeGradient(theme))
 

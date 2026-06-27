@@ -1,4 +1,5 @@
 import { Empty, Tag, Timeline } from 'antd'
+import type { TimelineItemProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -185,24 +186,7 @@ function TimelinePage() {
                 <Timeline
                   className="echo-timeline"
                   titleSpan="90px"
-                  items={group.days.map(day => ({
-                    key: day.key,
-                    /*
-                     * 每个日期只生成一条 Timeline，右侧集中展示当天全部内容。
-                     */
-                    title: (
-                      <time className="whitespace-nowrap text-right font-mono! text-size-18" dateTime={day.key}>
-                        {day.label}
-                      </time>
-                    ),
-                    content: (
-                      <div className="flex flex-col gap-120">
-                        {day.diaries.map(diary => (
-                          <TimelineDiaryCard key={diary.id} diary={diary} onOpenDiary={handleOpenDiary} />
-                        ))}
-                      </div>
-                    )
-                  }))}
+                  items={buildTimelineItems(group.key, group.days, handleOpenDiary)}
                 />
               </section>
             ))}
@@ -211,6 +195,39 @@ function TimelinePage() {
       </div>
     </section>
   )
+}
+
+function buildTimelineItems(groupKey: string, days: TimelineDayGroup[], onOpenDiary: (diaryId: string) => void): TimelineItemProps[] {
+  const dayItems = days.map(day => ({
+    key: day.key,
+    /*
+     * 每个日期只生成一条 Timeline，右侧集中展示当天全部内容。
+     */
+    title: (
+      <time className="whitespace-nowrap text-right font-mono! text-size-18" dateTime={day.key}>
+        {day.label}
+      </time>
+    ),
+    content: (
+      <div className="flex flex-col gap-120">
+        {day.diaries.map(diary => (
+          <TimelineDiaryCard key={diary.id} diary={diary} onOpenDiary={onOpenDiary} />
+        ))}
+      </div>
+    )
+  }))
+
+  /*
+   * AntD 6 的最后一项不会渲染 rail；追加隐藏哨兵项，让单条记录也能生成竖线。
+   */
+  return [
+    ...dayItems,
+    {
+      key: `${groupKey}-timeline-sentinel`,
+      className: 'echo-timeline-sentinel',
+      style: { display: 'none' }
+    }
+  ]
 }
 
 type TimelineDiaryCardProps = {

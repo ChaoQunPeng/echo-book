@@ -1036,23 +1036,22 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
   })
 
   const tagPopoverContent = (
-    <div className="flex max-h-260 min-w-220 flex-col gap-4 overflow-auto">
+    <div className="flex max-h-260 min-w-220 flex-col gap-6 overflow-auto">
       {selectableTags.length ? (
         selectableTags.map(tag => (
           <Checkbox
             key={tag.name}
             checked={selectedTags.includes(tag.name)}
-            className="flex items-center m-0! min-h-30 w-full rounded-[6px] px-6 py-4 hover:bg-[rgba(25,28,29,0.04)]"
             onChange={event => handleTagCheckedChange(tag.name, event.target.checked)}
           >
-            <span className="inline-flex min-w-0 items-center gap-8">
-              <span className="h-8 w-8 flex-[0_0_auto] rounded-full" style={{ backgroundColor: tag.color }} />
-              <span>{tag.name}</span>
-            </span>
+            <div className="flex items-center">
+              <span className="leading-none!">{tag.name}</span>
+              <span className="inline-flex h-12 w-12 ml-6 rounded-full" style={{ backgroundColor: tag.color }} />
+            </div>
           </Checkbox>
         ))
       ) : (
-        <span className="text-size-13 text-color-base-45">暂无标签</span>
+        <span className="text-size-14 text-color-base-45">暂无标签</span>
       )}
     </div>
   )
@@ -1290,7 +1289,7 @@ function renderMetadataPopoverContent({
         <div
           key={option.name}
           className={[
-            'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-color-base outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]',
+            'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-color-base outline-none hover:bg-base-hover focus-visible:bg-base-hover',
             selectedValue === option.name ? 'bg-primary-soft font-bold text-primary' : ''
           ]
             .filter(Boolean)

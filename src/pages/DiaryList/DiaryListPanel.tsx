@@ -130,7 +130,7 @@ function DiaryListPanel({
           placement="bottomRight"
         >
           <FilterOutlined
-            className="inline-flex h-32 w-32 flex-[0_0_32px] cursor-pointer items-center justify-center rounded-[6px] text-[rgba(25,28,29,0.72)] transition-colors duration-[160ms] ease-in-out hover:bg-[rgba(15,82,56,0.08)] hover:text-primary focus-visible:bg-[rgba(15,82,56,0.08)] focus-visible:text-primary focus-visible:outline-none"
+            className="inline-flex h-32 w-32 flex-[0_0_32px] cursor-pointer items-center justify-center rounded-[6px] text-[rgba(25,28,29,0.72)] transition-colors duration-[160ms] ease-in-out hover:bg-primary-soft hover:text-primary focus-visible:bg-primary-soft focus-visible:text-primary focus-visible:outline-none"
             role="button"
             tabIndex={0}
             aria-label={`按创建时间筛选，当前：${currentDateFilterLabel}`}
@@ -157,10 +157,8 @@ function DiaryListPanel({
                         role="button"
                         tabIndex={0}
                         className={[
-                          'relative block cursor-pointer bg-white py-24 pl-24 pr-56 text-inherit no-underline transition-all duration-[160ms] ease-in-out hover:border-l-[3px] hover:border-primary hover:bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]',
-                          diary.id === selectedDiaryId
-                            ? 'border-l-[3px] border-primary bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]'
-                            : ''
+                          'relative block cursor-pointer bg-white py-24 pl-24 pr-56 text-inherit no-underline transition-all duration-[160ms] ease-in-out hover:border-l-[3px] hover:border-primary hover:bg-primary-surface',
+                          diary.id === selectedDiaryId ? 'border-l-[3px] border-primary bg-primary-surface' : ''
                         ]
                           .filter(Boolean)
                           .join(' ')}
@@ -214,7 +212,7 @@ function DiaryListPanel({
                           <Button
                             type="text"
                             shape="circle"
-                            className="h-30! w-30! text-[rgba(25,28,29,0.58)] hover:bg-[rgba(15,82,56,0.08)]! hover:text-primary! focus-visible:bg-[rgba(15,82,56,0.08)]! focus-visible:text-primary!"
+                            className="h-30! w-30! text-[rgba(25,28,29,0.58)] hover:bg-primary-soft! hover:text-primary! focus-visible:bg-primary-soft! focus-visible:text-primary!"
                             icon={<MoreOutlined />}
                             aria-label={`${diary.title} 更多操作`}
                             onClick={event => event.stopPropagation()}

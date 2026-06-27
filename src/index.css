@@ -12,7 +12,10 @@
    * 注册项目颜色，基础字色命名参考 Ant Design 的 colorTextBase token。
    */
   --color-primary: var(--echo-color-primary);
+  --color-primary-soft: var(--echo-color-primary-soft);
+  --color-primary-surface: var(--echo-color-primary-surface);
   --color-page: var(--echo-color-page);
+  --color-base-hover: var(--echo-color-base-hover);
   --color-color-base: var(--echo-color-base);
   --color-color-base-45: var(--echo-color-base-45);
   --color-color-base-65: var(--echo-color-base-65);
@@ -67,6 +70,7 @@ body,
   margin-inline-end: 0;
 }
 
+.echo-timeline .ant-timeline-item-rail,
 .echo-timeline .ant-timeline-item-tail {
   border-inline-start-color: rgba(15, 82, 56, 0.18);
 }

@@ -9,7 +9,7 @@
 }
 
 .navItem:hover {
-  background-color: color-mix(in srgb, var(--echo-color-primary, #cf1322) 10%, transparent);
+  background-color: var(--echo-color-primary-soft, rgb(207 19 34 / 8%));
   color: var(--echo-color-primary, #cf1322);
 }
 

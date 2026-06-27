@@ -4,6 +4,13 @@ import { Outlet } from 'react-router-dom'
 import { EchoThemeContext } from './contexts/EchoThemeContext'
 import { applyEchoTheme, getEchoTheme, persistEchoThemeId, readStoredEchoThemeId } from './utils/theme'
 
+function buildInputActiveShadow(colorPrimary: string): string {
+  /*
+   * Input 聚焦外圈跟随主题色，并保持 Ant Design 默认的轻量透明度。
+   */
+  return `0 0 0 2px ${colorPrimary}1a`
+}
+
 function App() {
   const [themeId, setThemeId] = useState(readStoredEchoThemeId)
   const activeTheme = getEchoTheme(themeId)
@@ -32,6 +39,14 @@ function App() {
       components: {
         Button: {
           borderRadius: 24
+        },
+        Input: {
+          /*
+           * Input 的焦点与悬浮边框使用组件 token 控制，避免回落到默认黑色/蓝色。
+           */
+          activeBorderColor: activeTheme.colorPrimary,
+          hoverBorderColor: activeTheme.colorPrimary,
+          activeShadow: buildInputActiveShadow(activeTheme.colorPrimary)
         }
       }
     }
