@@ -1,4 +1,12 @@
-import { EditOutlined, ExportOutlined, FieldTimeOutlined, QuestionCircleOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
+import {
+  BulbOutlined,
+  EditOutlined,
+  ExportOutlined,
+  FieldTimeOutlined,
+  QuestionCircleOutlined,
+  ReadOutlined,
+  SettingOutlined
+} from '@ant-design/icons'
 import { App as AntdApp, Button } from 'antd'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -162,7 +170,7 @@ function AppSidebar() {
             })}
 
             <SidebarAction label="关于爱可日记" onClick={handleOpenAbout}>
-              <QuestionCircleOutlined className="text-size-14 mr-12" />
+              <BulbOutlined className="text-size-14 mr-12" />
             </SidebarAction>
           </nav>
         </div>

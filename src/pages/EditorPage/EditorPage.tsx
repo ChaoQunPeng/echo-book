@@ -31,6 +31,7 @@ import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEve
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Markdown, type MarkdownStorage } from 'tiptap-markdown'
+import { CLEARED_DIARY_TITLE_FALLBACK } from '../../../shared/defaultDiary'
 import type { Diary } from '../../../shared/diary'
 import { formatMood, MOODS } from '../../../shared/moods'
 import { formatWeather, WEATHERS } from '../../../shared/weather'
@@ -636,13 +637,24 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
         return
       }
 
-      const normalizedTitle = fields.title.trim()
+      const normalizedTitle = normalizeDiaryTitle(fields.title)
 
-      if (!normalizedTitle || !markdown.trim()) {
+      if (!markdown.trim()) {
         if (shouldUpdateStatus) {
           setSaveStatus('有未保存更改')
         }
         return
+      }
+
+      if (isFieldCommit && !fields.title.trim()) {
+        /*
+         * 失焦提交时把空标题回填到输入框，让界面和已保存标题保持一致。
+         */
+        latestFieldsRef.current = {
+          ...latestFieldsRef.current,
+          title: normalizedTitle
+        }
+        setTitle(normalizedTitle)
       }
 
       isAutoSavingRef.current = true
@@ -723,7 +735,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
      * 创建动作已经在入口完成，这里只负责更新当前日记。
      */
     const markdown = getCurrentMarkdown()
-    const normalizedTitle = title.trim()
+    const normalizedTitle = normalizeDiaryTitle(title)
 
     console.info('Diary save button clicked:', {
       diaryId,
@@ -737,14 +749,20 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       return
     }
 
-    if (!normalizedTitle) {
-      setSaveStatus('请填写标题')
-      return
-    }
-
     if (!markdown.trim()) {
       setSaveStatus('请填写正文')
       return
+    }
+
+    if (!title.trim()) {
+      /*
+       * 手动保存空标题时也立即回填默认名，避免保存成功后输入框仍为空。
+       */
+      latestFieldsRef.current = {
+        ...latestFieldsRef.current,
+        title: normalizedTitle
+      }
+      setTitle(normalizedTitle)
     }
 
     setIsSaving(true)
@@ -1430,12 +1448,21 @@ function buildDiarySnapshot(input: DiaryDraftFields & { markdown: string }): str
    * 可以避免标签空格、标题首尾空格这类无效输入反复触发自动保存。
    */
   return JSON.stringify({
-    title: input.title.trim(),
+    title: normalizeDiaryTitle(input.title),
     mood: input.mood.trim(),
     weather: input.weather.trim(),
     tags: parseTags(input.tagsInput),
     markdown: input.markdown
   })
+}
+
+function normalizeDiaryTitle(title: string): string {
+  /*
+   * 用户清空标题时保存为固定兜底名，避免列表出现空白标题。
+   */
+  const normalizedTitle = title.trim()
+
+  return normalizedTitle || CLEARED_DIARY_TITLE_FALLBACK
 }
 
 function isAppleLikePlatform(): boolean {

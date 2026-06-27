@@ -11,6 +11,7 @@ import type {
   SaveDiaryAssetInput,
   UpdateDiaryInput,
 } from "../../shared/diary.js";
+import { CLEARED_DIARY_TITLE_FALLBACK } from "../../shared/defaultDiary.js";
 import { DEFAULT_MOOD } from "../../shared/moods.js";
 import { formatWeather } from "../../shared/weather.js";
 import { getNotesPath } from "../db/connection.js";
@@ -368,7 +369,10 @@ function normalizeTitle(value: string): string {
 
   const normalized = value.trim();
   if (!normalized) {
-    throw new Error("title cannot be empty.");
+    /*
+     * 标题被清空时仍保存一个可展示的名称，避免列表和搜索索引出现空标题。
+     */
+    return CLEARED_DIARY_TITLE_FALLBACK;
   }
 
   return normalized;
