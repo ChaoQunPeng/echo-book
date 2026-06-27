@@ -42,7 +42,7 @@ const WELCOME_MOTION_STYLES = `
 
 .echo-welcome-logo {
   animation: echoWelcomeIn 1600ms ease-in-out 220ms both;
-  width: 140px;
+  width: 200px;
   height: auto;
   display: block;
 }
@@ -137,13 +137,13 @@ export function WelcomePage() {
         <div className="flex flex-col items-center text-center">
           {/* 欢迎页复用品牌 logo 资源，避免首页标题和侧边栏品牌露出不一致。 */}
           <img className="echo-welcome-logo mb-18!" src={logoUrl} alt="爱可日记" />
-          <Typography.Text className="echo-welcome-slogan text-size-17 font-normal text-color-base-65">陪你记下每一天</Typography.Text>
+          <Typography.Text className="echo-welcome-slogan text-size-20! font-normal!">陪你记下每一天</Typography.Text>
 
           <Button
+            className="echo-gradient-button echo-welcome-button mt-50 h-44 min-w-144 px-28 text-size-15"
             type="primary"
             size="large"
             shape="round"
-            className="echo-welcome-button mt-30 h-44 min-w-144 px-28 text-size-15"
             onClick={handleStart}
           >
             开始使用

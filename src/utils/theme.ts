@@ -11,6 +11,12 @@ export type EchoTheme = {
   colorPrimaryBg?: string
   colorPrimaryBgHover?: string
   colorBgBase?: string
+
+  gradient?: {
+    from: string
+    to: string
+    angle?: number
+  }
 }
 
 /*
@@ -34,39 +40,42 @@ export const ECHO_THEMES: EchoTheme[] = [
     descriptions: '沉静、热烈',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#cf1322',
-    colorInfo: '#cf1322'
+    colorInfo: '#cf1322',
+    gradient: {
+      from: '#ff4d4f',
+      to: '#cf1322',
+      angle: 135
+    }
   },
+
   // {
   //   id: 'moonlight',
   //   name: '月夜',
   //   descriptions: '宁静、安然',
-
   //   colorTextBase: '#ffffff',
-
   //   colorBgBase: '#141414',
-
   //   colorPrimary: '#7c9eff',
-
   //   colorInfo: '#7c9eff'
   // },
+
   // {
   //   id: 'lime',
-  //   // 原名：青柠
   //   name: '青柠',
   //   descriptions: '清新、生机',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#7cb305',
   //   colorInfo: '#7cb305'
   // },
+
   // {
   //   id: 'volcano',
-  //   // 原名：火山
   //   name: '赤焰',
   //   descriptions: '澎湃、勇敢',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#d4380d',
   //   colorInfo: '#d4380d'
   // },
+
   {
     id: 'polar-green',
     // 原名：极光绿
@@ -74,8 +83,14 @@ export const ECHO_THEMES: EchoTheme[] = [
     descriptions: '自然、宁静',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#389e0d',
-    colorInfo: '#389e0d'
+    colorInfo: '#389e0d',
+    gradient: {
+      from: '#73d13d',
+      to: '#389e0d',
+      angle: 135
+    }
   },
+
   {
     id: 'sunset-orange',
     // 原名：日暮
@@ -83,17 +98,23 @@ export const ECHO_THEMES: EchoTheme[] = [
     descriptions: '温暖、治愈',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#d46b08',
-    colorInfo: '#d46b08'
+    colorInfo: '#d46b08',
+    gradient: {
+      from: '#fa8c16',
+      to: '#d46b08',
+      angle: 135
+    }
   },
+
   // {
   //   id: 'cyan',
-  //   // 原名：明青
   //   name: '青明',
   //   descriptions: '清澈、平和',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#08979c',
   //   colorInfo: '#08979c'
   // },
+
   {
     id: 'daybreak-blue',
     // 原名：拂晓蓝
@@ -101,7 +122,12 @@ export const ECHO_THEMES: EchoTheme[] = [
     descriptions: '安稳、包容',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#0958d9',
-    colorInfo: '#0958d9'
+    colorInfo: '#0958d9',
+    gradient: {
+      from: '#4096ff',
+      to: '#0958d9',
+      angle: 135
+    }
   },
 
   {
@@ -111,7 +137,12 @@ export const ECHO_THEMES: EchoTheme[] = [
     descriptions: '优雅、浪漫',
     colorTextBase: COLOR_TEXT_BASE,
     colorPrimary: '#531dab',
-    colorInfo: '#531dab'
+    colorInfo: '#531dab',
+    gradient: {
+      from: '#9254de',
+      to: '#531dab',
+      angle: 135
+    }
   },
 
   {
@@ -123,45 +154,50 @@ export const ECHO_THEMES: EchoTheme[] = [
     colorPrimary: '#1f1f1f',
     colorInfo: '#1f1f1f',
     colorPrimaryBg: '#dfdfdf',
-    colorPrimaryBgHover: '#dfdfdf'
+    colorPrimaryBgHover: '#dfdfdf',
+    gradient: {
+      from: '#595959',
+      to: '#1f1f1f',
+      angle: 135
+    }
   }
+
   // {
   //   id: 'calendula-gold',
-  //   // 原名：金盏花
   //   name: '金穗',
   //   descriptions: '明亮、活力',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#d48806',
   //   colorInfo: '#d48806'
   // },
+
   // {
   //   id: 'sunrise-yellow',
-  //   // 原名：日出
   //   name: '日出',
   //   descriptions: '阳光、希望',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#d4b106',
   //   colorInfo: '#d4b106'
   // },
+
   // {
   //   id: 'geek-blue',
-  //   // 原名：极客蓝
   //   name: '极客蓝',
   //   descriptions: '专注、探索',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#1d39c4',
   //   colorInfo: '#1d39c4'
   // },
+
   // {
   //   id: 'magenta',
-  //   // 原名：法式洋红
   //   name: '洋红',
   //   descriptions: '灵动、感性',
   //   colorTextBase: COLOR_TEXT_BASE,
   //   colorPrimary: '#c41d7f',
   //   colorInfo: '#c41d7f'
   // },
-];
+]
 
 function hexToRgbString(hex: string): string {
   /*
@@ -173,6 +209,17 @@ function hexToRgbString(hex: string): string {
   const blue = Number.parseInt(normalizedHex.slice(4, 6), 16)
 
   return `${red} ${green} ${blue}`
+}
+
+function buildThemeGradient(theme: EchoTheme): string {
+  /*
+   * 渐变变量优先使用主题配置，未配置时退回主色，方便按钮样式统一消费。
+   */
+  if (!theme.gradient) {
+    return theme.colorPrimary
+  }
+
+  return `linear-gradient(${theme.gradient.angle ?? 135}deg, ${theme.gradient.to}, ${theme.gradient.from})`
 }
 
 export function getEchoTheme(themeId: string): EchoTheme {
@@ -223,6 +270,7 @@ export function applyEchoTheme(themeId: string): EchoTheme {
   root.style.setProperty('--echo-color-base-65', `rgb(${hexToRgbString(theme.colorTextBase)} / 65%)`)
   root.style.setProperty('--echo-color-base-85', `rgb(${hexToRgbString(theme.colorTextBase)} / 85%)`)
   root.style.setProperty('--echo-border-color', `#d9d9d9`)
+  root.style.setProperty('--echo-gradient-primary', buildThemeGradient(theme))
 
   return theme
 }

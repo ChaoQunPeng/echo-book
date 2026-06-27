@@ -1,10 +1,9 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { App as AntdApp, Empty } from 'antd'
+import { App as AntdApp, Button, Empty } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
-import EchoButton from '../../components/EchoButton'
 import { createDefaultDiary } from '../../utils/diaryCreation'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import EditorPage from '../EditorPage'
@@ -336,9 +335,9 @@ function DiaryListPage() {
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
              */}
             <Empty description="还没有日记">
-              <EchoButton icon={<PlusOutlined />} loading={isCreatingDiary} onClick={handleCreateDiary}>
+              <Button type="primary" className="echo-gradient-button" icon={<PlusOutlined />} loading={isCreatingDiary} onClick={handleCreateDiary}>
                 写第一篇
-              </EchoButton>
+              </Button>
             </Empty>
           </div>
         ) : null}

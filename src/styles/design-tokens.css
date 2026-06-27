@@ -7,5 +7,23 @@
   --echo-color-base-65: rgb(25 28 29 / 65%);
   --echo-color-base-85: rgb(25 28 29 / 85%);
   --echo-border-color: rgba(15, 82, 56, 0.12); */
+  --echo-gradient-primary: linear-gradient(135deg, #cf1322, #ff4d4f);
   --ant-button-primary-shadow: none;
+}
+
+/*
+ * 渐变按钮只用于显式标记的主操作，避免影响普通 primary 按钮的层级。
+ */
+.echo-gradient-button.ant-btn-primary:not(:disabled):not(.ant-btn-disabled) {
+  background: var(--echo-gradient-primary);
+  border-color: transparent;
+  color: #fff;
+}
+
+.echo-gradient-button.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover,
+.echo-gradient-button.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):focus-visible {
+  background: var(--echo-gradient-primary);
+  border-color: transparent;
+  color: #fff;
+  filter: brightness(1.04) saturate(1.05);
 }

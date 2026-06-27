@@ -337,9 +337,8 @@ function SettingsPage() {
                 </Button>
 
                 <Button
+                  type="primary"
                   icon={<FolderAddOutlined />}
-                  color="primary"
-                  variant="outlined"
                   loading={isSelectingDirectory || isMigratingNotes}
                   disabled={!window.settingsAPI || Boolean(settingsError)}
                   onClick={handleSelectDirectory}

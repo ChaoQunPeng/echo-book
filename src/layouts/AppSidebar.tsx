@@ -129,7 +129,7 @@ function AppSidebar() {
           {/* <Divider className="mt-12! mb-32!" /> */}
           <div className="border-t mt-12 mb-32"></div>
           <Button
-            className="pr-26! mb-24"
+            className="pr-26! mb-24 echo-gradient-button"
             shape="round"
             type="primary"
             block
