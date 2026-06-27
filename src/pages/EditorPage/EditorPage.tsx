@@ -689,13 +689,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
 
       const normalizedTitle = normalizeDiaryTitle(fields.title)
 
-      if (!markdown.trim()) {
-        if (shouldUpdateStatus) {
-          setSaveStatus('有未保存更改')
-        }
-        return
-      }
-
       if (isFieldCommit && !fields.title.trim()) {
         /*
          * 失焦提交时把空标题回填到输入框，让界面和已保存标题保持一致。
@@ -717,6 +710,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
         if (!window.diaryAPI) {
           /*
            * 所有草稿保存都必须走主进程，避免 renderer 直接碰本地文件。
+           * 空正文日记也要保存标题、心情、天气和标签。
            */
           throw new Error('Electron diary API is unavailable.')
         }
@@ -807,14 +801,9 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       return
     }
 
-    if (!markdown.trim()) {
-      setSaveStatus('请填写正文')
-      return
-    }
-
     if (!title.trim()) {
       /*
-       * 手动保存空标题时也立即回填默认名，避免保存成功后输入框仍为空。
+       * 手动保存允许正文为空，但空标题仍回填默认名，避免列表出现空白标题。
        */
       latestFieldsRef.current = {
         ...latestFieldsRef.current,
