@@ -129,7 +129,7 @@ export function WelcomePage() {
    * 欢迎页只承担首次进入的情绪确认，不放功能介绍，保持安静和留白。
    */
   return (
-    <main className="min-h-screen bg-page px-32 text-foreground">
+    <main className="min-h-screen bg-page px-32 text-color-base">
       {/* 内联动画只服务首次欢迎页，避免为了轻微动效新增样式文件。 */}
       <style>{WELCOME_MOTION_STYLES}</style>
 
@@ -137,7 +137,7 @@ export function WelcomePage() {
         <div className="flex flex-col items-center text-center">
           {/* 欢迎页复用品牌 logo 资源，避免首页标题和侧边栏品牌露出不一致。 */}
           <img className="echo-welcome-logo mb-18!" src={logoUrl} alt="爱可日记" />
-          <Typography.Text className="echo-welcome-slogan text-size-17 font-normal text-black-65">陪你记下每一天</Typography.Text>
+          <Typography.Text className="echo-welcome-slogan text-size-17 font-normal text-color-base-65">陪你记下每一天</Typography.Text>
 
           <Button
             type="primary"

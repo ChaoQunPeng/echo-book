@@ -4,7 +4,6 @@ import {
   CheckSquareOutlined,
   CloudOutlined,
   DownOutlined,
-  EditOutlined,
   FontSizeOutlined,
   FormOutlined,
   ItalicOutlined,
@@ -51,6 +50,8 @@ type DiaryDraftFields = {
   weather: string
   tagsInput: string
 }
+
+type SaveDraftReason = 'auto' | 'leave' | 'field-commit'
 
 type SelectableTag = Pick<TagLibraryItem, 'name' | 'color'>
 
@@ -615,15 +616,12 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     }
   }, [mood, tagsInput, title, weather])
 
-  useEffect(() => {
-    if (!diaryId || !isEditorReady || loadError) {
-      return
-    }
+  const saveExistingDiaryDraft = useCallback(
+    async (reason: SaveDraftReason) => {
+      const shouldUpdateStatus = reason !== 'leave'
+      const isFieldCommit = reason === 'field-commit'
 
-    const saveExistingDiaryDraft = async (reason: 'auto' | 'leave') => {
-      const shouldUpdateStatus = reason === 'auto'
-
-      if (isAutoSavingRef.current || isManualSavingRef.current) {
+      if (!diaryId || !isEditorReady || loadError || isAutoSavingRef.current || isManualSavingRef.current) {
         return
       }
 
@@ -650,13 +648,13 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       isAutoSavingRef.current = true
 
       if (shouldUpdateStatus) {
-        setSaveStatus('正在自动保存')
+        setSaveStatus(isFieldCommit ? '正在保存' : '正在自动保存')
       }
 
       try {
         if (!window.diaryAPI) {
           /*
-           * 自动保存也必须走 Electron main process，保持和手动保存同一条持久化链路。
+           * 所有草稿保存都必须走主进程，避免 renderer 直接碰本地文件。
            */
           throw new Error('Electron diary API is unavailable.')
         }
@@ -672,7 +670,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
 
         lastPersistedSnapshotRef.current = snapshot
         /*
-         * 通知父级刷新列表元数据，标题、心情、标签和更新时间会立即同步到左侧列表。
+         * 保存成功后只通知父级替换当前日记元数据。
          */
         onDiarySaved?.(updatedDiary)
 
@@ -682,18 +680,25 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
         })
 
         if (shouldUpdateStatus) {
-          setSaveStatus(latestSnapshot === snapshot ? '已自动保存' : '有未保存更改')
+          setSaveStatus(latestSnapshot === snapshot ? (isFieldCommit ? '已保存' : '已自动保存') : '有未保存更改')
           setLastSavedAt(updatedDiary.updatedAt)
         }
       } catch (error) {
-        console.error('Failed to auto-save diary:', error)
+        console.error('Failed to save diary draft:', error)
 
         if (shouldUpdateStatus) {
-          setSaveStatus(`自动保存失败：${getErrorMessage(error)}`)
+          setSaveStatus(`${isFieldCommit ? '保存' : '自动保存'}失败：${getErrorMessage(error)}`)
         }
       } finally {
         isAutoSavingRef.current = false
       }
+    },
+    [diaryId, getCurrentMarkdown, isEditorReady, loadError, onDiarySaved]
+  )
+
+  useEffect(() => {
+    if (!diaryId || !isEditorReady || loadError) {
+      return
     }
 
     /*
@@ -710,7 +715,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       void saveExistingDiaryDraft('leave')
       window.clearInterval(intervalId)
     }
-  }, [diaryId, getCurrentMarkdown, isEditorReady, loadError, onDiarySaved])
+  }, [diaryId, isEditorReady, loadError, saveExistingDiaryDraft])
 
   const handleSaveDiary = async () => {
     /*
@@ -836,6 +841,27 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     setSaveStatus('有未保存更改')
   }
 
+  const handleTitleChange = (event: ReactChangeEvent<HTMLInputElement>) => {
+    const nextTitle = event.target.value
+
+    /*
+     * ref 立即同步，保证紧接着失焦时能保存最新标题。
+     */
+    latestFieldsRef.current = {
+      ...latestFieldsRef.current,
+      title: nextTitle
+    }
+    setTitle(nextTitle)
+    markExistingDiaryChanged()
+  }
+
+  const handleTitleBlur = () => {
+    /*
+     * 标题失焦时主动保存一次，左侧列表只做局部更新。
+     */
+    void saveExistingDiaryDraft('field-commit')
+  }
+
   const handlePickerTriggerKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     /*
      * 自定义触发区域不是原生按钮，补齐 Enter 和 Space 的键盘操作。
@@ -850,18 +876,28 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     /*
      * Popover 只负责选择体验，真正保存的仍是心情名称。
      */
+    latestFieldsRef.current = {
+      ...latestFieldsRef.current,
+      mood: nextMood
+    }
     setMood(nextMood)
     setIsMoodPopoverOpen(false)
     markExistingDiaryChanged()
+    void saveExistingDiaryDraft('field-commit')
   }
 
   const handleWeatherChange = (nextWeather: string) => {
     /*
      * 天气和心情一样，只保存枚举名称，展示层再补 emoji。
      */
+    latestFieldsRef.current = {
+      ...latestFieldsRef.current,
+      weather: nextWeather
+    }
     setWeather(nextWeather)
     setIsWeatherPopoverOpen(false)
     markExistingDiaryChanged()
+    void saveExistingDiaryDraft('field-commit')
   }
 
   const handleTagCheckedChange = (tagName: string, checked: boolean) => {
@@ -990,7 +1026,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           <Checkbox
             key={tag.name}
             checked={selectedTags.includes(tag.name)}
-            className="m-0! min-h-30 w-full rounded-[6px] px-6 py-4 hover:bg-[rgba(25,28,29,0.04)]"
+            className="flex items-center m-0! min-h-30 w-full rounded-[6px] px-6 py-4 hover:bg-[rgba(25,28,29,0.04)]"
             onChange={event => handleTagCheckedChange(tag.name, event.target.checked)}
           >
             <span className="inline-flex min-w-0 items-center gap-8">
@@ -1000,7 +1036,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           </Checkbox>
         ))
       ) : (
-        <span className="text-size-13 text-black-45">暂无标签</span>
+        <span className="text-size-13 text-color-base-45">暂无标签</span>
       )}
     </div>
   )
@@ -1033,11 +1069,9 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           variant="borderless"
           placeholder="给这一天起个名字"
           size="large"
-          prefix={<FormOutlined className="mr-8 text-black-65! text-size-18" />}
-          onChange={event => {
-            setTitle(event.target.value)
-            markExistingDiaryChanged()
-          }}
+          prefix={<FormOutlined className="mr-8 text-color-base-65! text-size-18" />}
+          onChange={handleTitleChange}
+          onBlur={handleTitleBlur}
         />
       </div>
 
@@ -1186,7 +1220,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
             <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
             <EditorContent
               editor={editor}
-              className="echo-editor-content min-h-[inherit] flex-1 overflow-auto font-[inherit] text-foreground"
+              className="echo-editor-content min-h-[inherit] flex-1 overflow-auto font-[inherit] text-color-base"
             />
           </>
         ) : null}
@@ -1242,7 +1276,7 @@ function renderMetadataPopoverContent({
         <div
           key={option.name}
           className={[
-            'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-foreground outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]',
+            'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-color-base outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]',
             selectedValue === option.name ? 'bg-primary-soft font-bold text-primary' : ''
           ]
             .filter(Boolean)
@@ -1257,7 +1291,7 @@ function renderMetadataPopoverContent({
           <span>{option.name}</span>
         </div>
       ))}
-      {selectedValue ? (
+      {/* {selectedValue ? (
         <div
           className="mt-4 flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] border-t border-[rgba(25,28,29,0.08)] px-8 py-5 text-[rgba(25,28,29,0.55)] outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]"
           role="button"
@@ -1267,7 +1301,7 @@ function renderMetadataPopoverContent({
         >
           {clearLabel}
         </div>
-      ) : null}
+      ) : null} */}
     </div>
   )
 }

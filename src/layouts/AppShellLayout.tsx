@@ -7,7 +7,7 @@ function AppShellLayout() {
    * 右侧主区域继续通过 Outlet 渲染当前页面。
    */
   return (
-    <div className="flex h-screen bg-page text-foreground">
+    <div className="flex h-screen bg-page text-color-base">
       <AppSidebar />
 
       <div className="flex-1">

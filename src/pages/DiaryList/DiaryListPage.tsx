@@ -235,8 +235,44 @@ function DiaryListPage() {
   }
 
   /**
+   * 从当前列表状态中移除日记
+   * 删除已由主进程落库，这里只同步页面内存和缓存
+   */
+  const removeDiaryFromMemory = useCallback(
+    (deletedDiaryId: string) => {
+      const keyword = searchKeyword.trim()
+      const deletedDiaryWasInFullList = fullDiariesRef.current.some(diary => diary.id === deletedDiaryId)
+      const nextFullDiaries = fullDiariesRef.current.filter(diary => diary.id !== deletedDiaryId)
+
+      fullDiariesRef.current = nextFullDiaries
+
+      /*
+       * 搜索视图只知道当前命中的列表；全量列表可用时才用它判断库里是否还剩日记。
+       */
+      setDiaries(currentDiaries => currentDiaries.filter(diary => diary.id !== deletedDiaryId))
+      setHasAnyDiary(currentHasAnyDiary => {
+        const nextHasAnyDiary = keyword
+          ? nextFullDiaries.length > 0 || (currentHasAnyDiary && !deletedDiaryWasInFullList)
+          : nextFullDiaries.length > 0
+
+        hasAnyDiaryRef.current = nextHasAnyDiary
+        return nextHasAnyDiary
+      })
+    },
+    [searchKeyword]
+  )
+
+  const updateDiaryInMemory = useCallback((updatedDiary: Diary) => {
+    /*
+     * 编辑器保存后只替换对应日记，避免标题失焦时重新拉取整张列表。
+     */
+    fullDiariesRef.current = fullDiariesRef.current.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary))
+    setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
+  }, [])
+
+  /**
    * 删除指定日记
-   * 弹出确认框，确认后执行软删除并刷新列表
+   * 弹出确认框，确认后执行软删除并更新内存列表
    */
   const handleDeleteDiary = (diary: Diary) => {
     /*
@@ -255,12 +291,17 @@ function DiaryListPage() {
              * Web 示例数据只存在于 React state。
              * 删除时直接从当前列表移除，避免调用 Electron IPC。
              */
-            setDiaries(currentDiaries => currentDiaries.filter(currentDiary => currentDiary.id !== diary.id))
+            removeDiaryFromMemory(diary.id)
             return
           }
 
-          await window.diaryAPI.deleteDiary(diary.id)
-          await loadDiaries()
+          const deleteResult = await window.diaryAPI.deleteDiary(diary.id)
+
+          if (!deleteResult.success) {
+            throw new Error('主进程未能删除该日记')
+          }
+
+          removeDiaryFromMemory(diary.id)
         } catch {
           setErrorMessage('删除日记失败')
         }
@@ -272,12 +313,10 @@ function DiaryListPage() {
     (updatedDiary: Diary) => {
       /*
        * 右侧编辑器保存成功后，直接替换左侧列表中的同一条日记元数据。
-       * 后台刷新只校准搜索结果和数据库排序，不再触发列表页读取 loading。
        */
-      setDiaries(currentDiaries => currentDiaries.map(diary => (diary.id === updatedDiary.id ? updatedDiary : diary)))
-      void loadDiaries(searchKeyword, { showPageLoading: false })
+      updateDiaryInMemory(updatedDiary)
     },
-    [loadDiaries, searchKeyword]
+    [updateDiaryInMemory]
   )
 
   /*
@@ -292,7 +331,7 @@ function DiaryListPage() {
         {isLoading ? <DiaryListLoading /> : null}
 
         {!isLoading && !hasAnyDiary && !hasActiveSearch ? (
-          <div className="echo-empty-muted grid h-full min-h-360 place-items-center text-black-65">
+          <div className="echo-empty-muted grid h-full min-h-360 place-items-center text-color-base-65">
             {/*
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
              */}

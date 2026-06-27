@@ -145,7 +145,7 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
                 </div>
               ))
             ) : (
-              <p className="text-size-13 leading-[1.5] text-black-45">暂无标签，先创建一个。</p>
+              <p className="text-size-13 leading-[1.5] text-color-base-45">暂无标签，先创建一个。</p>
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
+import { formatWeather } from '../../../shared/weather'
 import PageHeader from '../../components/PageHeader'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 
@@ -180,7 +181,7 @@ function TimelinePage() {
           <div className="max-w-880">
             {groupedDiaries.map(group => (
               <section key={group.key} className="[&+&]:mt-34">
-                <h2 className="mb-24 font-mono text-size-24 text-black-85">{group.label}</h2>
+                <h2 className="mb-24 font-mono! text-size-24 text-color-base-85">{group.label}</h2>
                 <Timeline
                   className="echo-timeline"
                   titleSpan="90px"
@@ -190,7 +191,7 @@ function TimelinePage() {
                      * 每个日期只生成一条 Timeline，右侧集中展示当天全部内容。
                      */
                     title: (
-                      <time className="whitespace-nowrap text-right font-mono text-size-18" dateTime={day.key}>
+                      <time className="whitespace-nowrap text-right font-mono! text-size-18" dateTime={day.key}>
                         {day.label}
                       </time>
                     ),
@@ -221,6 +222,13 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
   const plainText = markdownToPlainText(diary.markdown)
   const title = buildTimelineTitle(diary.title, plainText)
   const summary = truncateText(plainText, SUMMARY_LENGTH)
+  /*
+   * 先整理展示文案，避免 JSX 里塞复杂条件表达式。
+   */
+  const moodMeta = diary.mood ? formatMood(diary.mood) : undefined
+  const weatherMeta = diary.weather ? formatWeather(diary.weather) : undefined
+  const moodLabel = formatTimelineMetaLabel(diary.mood, moodMeta)
+  const weatherLabel = formatTimelineMetaLabel(diary.weather, weatherMeta)
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     /*
@@ -268,18 +276,19 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       onKeyDown={handleCardKeyDown}
     >
       <h3
-        className="mb-8 cursor-pointer text-size-20 leading-[1.35] text-foreground transition-all duration-[160ms] ease-in-out group-hover:text-primary group-focus-visible:text-primary"
+        className="mb-8 cursor-pointer text-size-20 leading-[1.35] text-color-base transition-all duration-[160ms] ease-in-out group-hover:text-primary group-focus-visible:text-primary"
         onClick={() => onOpenDiary(diary.id)}
       >
         {title}
       </h3>
-      <div className="flex items-center gap-12 text-size-12 text-primary">
-        <time className="font-mono text-[rgba(25,28,29,0.5)]" dateTime={new Date(diary.createdAt).toISOString()}>
+      <div className="flex items-center gap-12 text-size-14 text-color-base-85">
+        <time className="font-mono!" dateTime={new Date(diary.createdAt).toISOString()}>
           {formatCreatedTime(diary.createdAt)}
         </time>
-        <span>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
+        {moodLabel ? <span>{moodLabel}</span> : null}
+        {weatherLabel ? <span>{weatherLabel}</span> : null}
       </div>
-      {summary ? <p className="mt-14 text-size-15 leading-[1.75] text-[rgba(25,28,29,0.72)]">{summary}</p> : null}
+      {summary ? <p className="mt-14 text-size-15 leading-[1.75] text-color-base-65">{summary}</p> : null}
       {diary.tags?.length ? (
         <div className="echo-zero-tag-margin mt-16 flex flex-wrap gap-8">
           {diary.tags.map(tag => (
@@ -291,6 +300,27 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       ) : null}
     </div>
   )
+}
+
+type TimelineMetaOption = {
+  name: string
+  emoji: string
+}
+
+/**
+ * 格式化时间线元信息
+ * 标准枚举展示 emoji + 名称；历史自定义值直接回显。
+ */
+function formatTimelineMetaLabel(rawValue: string | undefined, meta: TimelineMetaOption | undefined): string {
+  if (!rawValue) {
+    return ''
+  }
+
+  if (!meta) {
+    return rawValue
+  }
+
+  return `${meta.name} ${meta.emoji}`
 }
 
 /**
@@ -324,7 +354,7 @@ function buildTimelineTitle(title: string, plainText: string): string {
     return normalizedTitle
   }
 
-  return truncateText(plainText || '未命名日记', TITLE_FALLBACK_LENGTH)
+  return truncateText(plainText, TITLE_FALLBACK_LENGTH)
 }
 
 /**

@@ -98,7 +98,7 @@ function AppSidebar() {
         <div className="px-24 pb-24 pt-32">
           {/* 使用独立 logo 资源，避免品牌字样在组件里重复维护。 */}
           <img className="block h-auto w-140" src={logoUrl} alt="爱可日记" />
-          <div className="mt-12 text-size-14 text-black-65">爱生活，可记录</div>
+          <div className="mt-12 text-size-14 text-color-base-65">爱生活，可记录</div>
         </div>
 
         {/*

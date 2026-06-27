@@ -9,15 +9,14 @@
 @theme {
   --spacing: 1px;
   /*
-   * 注册项目颜色，类名会变成 `text-primary`、`bg-primary` 这类写法。
+   * 注册项目颜色，基础字色命名参考 Ant Design 的 colorTextBase token。
    */
   --color-primary: var(--echo-color-primary);
   --color-page: var(--echo-color-page);
-  --color-foreground: var(--echo-color-text);
-  --color-black: var(--echo-color-text);
-  --color-black-45: var(--echo-color-text-black-45);
-  --color-black-65: var(--echo-color-text-black-65);
-  --color-black-85: var(--echo-color-text-black-85);
+  --color-color-base: var(--echo-color-base);
+  --color-color-base-45: var(--echo-color-base-45);
+  --color-color-base-65: var(--echo-color-base-65);
+  --color-color-base-85: var(--echo-color-base-85);
 }
 
 @layer base {
@@ -91,7 +90,7 @@ body,
 .echo-diary-preview-content h3,
 .echo-diary-preview-content h4 {
   margin: 1.4em 0 0.55em;
-  color: var(--echo-color-text);
+  color: var(--echo-color-base);
   line-height: 1.35;
 }
 
@@ -143,7 +142,7 @@ body,
   padding: 2px 5px;
   border-radius: 5px;
   background: rgba(15, 82, 56, 0.08);
-  color: var(--echo-color-text);
+  color: var(--echo-color-base);
   font-size: 0.92em;
 }
 
@@ -174,7 +173,7 @@ body,
 
 .echo-diary-preview-content th {
   background: rgba(15, 82, 56, 0.06);
-  color: var(--echo-color-text);
+  color: var(--echo-color-base);
   font-weight: 700;
 }
 
@@ -197,7 +196,7 @@ body,
   padding: 30px;
   outline: none;
   background: #fff;
-  color: var(--echo-color-text);
+  color: var(--echo-color-base);
   font-size: 16px;
   line-height: 1.8;
 }
@@ -215,7 +214,7 @@ body,
 .echo-editor-content .ProseMirror h3,
 .echo-editor-content .ProseMirror h4,
 .echo-editor-content .ProseMirror h5 {
-  color: var(--echo-color-text);
+  color: var(--echo-color-base);
   line-height: 1.25;
 }
 

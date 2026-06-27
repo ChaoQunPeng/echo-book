@@ -218,10 +218,10 @@ export function applyEchoTheme(themeId: string): EchoTheme {
   root.dataset.echoTheme = theme.id
   root.style.setProperty('--echo-color-primary', theme.colorPrimary)
   root.style.setProperty('--echo-color-page', ECHO_THEME_LAYOUT_BG)
-  root.style.setProperty('--echo-color-text', theme.colorTextBase)
-  root.style.setProperty('--echo-color-text-black-45', `rgb(${hexToRgbString(theme.colorTextBase)} / 45%)`)
-  root.style.setProperty('--echo-color-text-black-65', `rgb(${hexToRgbString(theme.colorTextBase)} / 65%)`)
-  root.style.setProperty('--echo-color-text-black-85', `rgb(${hexToRgbString(theme.colorTextBase)} / 85%)`)
+  root.style.setProperty('--echo-color-base', theme.colorTextBase)
+  root.style.setProperty('--echo-color-base-45', `rgb(${hexToRgbString(theme.colorTextBase)} / 45%)`)
+  root.style.setProperty('--echo-color-base-65', `rgb(${hexToRgbString(theme.colorTextBase)} / 65%)`)
+  root.style.setProperty('--echo-color-base-85', `rgb(${hexToRgbString(theme.colorTextBase)} / 85%)`)
   root.style.setProperty('--echo-border-color', `#d9d9d9`)
 
   return theme

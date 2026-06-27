@@ -34,7 +34,7 @@ function DiaryPreview({
       {diary ? (
         <article className="min-h-full px-40 pb-48 pt-32">
           <div className="mb-30 border-b border-[rgba(25,28,29,0.08)] pb-20">
-            <h2 className="mt-8 text-size-28 leading-[1.25] text-foreground">{diary.title}</h2>
+            <h2 className="mt-8 text-size-28 leading-[1.25] text-color-base">{diary.title}</h2>
             <div className="mt-12 flex flex-wrap gap-x-14 gap-y-8 text-size-13 text-[rgba(25,28,29,0.58)]">
               <p className="font-bold text-primary">{formatFullCreatedAt(diary.createdAt)}</p>
               {diary.mood ? <span>心情：{formatMood(diary.mood)?.name ?? diary.mood}</span> : null}
@@ -42,7 +42,7 @@ function DiaryPreview({
               {diary.tags?.length ? <span>标签：{diary.tags.join(' / ')}</span> : null}
             </div>
           </div>
-          <div className="echo-diary-preview-content text-size-16 leading-[1.9] text-black-85">
+          <div className="echo-diary-preview-content text-size-16 leading-[1.9] text-color-base-85">
             {/*
              * Markdown 正文统一在这里渲染，调用方只负责传入日记和正文内容。
              */}
@@ -62,7 +62,7 @@ function DiaryPreview({
         </article>
       ) : (
         <div className="grid h-full min-h-280 place-items-center content-center gap-8 text-center text-[rgba(25,28,29,0.62)]">
-          <h2 className="text-size-18 text-foreground">{loading ? '正在读取日记' : emptyTitle}</h2>
+          <h2 className="text-size-18 text-color-base">{loading ? '正在读取日记' : emptyTitle}</h2>
           <p>{loading ? '请稍等，正在准备预览内容。' : errorMessage || emptyDescription}</p>
         </div>
       )}

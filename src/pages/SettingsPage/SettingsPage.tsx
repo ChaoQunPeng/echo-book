@@ -261,7 +261,7 @@ function SettingsPage() {
                     key={theme.id}
                     type="button"
                     className={[
-                      'flex min-h-74 w-full cursor-pointer items-center gap-12 rounded-[8px] border border-[var(--echo-border-color)] bg-white p-12 text-left text-foreground transition-[border-color,box-shadow,transform] duration-[160ms] ease-in-out hover:-translate-y-1 hover:border-primary',
+                      'flex min-h-74 w-full cursor-pointer items-center gap-12 rounded-[8px] border border-[var(--echo-border-color)] bg-white p-12 text-left text-color-base transition-[border-color,box-shadow,transform] duration-[160ms] ease-in-out hover:-translate-y-1 hover:border-primary',
                       isActive ? 'border-primary' : ''
                     ]
                       .filter(Boolean)
@@ -280,7 +280,7 @@ function SettingsPage() {
                     ></span>
                     <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
                       <span className="col-start-1 text-size-15 font-semibold">{theme.name}</span>
-                      <span className="col-start-1 text-size-13 text-black-65">{theme.descriptions}</span>
+                      <span className="col-start-1 text-size-13 text-color-base-65">{theme.descriptions}</span>
                       {isActive ? <CheckOutlined className="col-start-2 row-span-2 row-start-1 text-primary" /> : null}
                     </span>
                   </button>

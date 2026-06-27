@@ -69,8 +69,8 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
                   <span className="h-8 w-8 flex-[0_0_auto] rounded-[2px] bg-[var(--about-accent)]" aria-hidden="true" />
                   <span>{principle.title}</span>
                 </div>
-                <div className="text-black-65! mb-4 ml-18">{principle.description}</div>
-                <div className="text-black-65! mb-4 ml-18">{principle.note}</div>
+                <div className="text-color-base-65! mb-4 ml-18">{principle.description}</div>
+                <div className="text-color-base-65! mb-4 ml-18">{principle.note}</div>
               </div>
             ))}
           </div>

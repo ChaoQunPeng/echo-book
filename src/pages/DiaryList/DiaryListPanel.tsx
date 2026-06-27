@@ -142,13 +142,13 @@ function DiaryListPanel({
       <div className="min-h-0 flex-1 overflow-auto">
         {groupedDiaries.length === 0 ? (
           <div className="grid h-full min-h-280 place-items-center content-center gap-8 text-center text-[rgba(25,28,29,0.62)]">
-            <h2 className="text-size-18 text-foreground">没有匹配的日记</h2>
+            <h2 className="text-size-18 text-color-base">没有匹配的日记</h2>
             <p>换个关键词或筛选条件试试。</p>
           </div>
         ) : (
           groupedDiaries.map(group => (
             <section key={group.key}>
-              <div className="px-24 py-16">{group.label}</div>
+              <div className="px-24 py-16 font-mono! text-size-16">{group.label}</div>
               <ul className="flex list-none flex-col gap-6">
                 {group.diaries.map(diary => {
                   return (
@@ -172,9 +172,9 @@ function DiaryListPanel({
                           }
                         }}
                       >
-                        <div className="mb-4 text-size-14 text-primary">{formatCreatedTime(diary.createdAt)}</div>
-                        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-size-16 text-foreground">{diary.title}</div>
-                        <div className="mt-8 overflow-hidden text-ellipsis whitespace-nowrap text-size-12 leading-[1.5] text-[rgba(25,28,29,0.62)]">
+                        <div className="mb-6 text-size-14 text-primary font-mono!">{formatCreatedTime(diary.createdAt)}</div>
+                        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-size-16 text-color-base">{diary.title}</div>
+                        <div className="mt-12 overflow-hidden text-ellipsis whitespace-nowrap text-size-14 text-color-base-65">
                           {buildDiaryMetaSummary(diary)}
                         </div>
                       </div>
@@ -238,11 +238,14 @@ function DiaryListPanel({
  * 列表不读取 Markdown 正文，只展示可由数据库索引直接提供的信息
  */
 function buildDiaryMetaSummary(diary: Diary): string {
+  const moodMeta = diary.mood ? formatMood(diary.mood) : undefined
+  const weatherMeta = diary.weather ? formatWeather(diary.weather) : undefined
   const summaryParts = [
-    diary.mood ? `心情：${formatMood(diary.mood)?.name ?? diary.mood}` : '',
-    diary.weather ? `天气：${formatWeather(diary.weather)?.name ?? diary.weather}` : '',
-    diary.tags?.length ? `标签：${diary.tags.join(' / ')}` : '',
-    `更新：${formatUpdatedAt(diary.updatedAt)}`
+    /*
+     * 标准枚举展示 emoji 和名称；历史自定义值找不到枚举时仍显示原文。
+     */
+    diary.mood ? (moodMeta ? `${moodMeta.name} ${moodMeta.emoji}` : diary.mood) : '',
+    diary.weather ? (weatherMeta ? `${weatherMeta.name} ${weatherMeta.emoji}` : diary.weather) : ''
   ].filter(Boolean)
 
   return summaryParts.join(' · ')
@@ -307,12 +310,17 @@ function formatCreatedTime(timestamp: number): string {
  * 将时间戳转换为列表摘要里的日期时间格式
  */
 function formatUpdatedAt(timestamp: number): string {
+  /*
+   * zh-CN 默认日期分隔符是 /，列表里统一换成 -。
+   */
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  }).format(new Date(timestamp))
+  })
+    .format(new Date(timestamp))
+    .replace(/\//g, '-')
 }
 
 export default DiaryListPanel

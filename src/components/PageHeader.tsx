@@ -22,7 +22,7 @@ function PageHeader({ eyebrow, title, extra, className }: PageHeaderProps) {
     <div className={headerClassName}>
       <div>
         <p className="mb-4 text-size-12 font-bold uppercase tracking-normal text-primary">{eyebrow}</p>
-        <h1 className="text-size-28 leading-[1.2] text-foreground">{title}</h1>
+        <h1 className="text-size-28 leading-[1.2] text-color-base">{title}</h1>
       </div>
       {extra ? <span className="text-size-13 text-[rgba(25,28,29,0.52)]">{extra}</span> : null}
     </div>
