@@ -40,26 +40,35 @@
   max-width: 880px;
 }
 
+.timelineNumber {
+  /*
+   * 页面内独立数字统一使用等宽字体，保持计数和日期的视觉一致。
+   */
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
 .timelineGroup + .timelineGroup {
   margin-top: 34px;
 }
 
 .timelineGroup h2 {
-  margin: 0 0 18px 0;
-  color: var(--color-text-black-65);
+  margin: 0 0 24px 0;
+  color: var(--echo-color-text-black-85);
+  /*
+   * 年份包含数字，使用系统等宽字体让数字宽度统一。
+   */
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
   font-size: 24px;
 }
 
 .timeline {
-  padding-left: 4px;
+  // :global(.ant-steps-item-wrapper.ant-timeline-item-wrapper) {
+  //   column-gap: 32px;
+  // }
 
-  :global(.ant-steps-item-wrapper.ant-timeline-item-wrapper) {
-    column-gap: 32px;
-  }
-
-  :global(.ant-timeline-item-content) {
-    padding-top: 6px;
-  }
+  // :global(.ant-timeline-item-content) {
+  //   padding-top: 6px;
+  // }
 }
 
 .timeline :global(.ant-timeline-item-tail) {
@@ -68,25 +77,43 @@
 
 .timelineDate {
   /*
-   * 左侧日期独立成列，避免 Timeline title 被内容撑开。
+   * 日期数字改用等宽字体，时间轴左侧更容易对齐查看。
    */
-  display: block;
-  padding-top: 6px;
-  color: rgba(25, 28, 29, 0.5);
-  font-size: 12px;
-  line-height: 1.5;
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 18px;
   text-align: right;
   white-space: nowrap;
 }
 
+.timelineDayContent {
+  /*
+   * 同一天的多篇日记在右侧纵向聚合，避免左侧重复日期。
+   */
+  display: flex;
+  flex-direction: column;
+  gap: 120px;
+}
+
 .timelineCard {
   // max-width: 720px;
-  margin-bottom: 18px;
-  border: 1px solid rgba(15, 82, 56, 0.1);
-  border-radius: 14px;
-  background: #ffffff;
-  cursor: pointer;
+  // border: 1px solid rgba(15, 82, 56, 0.1);
+  // border-radius: 14px;
+  // background: #ffffff;
+  // cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease;
+}
+
+:global(.ant-timeline-item) {
+  padding-bottom: 180px !important;
+}
+
+:global(.ant-timeline-layout-alternate .ant-timeline-item .ant-timeline-item-header) {
+  align-items: flex-start !important;
+  flex: 1 1 0 !important;
+}
+
+:global(.ant-timeline-layout-alternate .ant-timeline-item .ant-timeline-item-section) {
+  gap: 80px !important;
 }
 
 .timelineCard:hover,
@@ -96,20 +123,28 @@
   }
 }
 
-.timelineCard :global(.ant-card-body) {
-  padding: 20px 22px;
-}
-
-.timelineCardMood {
+.timelineCardMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   color: var(--echo-color-primary);
   font-size: 12px;
 }
 
+.timelineCardMeta time {
+  color: rgba(25, 28, 29, 0.5);
+  /*
+   * 卡片内时分同样使用等宽数字，保持时间信息风格一致。
+   */
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
 .timelineCard h3 {
-  margin: 8px 0 4px 0;
   font-size: 20px;
   line-height: 1.35;
   color: var(--echo-color-text);
+  cursor: pointer;
+  margin-bottom: 8px;
   transition: all 160ms ease, border-color 160ms ease;
 }
 

@@ -1,16 +1,11 @@
 :root {
-  /*
-   * 页面级设计变量只服务布局和非 antd 区域。
-   * 表单、按钮、弹框等组件视觉交给 antd 默认样式。
-   *  0f5238
-   */
-  --echo-color-primary: #237804;
+  /* --echo-color-primary: #237804;
   --echo-color-primary-10: color-mix(in srgb, var(--echo-color-primary) 10%, transparent);
   --echo-color-page: #f8f9fa;
   --echo-color-text: #191c1d;
   --echo-color-text-black-45: rgb(25 28 29 / 45%);
   --echo-color-text-black-65: rgb(25 28 29 / 65%);
   --echo-color-text-black-85: rgb(25 28 29 / 85%);
-  --echo-border-color: rgba(15, 82, 56, 0.12);
+  --echo-border-color: rgba(15, 82, 56, 0.12); */
   --ant-button-primary-shadow: none;
 }

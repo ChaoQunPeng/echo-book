@@ -1,4 +1,4 @@
-import { Card, Empty, Tag, Timeline } from 'antd'
+import { Empty, Tag, Timeline } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -16,6 +16,18 @@ type TimelineDiary = Diary & {
   markdown: string
 }
 
+type TimelineDayGroup = {
+  key: string
+  label: string
+  diaries: TimelineDiary[]
+}
+
+type TimelineYearGroup = {
+  key: string
+  label: string
+  days: TimelineDayGroup[]
+}
+
 let timelineDiaryCache: TimelineDiary[] | null = null
 
 function TimelinePage() {
@@ -27,27 +39,39 @@ function TimelinePage() {
 
   const groupedDiaries = useMemo(() => {
     /*
-     * 时光页以创建月份分组，组内继续保持创建时间倒序。
+     * 时光页先按年份分组，再按自然日合并同一天的多篇日记。
      */
     const sortedDiaries = [...diaries].sort((firstDiary, secondDiary) => {
       return secondDiary.createdAt - firstDiary.createdAt || secondDiary.updatedAt - firstDiary.updatedAt
     })
-    const groups: Array<{ key: string; label: string; diaries: TimelineDiary[] }> = []
+    const groups: TimelineYearGroup[] = []
 
     sortedDiaries.forEach(diary => {
-      const key = formatMonthKey(diary.createdAt)
-      const existingGroup = groups.find(group => group.key === key)
+      const yearKey = formatYearKey(diary.createdAt)
+      const dayKey = formatDayKey(diary.createdAt)
+      let yearGroup = groups.find(group => group.key === yearKey)
 
-      if (existingGroup) {
-        existingGroup.diaries.push(diary)
-        return
+      if (!yearGroup) {
+        yearGroup = {
+          key: yearKey,
+          label: formatYearLabel(diary.createdAt),
+          days: []
+        }
+        groups.push(yearGroup)
       }
 
-      groups.push({
-        key,
-        label: formatMonthLabel(diary.createdAt),
-        diaries: [diary]
-      })
+      let dayGroup = yearGroup.days.find(day => day.key === dayKey)
+
+      if (!dayGroup) {
+        dayGroup = {
+          key: dayKey,
+          label: formatDayLabel(diary.createdAt),
+          diaries: []
+        }
+        yearGroup.days.push(dayGroup)
+      }
+
+      dayGroup.diaries.push(diary)
     })
 
     return groups
@@ -132,7 +156,15 @@ function TimelinePage() {
 
   return (
     <section className={styles.timelinePage}>
-      <PageHeader eyebrow="Timeline" title="时光" extra={`${diaries.length} 篇`} />
+      <PageHeader
+        eyebrow="Timeline"
+        title="时光"
+        extra={
+          <>
+            <span className={styles.timelineNumber}>{diaries.length}</span> 篇
+          </>
+        }
+      />
 
       {errorMessage ? <p className={styles.timelineError}>{errorMessage}</p> : null}
 
@@ -152,17 +184,24 @@ function TimelinePage() {
                 <h2>{group.label}</h2>
                 <Timeline
                   className={styles.timeline}
-                  titleSpan="128px"
-                  items={group.diaries.map(diary => ({
+                  titleSpan="90px"
+                  items={group.days.map(day => ({
+                    key: day.key,
                     /*
-                     * 使用 Timeline 的 title/content 分栏能力，让日期固定在左侧，日记内容显示在右侧。
+                     * 每个日期只生成一条 Timeline，右侧集中展示当天全部内容。
                      */
                     title: (
-                      <time className={styles.timelineDate} dateTime={new Date(diary.createdAt).toISOString()}>
-                        {formatCreatedAt(diary.createdAt)}
+                      <time className={styles.timelineDate} dateTime={day.key}>
+                        {day.label}
                       </time>
                     ),
-                    content: <TimelineDiaryCard diary={diary} onOpenDiary={handleOpenDiary} />
+                    content: (
+                      <div className={styles.timelineDayContent}>
+                        {day.diaries.map(diary => (
+                          <TimelineDiaryCard key={diary.id} diary={diary} onOpenDiary={handleOpenDiary} />
+                        ))}
+                      </div>
+                    )
                   }))}
                 />
               </section>
@@ -182,7 +221,7 @@ type TimelineDiaryCardProps = {
 function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
   const plainText = markdownToPlainText(diary.markdown)
   const title = buildTimelineTitle(diary.title, plainText)
-  const summary = truncateText(plainText || '没有正文预览', SUMMARY_LENGTH)
+  const summary = truncateText(plainText, SUMMARY_LENGTH)
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     /*
@@ -198,17 +237,43 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
     /*
      * 不使用 hoverable，避免 AntD 注入默认悬浮阴影。
      */
-    <Card
+    // <Card
+    //   className={`${styles.timelineCard} rounded-xl!`}
+    //   role="button"
+    //   tabIndex={0}
+    //   aria-label={`打开日记：${title}`}
+    //   onClick={() => onOpenDiary(diary.id)}
+    //   onKeyDown={handleCardKeyDown}
+    // >
+    //   <h3>{title}</h3>
+    //   <div className={styles.timelineCardMeta}>
+    //     <time dateTime={new Date(diary.createdAt).toISOString()}>{formatCreatedTime(diary.createdAt)}</time>
+    //     <span>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
+    //   </div>
+    //   <p>{summary}</p>
+    //   {diary.tags?.length ? (
+    //     <div className={styles.timelineTags}>
+    //       {diary.tags.map(tag => (
+    //         <Tag key={tag} variant="outlined" color="green">
+    //           #{tag}
+    //         </Tag>
+    //       ))}
+    //     </div>
+    //   ) : null}
+    // </Card>
+    <div
       className={`${styles.timelineCard} rounded-xl!`}
       role="button"
       tabIndex={0}
       aria-label={`打开日记：${title}`}
-      onClick={() => onOpenDiary(diary.id)}
       onKeyDown={handleCardKeyDown}
     >
-      <h3>{title}</h3>
-      <span className={styles.timelineCardMood}>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
-      <p>{summary}</p>
+      <h3 onClick={() => onOpenDiary(diary.id)}>{title}</h3>
+      <div className={styles.timelineCardMeta}>
+        <time dateTime={new Date(diary.createdAt).toISOString()}>{formatCreatedTime(diary.createdAt)}</time>
+        <span>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
+      </div>
+      {summary ? <p>{summary}</p> : null}
       {diary.tags?.length ? (
         <div className={styles.timelineTags}>
           {diary.tags.map(tag => (
@@ -218,7 +283,7 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
           ))}
         </div>
       ) : null}
-    </Card>
+    </div>
   )
 }
 
@@ -271,35 +336,54 @@ function truncateText(text: string, maxLength: number): string {
 }
 
 /**
- * 格式化月份分组 key
- * 使用 YYYY-MM 保持排序和分组稳定。
+ * 格式化年份分组 key
+ * 使用年份合并同一年的日记。
  */
-function formatMonthKey(timestamp: number): string {
+function formatYearKey(timestamp: number): string {
+  const date = new Date(timestamp)
+  return String(date.getFullYear())
+}
+
+/**
+ * 格式化日期分组 key
+ * 使用 YYYY-MM-DD 合并同一天的日记。
+ */
+function formatDayKey(timestamp: number): string {
   const date = new Date(timestamp)
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
 
-  return `${year}-${month}`
+  return `${year}-${month}-${day}`
 }
 
 /**
- * 格式化月份标题
- * 时光页按年月展示历史记录。
+ * 格式化年份标题
+ * 时光页按年展示历史记录。
  */
-function formatMonthLabel(timestamp: number): string {
+function formatYearLabel(timestamp: number): string {
   const date = new Date(timestamp)
-  return `${date.getFullYear()}年${date.getMonth() + 1}月`
+  return `${date.getFullYear()}年`
 }
 
 /**
- * 格式化卡片创建时间
- * 同一天多篇日记通过时分区分。
+ * 格式化日期标题
+ * 年份已在分组标题中展示，左侧只显示当天月日。
  */
-function formatCreatedAt(timestamp: number): string {
+function formatDayLabel(timestamp: number): string {
+  const date = new Date(timestamp)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${month}-${day}`
+}
+
+/**
+ * 格式化卡片时间
+ * 同一天多篇日记通过时分区分先后。
+ */
+function formatCreatedTime(timestamp: number): string {
   return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
   }).format(new Date(timestamp))

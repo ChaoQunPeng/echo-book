@@ -22,7 +22,7 @@ const THEME_STORAGE_KEY = 'echo-book-theme'
 
 export const DEFAULT_ECHO_THEME_ID: string = 'dust-red'
 
-export const ECHO_THEME_LAYOUT_BG = '#f5f5f5'
+export const ECHO_THEME_LAYOUT_BG = '#fafafa'
 
 const COLOR_TEXT_BASE = '#1f1f1f'
 

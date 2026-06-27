@@ -56,7 +56,7 @@ function DiaryPreview({
                   img: imageProps => <DiaryPreviewImage diaryId={diary.id} {...imageProps} />
                 }}
               >
-                {markdown || '没有正文预览'}
+                {markdown}
               </ReactMarkdown>
             ) : null}
           </div>
