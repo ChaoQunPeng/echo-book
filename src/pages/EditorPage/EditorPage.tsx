@@ -30,7 +30,7 @@ import { Button, Checkbox, Dropdown, Input, Popover, Space, Tag, Tooltip, type M
 import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Markdown, type MarkdownStorage } from 'tiptap-markdown'
+import { Markdown, type MarkdownNodeSpec, type MarkdownStorage } from 'tiptap-markdown'
 import { CLEARED_DIARY_TITLE_FALLBACK } from '../../../shared/defaultDiary'
 import type { Diary } from '../../../shared/diary'
 import { formatMood, MOODS } from '../../../shared/moods'
@@ -69,6 +69,11 @@ type DiaryImageUrlResolver = (url: string) => Promise<string>
 
 function createDiaryImageExtension(resolveImageUrl: DiaryImageUrlResolver) {
   return Image.extend({
+    addStorage() {
+      return {
+        markdown: createDiaryImageMarkdownSpec()
+      }
+    },
     parseMarkdown(token, helpers) {
       /*
        * 图片宽度保存在 Markdown title 中，重新打开编辑器时恢复到节点属性。
@@ -104,6 +109,39 @@ function createDiaryImageExtension(resolveImageUrl: DiaryImageUrlResolver) {
       return props => createDiaryImageNodeView(props, resolveImageUrl)
     }
   })
+}
+
+function createDiaryImageMarkdownSpec(): MarkdownNodeSpec {
+  return {
+    serialize(state, node) {
+      /*
+       * tiptap-markdown 使用 storage.markdown 序列化，需在这里把 width 写回 Markdown。
+       */
+      const src = typeof node.attrs?.src === 'string' ? node.attrs.src : ''
+      const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''
+      const title = serializeDiaryImageWidthTitle(node.attrs?.width) ?? (typeof node.attrs?.title === 'string' ? node.attrs.title : '')
+
+      state.write(`![${state.esc(alt)}](${src.replace(/[()]/g, '\\$&')}${title ? ` "${title.replace(/"/g, '\\"')}"` : ''})`)
+    },
+    parse: {
+      updateDOM(element) {
+        /*
+         * markdown-it 会先把图片 title 渲染成 DOM 属性，这里再恢复成 TipTap 节点 width。
+         */
+        element.querySelectorAll('img[title]').forEach(image => {
+          const title = image.getAttribute('title') ?? ''
+          const imageWidth = parseDiaryImageWidthTitle(title)
+
+          if (imageWidth === null) {
+            return
+          }
+
+          image.setAttribute('width', String(imageWidth))
+          image.removeAttribute('title')
+        })
+      }
+    }
+  }
 }
 
 function createDiaryImageNodeView({ node, extension, editor, getPos }: NodeViewRendererProps, resolveImageUrl: DiaryImageUrlResolver) {
@@ -1220,14 +1258,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
                     onClick={handleToggleOrderedList}
                   />
                 </Tooltip>
-                <Tooltip title="任务列表">
+                {/* <Tooltip title="任务列表">
                   <Button
                     icon={<CheckSquareOutlined />}
                     disabled={isToolbarDisabled}
                     type={editor.isActive('taskList') ? 'primary' : 'default'}
                     onClick={handleToggleTaskList}
                   />
-                </Tooltip>
+                </Tooltip> */}
                 <Tooltip title="插入图片">
                   <Button icon={<PictureOutlined />} disabled={isToolbarDisabled} onClick={() => imageInputRef.current?.click()} />
                 </Tooltip>
