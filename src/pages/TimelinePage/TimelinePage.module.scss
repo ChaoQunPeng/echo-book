@@ -1,0 +1,43 @@
+/*
+ * 时光页只在本页覆盖 AntD Timeline 和 Empty 的内部节点。
+ */
+.emptyMuted {
+  :global(.ant-empty-description) {
+    color: rgba(25, 28, 29, 0.62);
+  }
+}
+
+.timeline {
+  :global(.ant-timeline-item-rail),
+  :global(.ant-timeline-item-tail) {
+    border-inline-start-color: rgba(15, 82, 56, 0.18);
+  }
+
+  :global(.ant-timeline-item) {
+    padding-bottom: 180px !important;
+  }
+
+  &:global(.ant-timeline-layout-alternate) {
+    :global(.ant-timeline-item .ant-timeline-item-header) {
+      align-items: flex-start !important;
+      flex: 1 1 0 !important;
+    }
+
+    :global(.ant-timeline-item .ant-timeline-item-section) {
+      gap: 80px !important;
+    }
+  }
+}
+
+/*
+ * AntD 最后一项不会生成 rail，隐藏哨兵项只用来补齐竖线。
+ */
+.timelineSentinel {
+  display: none;
+}
+
+.zeroTagMargin {
+  :global(.ant-tag) {
+    margin-inline-end: 0;
+  }
+}

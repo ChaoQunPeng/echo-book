@@ -1,0 +1,14 @@
+/*
+ * About 弹窗只覆盖自身 Modal 的外壳样式。
+ */
+.aboutModal {
+  :global(.ant-modal-content) {
+    overflow: hidden;
+    background: var(--about-bg);
+    box-shadow: none;
+  }
+
+  :global(.ant-modal-close) {
+    color: var(--about-text-tertiary);
+  }
+}

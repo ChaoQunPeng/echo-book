@@ -1,0 +1,177 @@
+/*
+ * TipTap 正文区域由运行时 DOM 组成，样式集中在编辑器模块内维护。
+ */
+.editorContent {
+  flex: 1;
+  height: 100%;
+  min-height: inherit;
+
+  :global(.ProseMirror) {
+    min-height: 100%;
+    padding: 30px;
+    outline: none;
+    background: #fff;
+    color: var(--echo-color-base);
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  :global(.ProseMirror h1),
+  :global(.ProseMirror h2),
+  :global(.ProseMirror h3),
+  :global(.ProseMirror h4),
+  :global(.ProseMirror h5) {
+    color: var(--echo-color-base);
+    line-height: 1.25;
+  }
+
+  :global(.ProseMirror h1) {
+    margin: 22px 0 12px;
+    font-size: 28px;
+  }
+
+  :global(.ProseMirror h2) {
+    margin: 20px 0 10px;
+    font-size: 23px;
+  }
+
+  :global(.ProseMirror h3) {
+    margin: 18px 0 8px;
+    font-size: 19px;
+  }
+
+  :global(.ProseMirror h4) {
+    margin: 16px 0 8px;
+    font-size: 17px;
+  }
+
+  :global(.ProseMirror h5) {
+    margin: 14px 0 6px;
+    font-size: 15px;
+  }
+
+  :global(.ProseMirror p),
+  :global(.ProseMirror ul),
+  :global(.ProseMirror ol),
+  :global(.ProseMirror blockquote) {
+    margin: 0 0 12px;
+  }
+
+  :global(.ProseMirror ul),
+  :global(.ProseMirror ol) {
+    padding-left: 26px;
+  }
+
+  :global(.ProseMirror ul) {
+    list-style: disc;
+  }
+
+  :global(.ProseMirror ol) {
+    list-style: decimal;
+  }
+
+  :global(.ProseMirror li + li) {
+    margin-top: 4px;
+  }
+
+  :global(.ProseMirror blockquote) {
+    padding: 2px 0 2px 14px;
+    border-left: 3px solid rgba(15, 82, 56, 0.28);
+    color: rgba(25, 28, 29, 0.64);
+  }
+
+  :global(.ProseMirror a) {
+    color: var(--echo-color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  :global(.ProseMirror ul[data-type='taskList']) {
+    padding-left: 0;
+    list-style: none;
+  }
+
+  :global(.ProseMirror li[data-type='taskItem']) {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  :global(.ProseMirror li[data-type='taskItem'] > label) {
+    flex: 0 0 auto;
+    padding-top: 2px;
+  }
+
+  :global(.ProseMirror li[data-type='taskItem'] > div) {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+.tiptapProseMirror {
+  min-height: 100%;
+  padding: 30px;
+  outline: none;
+  background: #fff;
+  color: var(--echo-color-base);
+  font-size: 16px;
+  line-height: 1.8;
+
+  :global(p.is-editor-empty:first-child)::before {
+    content: attr(data-placeholder);
+    height: 0;
+    float: left;
+    color: rgba(25, 28, 29, 0.36);
+    pointer-events: none;
+  }
+}
+
+/*
+ * 图片 NodeView 不经过 React 渲染，类名由 EditorPage 创建 DOM 时注入。
+ */
+.diaryImageNodeView {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 8px 0 14px;
+  line-height: 0;
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+  }
+
+  &:hover .diaryImageResizeHandle,
+  &:focus-within .diaryImageResizeHandle,
+  &:global(.ProseMirror-selectednode) .diaryImageResizeHandle {
+    opacity: 1;
+  }
+}
+
+.diaryImageResizeHandle {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--echo-color-primary);
+  box-shadow: 0 2px 8px rgba(25, 28, 29, 0.18);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 160ms ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 4px;
+    width: 6px;
+    height: 2px;
+    border-radius: 999px;
+    background: #ffffff;
+  }
+}

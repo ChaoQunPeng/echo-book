@@ -4,3 +4,10 @@
 .embeddedEditor :global(.ant-input-affix-wrapper) {
   margin-top: 20px;
 }
+
+/*
+ * 空列表描述由 AntD Empty 生成，在列表页模块内做轻量覆盖。
+ */
+.emptyMuted :global(.ant-empty-description) {
+  color: rgba(25, 28, 29, 0.62);
+}

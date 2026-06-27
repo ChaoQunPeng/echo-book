@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
 import { formatWeather } from '../../../shared/weather'
+import styles from './DiaryPreview.module.scss'
 
 type DiaryPreviewProps = {
   diary: Diary | null
@@ -42,7 +43,7 @@ function DiaryPreview({
               {diary.tags?.length ? <span>标签：{diary.tags.join(' / ')}</span> : null}
             </div>
           </div>
-          <div className="echo-diary-preview-content text-size-16 leading-[1.9] text-color-base-85">
+          <div className={`${styles.previewContent} text-size-16 leading-[1.9] text-color-base-85`}>
             {/*
              * Markdown 正文统一在这里渲染，调用方只负责传入日记和正文内容。
              */}

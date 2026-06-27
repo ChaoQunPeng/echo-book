@@ -8,6 +8,7 @@ import { formatMood } from '../../../shared/moods'
 import { formatWeather } from '../../../shared/weather'
 import PageHeader from '../../components/PageHeader'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
+import styles from './TimelinePage.module.scss'
 
 const TIMELINE_LIMIT = 200
 const TITLE_FALLBACK_LENGTH = 20
@@ -173,7 +174,7 @@ function TimelinePage() {
         {isLoading ? <p className="grid min-h-320 place-items-center text-[rgba(25,28,29,0.62)]">正在读取时光...</p> : null}
 
         {!isLoading && diaries.length === 0 ? (
-          <div className="echo-empty-muted grid min-h-320 place-items-center text-[rgba(25,28,29,0.62)]">
+          <div className={`${styles.emptyMuted} grid min-h-320 place-items-center text-[rgba(25,28,29,0.62)]`}>
             <Empty description="还没有日记" />
           </div>
         ) : null}
@@ -184,7 +185,7 @@ function TimelinePage() {
               <section key={group.key} className="[&+&]:mt-34">
                 <h2 className="mb-24 font-mono! text-size-24 text-color-base-85">{group.label}</h2>
                 <Timeline
-                  className="echo-timeline"
+                  className={styles.timeline}
                   titleSpan="90px"
                   items={buildTimelineItems(group.key, group.days, handleOpenDiary)}
                 />
@@ -224,8 +225,7 @@ function buildTimelineItems(groupKey: string, days: TimelineDayGroup[], onOpenDi
     ...dayItems,
     {
       key: `${groupKey}-timeline-sentinel`,
-      className: 'echo-timeline-sentinel',
-      style: { display: 'none' }
+      className: styles.timelineSentinel
     }
   ]
 }
@@ -307,7 +307,7 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       </div>
       {summary ? <p className="mt-14 text-size-15 leading-[1.75] text-color-base-65">{summary}</p> : null}
       {diary.tags?.length ? (
-        <div className="echo-zero-tag-margin mt-16 flex flex-wrap gap-8">
+        <div className={`${styles.zeroTagMargin} mt-16 flex flex-wrap gap-8`}>
           {diary.tags.map(tag => (
             <Tag key={tag} variant="outlined" color="green">
               #{tag}

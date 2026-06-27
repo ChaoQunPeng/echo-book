@@ -1,11 +1,4 @@
-import {
-  BulbOutlined,
-  EditOutlined,
-  ExportOutlined,
-  FieldTimeOutlined,
-  ReadOutlined,
-  SettingOutlined
-} from '@ant-design/icons'
+import { BulbOutlined, EditOutlined, ExportOutlined, FieldTimeOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons'
 import { App as AntdApp, Button } from 'antd'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -105,7 +98,8 @@ function AppSidebar() {
         <div className="px-24 pb-24 pt-32">
           {/* 使用独立 logo 资源，避免品牌字样在组件里重复维护。 */}
           <img className="block h-auto w-140" src={logoUrl} alt="爱可日记" />
-          <div className="mt-12 text-size-14 text-color-base-65">爱生活，可记录</div>
+          {/* 爱生活，可记录 */}
+          <div className="mt-12 text-size-14 text-color-base-65 pl-2">陪你记下每一天</div>
         </div>
 
         {/*
@@ -137,7 +131,7 @@ function AppSidebar() {
             loading={isCreatingDiary}
             onClick={handleCreateDiary}
           >
-            <span>新日记</span>
+            <span>写日记</span>
           </Button>
 
           <Button
@@ -168,7 +162,7 @@ function AppSidebar() {
               )
             })}
 
-            <SidebarAction label="关于爱可日记" onClick={handleOpenAbout}>
+            <SidebarAction label="关于爱可" onClick={handleOpenAbout}>
               <BulbOutlined className="text-size-14 mr-12" />
             </SidebarAction>
           </nav>

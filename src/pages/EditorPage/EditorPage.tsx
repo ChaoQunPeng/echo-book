@@ -37,6 +37,7 @@ import { formatMood, MOODS } from '../../../shared/moods'
 import { formatWeather, WEATHERS } from '../../../shared/weather'
 import type { TagLibraryItem } from '../../../shared/tags'
 import TagManagerDialog from './TagManagerDialog'
+import styles from './EditorPage.module.scss'
 
 const DEFAULT_TAG_COLOR = '#237804'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
@@ -115,8 +116,8 @@ function createDiaryImageNodeView({ node, extension, editor, getPos }: NodeViewR
   const imageElement = document.createElement('img')
   const resizeHandle = document.createElement('span')
 
-  wrapperElement.className = 'echo-diary-image-node-view'
-  resizeHandle.className = 'echo-diary-image-resize-handle'
+  wrapperElement.className = styles.diaryImageNodeView
+  resizeHandle.className = styles.diaryImageResizeHandle
   resizeHandle.setAttribute('role', 'presentation')
   wrapperElement.append(imageElement, resizeHandle)
 
@@ -425,7 +426,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       textDirection: 'auto',
       editorProps: {
         attributes: {
-          class: 'echo-tiptap-prosemirror',
+          class: styles.tiptapProseMirror,
           'aria-label': '日记正文'
         },
         handlePaste(_view, event) {
@@ -1235,7 +1236,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
             <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
             <EditorContent
               editor={editor}
-              className="echo-editor-content min-h-[inherit] flex-1 overflow-auto font-[inherit] text-color-base"
+              className={`${styles.editorContent} min-h-[inherit] flex-1 overflow-auto font-[inherit] text-color-base`}
             />
           </>
         ) : null}

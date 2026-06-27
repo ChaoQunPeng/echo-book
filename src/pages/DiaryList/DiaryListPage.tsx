@@ -330,7 +330,7 @@ function DiaryListPage() {
         {isLoading ? <DiaryListLoading /> : null}
 
         {!isLoading && !hasAnyDiary && !hasActiveSearch ? (
-          <div className="echo-empty-muted grid h-full min-h-360 place-items-center text-color-base-65">
+          <div className={`${styles.emptyMuted} grid h-full min-h-360 place-items-center text-color-base-65`}>
             {/*
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
              */}

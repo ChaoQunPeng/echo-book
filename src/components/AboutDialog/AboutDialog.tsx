@@ -1,5 +1,6 @@
 import { Modal, Typography, theme as antdTheme } from 'antd'
 import type { CSSProperties } from 'react'
+import styles from './AboutDialog.module.scss'
 
 type AboutDialogProps = {
   open: boolean
@@ -42,7 +43,7 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
       footer={null}
       width={640} /* 收紧宽度，让文字层级成为主要视觉区分 */
       centered
-      className="echo-about-modal"
+      className={styles.aboutModal}
       style={aboutStyle}
       styles={{
         body: {
