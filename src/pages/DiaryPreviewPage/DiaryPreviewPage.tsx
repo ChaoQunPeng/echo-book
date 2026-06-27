@@ -5,7 +5,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import DiaryPreview from '../../components/DiaryPreview'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
-import styles from './DiaryPreviewPage.module.scss'
 
 function DiaryPreviewPage() {
   const navigate = useNavigate()
@@ -83,8 +82,8 @@ function DiaryPreviewPage() {
   }, [diaryId])
 
   return (
-    <section className={styles.diaryPreviewPage}>
-      <header className={styles.diaryPreviewPageHeader}>
+    <section className="flex h-full flex-col bg-page">
+      <header className="flex flex-[0_0_auto] items-center justify-between gap-12 border-b border-[rgba(15,82,56,0.08)] bg-white px-24 py-16">
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
           返回
         </Button>
@@ -94,7 +93,7 @@ function DiaryPreviewPage() {
       </header>
 
       <DiaryPreview
-        className={styles.diaryPreviewPageContent}
+        className="flex-1"
         diary={diary}
         markdown={markdown}
         loading={isLoading}

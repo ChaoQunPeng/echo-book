@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
 import { formatWeather } from '../../../shared/weather'
-import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
 
 type DiaryListPanelProps = {
@@ -108,10 +107,11 @@ function DiaryListPanel({
   }
 
   return (
-    <aside className={styles.diaryListPanel}>
-      <div className={styles.diaryListToolbar}>
+    <aside className="flex w-320 flex-col overflow-hidden border-r border-[rgba(15,82,56,0.12)] bg-page">
+      <div className="flex flex-[0_0_auto] gap-10 border-b border-[rgba(25,28,29,0.08)] bg-white p-12">
         <Input
           allowClear
+          className="min-w-0 flex-1"
           variant="borderless"
           prefix={<SearchOutlined />}
           placeholder="搜索标题或正文"
@@ -130,7 +130,7 @@ function DiaryListPanel({
           placement="bottomRight"
         >
           <FilterOutlined
-            className={styles.diaryDateFilterIcon}
+            className="inline-flex h-32 w-32 flex-[0_0_32px] cursor-pointer items-center justify-center rounded-[6px] text-[rgba(25,28,29,0.72)] transition-colors duration-[160ms] ease-in-out hover:bg-[rgba(15,82,56,0.08)] hover:text-primary focus-visible:bg-[rgba(15,82,56,0.08)] focus-visible:text-primary focus-visible:outline-none"
             role="button"
             tabIndex={0}
             aria-label={`按创建时间筛选，当前：${currentDateFilterLabel}`}
@@ -139,25 +139,32 @@ function DiaryListPanel({
         </Dropdown>
       </div>
 
-      <div className={styles.diaryListScrollArea}>
+      <div className="min-h-0 flex-1 overflow-auto">
         {groupedDiaries.length === 0 ? (
-          <div className={styles.diaryListNoResult}>
-            <h2>没有匹配的日记</h2>
+          <div className="grid h-full min-h-280 place-items-center content-center gap-8 text-center text-[rgba(25,28,29,0.62)]">
+            <h2 className="text-size-18 text-foreground">没有匹配的日记</h2>
             <p>换个关键词或筛选条件试试。</p>
           </div>
         ) : (
           groupedDiaries.map(group => (
-            <section key={group.key} className={styles.diaryListGroup}>
-              <div className={styles.groupLabel}>{group.label}</div>
-              <ul className={styles.diaryList}>
+            <section key={group.key}>
+              <div className="px-24 py-16">{group.label}</div>
+              <ul className="flex list-none flex-col gap-6">
                 {group.diaries.map(diary => {
                   return (
-                    <li key={diary.id} className={styles.diaryListItemWrapper}>
+                    <li key={diary.id} className="relative">
                       <div
                         role="button"
                         tabIndex={0}
                         className={
-                          diary.id === selectedDiaryId ? `${styles.diaryListItem} ${styles.diaryListItemActive}` : styles.diaryListItem
+                          [
+                            'relative block cursor-pointer bg-white py-24 pl-24 pr-56 text-inherit no-underline transition-all duration-[160ms] ease-in-out hover:border-l-[3px] hover:border-primary hover:bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]',
+                            diary.id === selectedDiaryId
+                              ? 'border-l-[3px] border-primary bg-[color-mix(in_srgb,var(--echo-color-primary)_5%,#ffffff)]'
+                              : ''
+                          ]
+                            .filter(Boolean)
+                            .join(' ')
                         }
                         onClick={() => navigate(`/list/${diary.id}`)}
                         onKeyDown={event => {
@@ -167,11 +174,13 @@ function DiaryListPanel({
                           }
                         }}
                       >
-                        <div className={`${styles.diaryListDate} text-size-14 mb-4`}>{formatCreatedTime(diary.createdAt)}</div>
-                        <div className={styles.diaryListTitle}>{diary.title}</div>
-                        <div className={`${styles.diaryListSummary} mt-8`}>{buildDiaryMetaSummary(diary)}</div>
+                        <div className="mb-4 text-size-14 text-primary">{formatCreatedTime(diary.createdAt)}</div>
+                        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-size-16 text-foreground">{diary.title}</div>
+                        <div className="mt-8 overflow-hidden text-ellipsis whitespace-nowrap text-size-12 leading-[1.5] text-[rgba(25,28,29,0.62)]">
+                          {buildDiaryMetaSummary(diary)}
+                        </div>
                       </div>
-                      <div className={styles.diaryListActions}>
+                      <div className="absolute right-14 top-14">
                         <Dropdown
                           trigger={['click']}
                           placement="bottomRight"
@@ -207,7 +216,7 @@ function DiaryListPanel({
                           <Button
                             type="text"
                             shape="circle"
-                            className={styles.diaryListActionTrigger}
+                            className="h-30! w-30! text-[rgba(25,28,29,0.58)] hover:bg-[rgba(15,82,56,0.08)]! hover:text-primary! focus-visible:bg-[rgba(15,82,56,0.08)]! focus-visible:text-primary!"
                             icon={<MoreOutlined />}
                             aria-label={`${diary.title} 更多操作`}
                             onClick={event => event.stopPropagation()}

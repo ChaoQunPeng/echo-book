@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom'
 import AppSidebar from './AppSidebar'
-import styles from './AppShellLayout.module.scss'
 
 function AppShellLayout() {
   /*
@@ -8,10 +7,10 @@ function AppShellLayout() {
    * 右侧主区域继续通过 Outlet 渲染当前页面。
    */
   return (
-    <div className={styles.appShell}>
+    <div className="flex h-screen bg-page text-foreground">
       <AppSidebar />
 
-      <div className={styles.mainContainer}>
+      <div className="flex-1">
         <Outlet />
       </div>
     </div>

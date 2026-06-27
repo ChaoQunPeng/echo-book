@@ -1,7 +1,6 @@
 import { Button, Typography } from 'antd'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logoUrl from '../assets/logo.svg'
-import styles from '../layouts/AppShellLayout.module.scss'
 
 const WELCOME_COMPLETED_STORAGE_KEY = 'echo-diary-welcome-completed'
 const HOME_PATH = '/list'
@@ -137,7 +136,7 @@ export function WelcomePage() {
       <section className="mx-auto flex min-h-screen w-full max-w-560 items-center justify-center py-56">
         <div className="flex flex-col items-center text-center">
           {/* 欢迎页复用品牌 logo 资源，避免首页标题和侧边栏品牌露出不一致。 */}
-          <img className={`${styles.logoImage} echo-welcome-logo mb-18!`} src={logoUrl} alt="爱可日记" />
+          <img className="echo-welcome-logo mb-18!" src={logoUrl} alt="爱可日记" />
           <Typography.Text className="echo-welcome-slogan text-size-17 font-normal text-black-65">陪你记下每一天</Typography.Text>
 
           <Button

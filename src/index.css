@@ -46,3 +46,304 @@ body,
 .ant-btn {
   box-shadow: none !important;
 }
+
+/*
+ * 第三方组件内部节点无法直接写 Tailwind className，这里只保留必要的全局桥接样式。
+ */
+.echo-empty-muted .ant-empty-description {
+  color: rgba(25, 28, 29, 0.62);
+}
+
+.echo-zero-tag-margin .ant-tag {
+  margin-inline-end: 0;
+}
+
+.echo-timeline .ant-timeline-item-tail {
+  border-inline-start-color: rgba(15, 82, 56, 0.18);
+}
+
+.echo-timeline .ant-timeline-item {
+  padding-bottom: 180px !important;
+}
+
+.echo-timeline.ant-timeline-layout-alternate .ant-timeline-item .ant-timeline-item-header {
+  align-items: flex-start !important;
+  flex: 1 1 0 !important;
+}
+
+.echo-timeline.ant-timeline-layout-alternate .ant-timeline-item .ant-timeline-item-section {
+  gap: 80px !important;
+}
+
+/* Markdown 预览内容由 react-markdown 生成，需要用后代选择器统一排版。 */
+.echo-diary-preview-content h1,
+.echo-diary-preview-content h2,
+.echo-diary-preview-content h3,
+.echo-diary-preview-content h4 {
+  margin: 1.4em 0 0.55em;
+  color: var(--echo-color-text);
+  line-height: 1.35;
+}
+
+.echo-diary-preview-content h1 {
+  font-size: 24px;
+}
+
+.echo-diary-preview-content h2 {
+  font-size: 21px;
+}
+
+.echo-diary-preview-content h3 {
+  font-size: 18px;
+}
+
+.echo-diary-preview-content p,
+.echo-diary-preview-content ul,
+.echo-diary-preview-content ol,
+.echo-diary-preview-content blockquote,
+.echo-diary-preview-content pre,
+.echo-diary-preview-content table {
+  margin: 0 0 14px;
+}
+
+.echo-diary-preview-content ul,
+.echo-diary-preview-content ol {
+  padding-left: 24px;
+}
+
+.echo-diary-preview-content ul {
+  list-style: disc;
+}
+
+.echo-diary-preview-content ol {
+  list-style: decimal;
+}
+
+.echo-diary-preview-content li + li {
+  margin-top: 4px;
+}
+
+.echo-diary-preview-content blockquote {
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid rgba(15, 82, 56, 0.28);
+  color: rgba(25, 28, 29, 0.64);
+}
+
+.echo-diary-preview-content code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(15, 82, 56, 0.08);
+  color: var(--echo-color-text);
+  font-size: 0.92em;
+}
+
+.echo-diary-preview-content pre {
+  overflow: auto;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f6f8f7;
+}
+
+.echo-diary-preview-content pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.echo-diary-preview-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.echo-diary-preview-content th,
+.echo-diary-preview-content td {
+  padding: 8px 10px;
+  border: 1px solid rgba(25, 28, 29, 0.12);
+  text-align: left;
+}
+
+.echo-diary-preview-content th {
+  background: rgba(15, 82, 56, 0.06);
+  color: var(--echo-color-text);
+  font-weight: 700;
+}
+
+.echo-diary-preview-content a {
+  color: var(--echo-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* TipTap 编辑器正文和图片 NodeView 都是运行时 DOM，需要集中在全局入口维护。 */
+.echo-editor-content {
+  flex: 1;
+  height: 100%;
+  min-height: inherit;
+}
+
+.echo-editor-content .ProseMirror,
+.echo-tiptap-prosemirror {
+  min-height: 100%;
+  padding: 30px;
+  outline: none;
+  background: #fff;
+  color: var(--echo-color-text);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.echo-tiptap-prosemirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  height: 0;
+  float: left;
+  color: rgba(25, 28, 29, 0.36);
+  pointer-events: none;
+}
+
+.echo-editor-content .ProseMirror h1,
+.echo-editor-content .ProseMirror h2,
+.echo-editor-content .ProseMirror h3,
+.echo-editor-content .ProseMirror h4,
+.echo-editor-content .ProseMirror h5 {
+  color: var(--echo-color-text);
+  line-height: 1.25;
+}
+
+.echo-editor-content .ProseMirror h1 {
+  margin: 22px 0 12px;
+  font-size: 28px;
+}
+
+.echo-editor-content .ProseMirror h2 {
+  margin: 20px 0 10px;
+  font-size: 23px;
+}
+
+.echo-editor-content .ProseMirror h3 {
+  margin: 18px 0 8px;
+  font-size: 19px;
+}
+
+.echo-editor-content .ProseMirror h4 {
+  margin: 16px 0 8px;
+  font-size: 17px;
+}
+
+.echo-editor-content .ProseMirror h5 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+}
+
+.echo-editor-content .ProseMirror p,
+.echo-editor-content .ProseMirror ul,
+.echo-editor-content .ProseMirror ol,
+.echo-editor-content .ProseMirror blockquote {
+  margin: 0 0 12px;
+}
+
+.echo-editor-content .ProseMirror ul,
+.echo-editor-content .ProseMirror ol {
+  padding-left: 26px;
+}
+
+.echo-editor-content .ProseMirror ul {
+  list-style: disc;
+}
+
+.echo-editor-content .ProseMirror ol {
+  list-style: decimal;
+}
+
+.echo-editor-content .ProseMirror li + li {
+  margin-top: 4px;
+}
+
+.echo-editor-content .ProseMirror blockquote {
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid rgba(15, 82, 56, 0.28);
+  color: rgba(25, 28, 29, 0.64);
+}
+
+.echo-editor-content .ProseMirror a {
+  color: var(--echo-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.echo-editor-content .ProseMirror ul[data-type='taskList'] {
+  padding-left: 0;
+  list-style: none;
+}
+
+.echo-editor-content .ProseMirror li[data-type='taskItem'] {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.echo-editor-content .ProseMirror li[data-type='taskItem'] > label {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.echo-editor-content .ProseMirror li[data-type='taskItem'] > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.echo-diary-image-node-view {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 8px 0 14px;
+  line-height: 0;
+}
+
+.echo-diary-image-node-view img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.echo-diary-image-resize-handle {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--echo-color-primary);
+  box-shadow: 0 2px 8px rgba(25, 28, 29, 0.18);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.echo-diary-image-resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 4px;
+  width: 6px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.echo-diary-image-node-view:hover .echo-diary-image-resize-handle,
+.echo-diary-image-node-view:focus-within .echo-diary-image-resize-handle,
+.echo-diary-image-node-view.ProseMirror-selectednode .echo-diary-image-resize-handle {
+  opacity: 1;
+}
+
+.echo-about-modal .ant-modal-content {
+  overflow: hidden;
+  background: var(--about-bg);
+  box-shadow: none;
+}
+
+.echo-about-modal .ant-modal-close {
+  color: var(--about-text-tertiary);
+}

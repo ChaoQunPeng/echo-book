@@ -35,7 +35,6 @@ import type { Diary } from '../../../shared/diary'
 import { formatMood, MOODS } from '../../../shared/moods'
 import { formatWeather, WEATHERS } from '../../../shared/weather'
 import type { TagLibraryItem } from '../../../shared/tags'
-import styles from './EditorPage.module.scss'
 import TagManagerDialog from './TagManagerDialog'
 
 const DEFAULT_TAG_COLOR = '#237804'
@@ -112,8 +111,8 @@ function createDiaryImageNodeView({ node, extension, editor, getPos }: NodeViewR
   const imageElement = document.createElement('img')
   const resizeHandle = document.createElement('span')
 
-  wrapperElement.className = styles.diaryImageNodeView
-  resizeHandle.className = styles.diaryImageResizeHandle
+  wrapperElement.className = 'echo-diary-image-node-view'
+  resizeHandle.className = 'echo-diary-image-resize-handle'
   resizeHandle.setAttribute('role', 'presentation')
   wrapperElement.append(imageElement, resizeHandle)
 
@@ -422,7 +421,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
       textDirection: 'auto',
       editorProps: {
         attributes: {
-          class: styles.tiptapProseMirror,
+          class: 'echo-tiptap-prosemirror',
           'aria-label': '日记正文'
         },
         handlePaste(_view, event) {
@@ -983,23 +982,23 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
   })
 
   const tagPopoverContent = (
-    <div className={styles.tagPopoverContent}>
+    <div className="flex max-h-260 min-w-220 flex-col gap-4 overflow-auto">
       {selectableTags.length ? (
         selectableTags.map(tag => (
           <Checkbox
             key={tag.name}
             checked={selectedTags.includes(tag.name)}
-            className={styles.tagPopoverCheckbox}
+            className="m-0! min-h-30 w-full rounded-[6px] px-6 py-4 hover:bg-[rgba(25,28,29,0.04)]"
             onChange={event => handleTagCheckedChange(tag.name, event.target.checked)}
           >
-            <span className={styles.tagOptionLabel}>
-              <span className={styles.tagOptionDot} style={{ backgroundColor: tag.color }} />
+            <span className="inline-flex min-w-0 items-center gap-8">
+              <span className="h-8 w-8 flex-[0_0_auto] rounded-full" style={{ backgroundColor: tag.color }} />
               <span>{tag.name}</span>
             </span>
           </Checkbox>
         ))
       ) : (
-        <span className={styles.tagPopoverEmpty}>暂无标签</span>
+        <span className="text-size-13 text-black-45">暂无标签</span>
       )}
     </div>
   )
@@ -1009,9 +1008,9 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
    * 新日记由入口按钮先创建记录，再携带 id 跳转到这里。
    */
   return (
-    <section className={className ? `${styles.editorPage} ${className}` : styles.editorPage}>
-      <header className={styles.editorPageHeader}>
-        <div className={styles.editorPageActions}>
+    <section className={['flex h-full flex-col', className].filter(Boolean).join(' ')}>
+      <header className="flex p-12">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-12">
           {/*
            * 内嵌在列表页时不显示返回入口，避免右侧编辑器影响左侧列表导航。
            */}
@@ -1025,7 +1024,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
 
       <div className="ml-16">
         <Input
-          className={`${styles.editorTitleInput} mb-12`}
+          className="mb-12 h-52 pl-0 text-size-20"
           value={title}
           variant="borderless"
           placeholder="给这一天起个名字"
@@ -1038,7 +1037,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
         />
       </div>
 
-      <div className={styles.editorMetaRow}>
+      <div className="flex flex-wrap items-center gap-12 border-b border-primary-soft pb-12 pl-12 pr-20">
         <Popover
           content={moodPopoverContent}
           trigger="click"
@@ -1097,14 +1096,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
 
       <TagManagerDialog open={isTagManagerOpen} onOpenChange={setIsTagManagerOpen} onTagsChanged={loadTagLibrary} />
 
-      {loadError ? <p className={styles.editorPageError}>{loadError}</p> : null}
+      {loadError ? <p className="text-size-13 leading-[1.5] text-[#b42318]">{loadError}</p> : null}
 
-      <div className={styles.editorPageWorkspace}>
+      <div className="flex min-h-0 flex-1 flex-col">
         {isEditorReady ? (
           <>
             {editor ? (
               <div
-                className={styles.simpleEditorToolbar}
+                className="flex flex-wrap items-center gap-6 border-b border-primary-soft bg-page px-20 py-8"
                 role="toolbar"
                 aria-label="TipTap Simple editor 工具栏"
                 onMouseDown={handleEditorToolbarMouseDown}
@@ -1118,7 +1117,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                 <Tooltip title="重做">
                   <Button icon={<RedoOutlined />} disabled={!canRedo} onClick={handleRedo} />
                 </Tooltip>
-                <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
+                <span className="mx-2 h-22 w-1 bg-primary-soft" aria-hidden="true" />
                 <Tooltip title="标题大小">
                   <Dropdown
                     disabled={isToolbarDisabled}
@@ -1150,7 +1149,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
                     onClick={handleToggleItalic}
                   />
                 </Tooltip>
-                <span className={styles.simpleEditorToolbarDivider} aria-hidden="true" />
+                <span className="mx-2 h-22 w-1 bg-primary-soft" aria-hidden="true" />
                 <Tooltip title="无序列表">
                   <Button
                     icon={<UnorderedListOutlined />}
@@ -1181,13 +1180,13 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, className = ''
               </div>
             ) : null}
             <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleImageInputChange} />
-            <EditorContent editor={editor} className={styles.editorPageMilkdown} />
+            <EditorContent editor={editor} className="echo-editor-content min-h-[inherit] flex-1 overflow-auto font-[inherit] text-foreground" />
           </>
         ) : null}
       </div>
 
-      <footer className={styles.editorPageFooter}>
-        <span className={styles.editorPageStatus} aria-live="polite">
+      <footer className="flex items-center justify-between border-t border-primary-soft px-20 py-16">
+        <span className="text-size-13 leading-[1.4] text-[rgba(25,28,29,0.62)]" aria-live="polite">
           {saveStatus}
           {lastSavedAt ? ` · 上次保存时间：${formatLastSavedAt(lastSavedAt)}` : ''}
         </span>
@@ -1231,24 +1230,29 @@ function renderMetadataPopoverContent({
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
 }) {
   return (
-    <div className={styles.metadataPopoverContent}>
+    <div className="flex min-w-180 flex-col gap-4">
       {options.map(option => (
         <div
           key={option.name}
-          className={selectedValue === option.name ? `${styles.metadataPopoverOption} ${styles.metadataPopoverOptionActive}` : styles.metadataPopoverOption}
+          className={[
+            'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-foreground outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]',
+            selectedValue === option.name ? 'bg-primary-soft font-bold text-primary' : ''
+          ]
+            .filter(Boolean)
+            .join(' ')}
           role="button"
           tabIndex={0}
           aria-pressed={selectedValue === option.name}
           onClick={() => onSelect(option.name)}
           onKeyDown={onKeyDown}
         >
-          <span className={styles.metadataPopoverEmoji}>{option.emoji}</span>
+          <span className="w-20 text-center">{option.emoji}</span>
           <span>{option.name}</span>
         </div>
       ))}
       {selectedValue ? (
         <div
-          className={styles.metadataPopoverClear}
+          className="mt-4 flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] border-t border-[rgba(25,28,29,0.08)] px-8 py-5 text-[rgba(25,28,29,0.55)] outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]"
           role="button"
           tabIndex={0}
           onClick={() => onSelect('')}

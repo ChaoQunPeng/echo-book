@@ -10,7 +10,6 @@ import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import EditorPage from '../EditorPage'
 import DiaryListLoading from './DiaryListLoading'
 import DiaryListPanel from './DiaryListPanel'
-import styles from './DiaryListPage.module.scss'
 import type { DateFilterValue } from './types'
 
 const DATE_FILTER_OPTIONS: Array<{ value: DateFilterValue; label: string }> = [
@@ -285,14 +284,14 @@ function DiaryListPage() {
    * 列表页只负责查询、跳转和删除，具体正文编辑留给 EditorPage 处理。
    */
   return (
-    <section className={styles.diaryListPage}>
-      {errorMessage ? <p className={styles.diaryListPageError}>{errorMessage}</p> : null}
+    <section className="flex h-full">
+      {errorMessage ? <p className="text-size-13 leading-[1.5] text-[#b42318]">{errorMessage}</p> : null}
 
-      <div className={styles.diaryListPageContent}>
+      <div className="min-h-0 flex-1">
         {isLoading ? <DiaryListLoading /> : null}
 
         {!isLoading && !hasAnyDiary && !hasActiveSearch ? (
-          <div className={styles.diaryListPageEmptyState}>
+          <div className="echo-empty-muted grid h-full min-h-360 place-items-center text-black-65">
             {/*
              * 空列表使用 antd Empty 统一缺省图和描述，按钮保留在中间主操作位。
              */}
@@ -305,7 +304,7 @@ function DiaryListPage() {
         ) : null}
 
         {!isLoading && (hasAnyDiary || hasActiveSearch) ? (
-          <div className={styles.diarySplitLayout}>
+          <div className="flex h-full">
             <DiaryListPanel
               dateFilter={dateFilter}
               dateFilterMenuItems={DATE_FILTER_MENU_ITEMS}
@@ -323,9 +322,9 @@ function DiaryListPage() {
               /*
                * 右侧直接渲染 EditorPage，选中左侧条目后即可编辑当前日记。
                */
-              <EditorPage className={styles.diaryEditorPanel} diaryId={selectedDiary.id} embedded onDiarySaved={handleDiarySaved} />
+              <EditorPage className="h-full min-h-0 min-w-0 flex-1 overflow-auto" diaryId={selectedDiary.id} embedded onDiarySaved={handleDiarySaved} />
             ) : (
-              <div className={styles.diaryEditorEmpty}>
+              <div className="grid flex-1 place-items-center text-[rgba(25,28,29,0.62)]">
                 <Empty description="左侧选中后，这里会展示编辑器。" />
               </div>
             )}

@@ -1,6 +1,5 @@
 import { Modal, Typography, theme as antdTheme } from 'antd'
 import type { CSSProperties } from 'react'
-import styles from './AboutDialog.module.scss'
 
 type AboutDialogProps = {
   open: boolean
@@ -43,7 +42,7 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
       footer={null}
       width={640} /* 收紧宽度，让文字层级成为主要视觉区分 */
       centered
-      className={styles.aboutModal}
+      className="echo-about-modal"
       style={aboutStyle}
       styles={{
         body: {
@@ -51,9 +50,9 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
         }
       }}
     >
-      <section className={styles.aboutDialog} aria-labelledby="about-dialog-title">
-        <div className={styles.aboutInner}>
-          <Typography.Text className={styles.aboutEyebrow}>About Echo Book</Typography.Text>
+      <section className="pb-42 pl-32 pt-40" aria-labelledby="about-dialog-title">
+        <div className="w-full max-w-520 text-size-16">
+          <Typography.Text className="text-size-12 font-medium uppercase text-[var(--about-text-tertiary)]">About Echo Book</Typography.Text>
           <Typography.Title level={2} className="mt-4!">
             关于爱可日记
           </Typography.Title>
@@ -62,12 +61,12 @@ function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           {/* <div>爱可日记是一款本地优先的日记应用：</div> */}
 
           {/* 只用字号、字重和颜色建立层级，不额外做块状分隔。 */}
-          <div className={styles.aboutPrinciples}>
+          <div className="mt-30 flex flex-col gap-32">
             {aboutPrinciples.map(principle => (
               <div key={principle.title} className="">
-                <div className={styles.principleTitle}>
+                <div className="mb-8 flex items-center gap-10 text-size-18 font-bold">
                   {/* 小方块用于给原则标题增加轻量装饰。 */}
-                  <span className={styles.principleMarker} aria-hidden="true" />
+                  <span className="h-8 w-8 flex-[0_0_auto] rounded-[2px] bg-[var(--about-accent)]" aria-hidden="true" />
                   <span>{principle.title}</span>
                 </div>
                 <div className="text-black-65! mb-4 ml-18">{principle.description}</div>

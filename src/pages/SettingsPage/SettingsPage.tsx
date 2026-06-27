@@ -7,7 +7,6 @@ import PageHeader from '../../components/PageHeader'
 import { useEchoTheme } from '../../contexts/EchoThemeContext'
 import { ECHO_THEME_LAYOUT_BG, ECHO_THEMES } from '../../utils/theme'
 import type { EchoThemeId } from '../../utils/theme'
-import styles from './SettingsPage.module.scss'
 
 function SettingsPage() {
   /*
@@ -238,12 +237,13 @@ function SettingsPage() {
   }
 
   return (
-    <section className={styles.settingsPage}>
+    <section className="flex h-full flex-col bg-page">
       <PageHeader eyebrow="Settings" title="设置" />
 
-      <div className={styles.settingsScrollArea}>
-        <div className={styles.settingsContent}>
+      <div className="min-h-0 flex-1 overflow-auto px-48 pb-56 pt-26">
+        <div className="mx-auto grid max-w-960 grid-cols-1 gap-16">
           <Card
+            className="rounded-[8px]!"
             title={
               <Space size={8}>
                 <BgColorsOutlined />
@@ -251,7 +251,7 @@ function SettingsPage() {
               </Space>
             }
           >
-            <div className={styles.themeGrid}>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-12">
               {ECHO_THEMES.map(theme => {
                 const isActive = theme.id === themeId
 
@@ -259,12 +259,17 @@ function SettingsPage() {
                   <button
                     key={theme.id}
                     type="button"
-                    className={isActive ? `${styles.themeOption} ${styles.themeOptionActive}` : styles.themeOption}
+                    className={[
+                      'flex min-h-74 w-full cursor-pointer items-center gap-12 rounded-[8px] border border-[var(--echo-border-color)] bg-white p-12 text-left text-foreground transition-[border-color,box-shadow,transform] duration-[160ms] ease-in-out hover:-translate-y-1 hover:border-primary',
+                      isActive ? 'border-primary' : ''
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     aria-pressed={isActive}
                     onClick={() => handleThemeChange(theme.id)}
                   >
                     <span
-                      className={styles.themePreview}
+                      className="inline-flex h-42 w-42 flex-[0_0_42px] items-center justify-center rounded-full border border-[#f0f0f0] bg-[linear-gradient(135deg,var(--theme-primary)_0_50%,white_50%),var(--theme-page)] text-size-16"
                       style={
                         {
                           '--theme-primary': theme.colorPrimary,
@@ -272,10 +277,10 @@ function SettingsPage() {
                         } as CSSProperties
                       }
                     ></span>
-                    <span className={`${styles.themeText}`}>
-                      <span className={styles.themeName}>{theme.name}</span>
-                      <span className={styles.themeDescription}>{theme.descriptions}</span>
-                      {isActive ? <CheckOutlined /> : null}
+                    <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                      <span className="col-start-1 text-size-15 font-semibold">{theme.name}</span>
+                      <span className="col-start-1 text-size-13 text-black-65">{theme.descriptions}</span>
+                      {isActive ? <CheckOutlined className="col-start-2 row-span-2 row-start-1 text-primary" /> : null}
                     </span>
                   </button>
                 )
@@ -284,6 +289,7 @@ function SettingsPage() {
           </Card>
 
           <Card
+            className="rounded-[8px]!"
             title={
               <Space size={8}>
                 <FolderOpenOutlined />
@@ -291,7 +297,7 @@ function SettingsPage() {
               </Space>
             }
           >
-            {settingsError ? <Alert className={styles.settingsAlert} message={settingsError} type="error" showIcon /> : null}
+            {settingsError ? <Alert className="mb-16" message={settingsError} type="error" showIcon /> : null}
             <Form layout="vertical">
               {/*
                * Input 保持 readOnly，便于用户选中复制路径。

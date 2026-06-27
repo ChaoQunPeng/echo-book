@@ -2,7 +2,6 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, ColorPicker, Input, Modal, Popconfirm, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
 import type { TagLibraryItem } from '../../../shared/tags'
-import styles from './TagManagerDialog.module.scss'
 
 const DEFAULT_TAG_COLOR = '#237804'
 const TAG_COLOR_OPTIONS = ['#237804', '#1677ff', '#13c2c2', '#722ed1', '#eb2f96', '#fa8c16', '#a0d911', '#8c8c8c']
@@ -113,18 +112,21 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
       footer={null}
       width={640}
     >
-      <div className={styles.dialogBody}>
-        <div className={styles.tagListPanel}>
-          <p className={styles.panelTitle}>标签库</p>
-          <div className={styles.tagList}>
+      <div className="grid grid-cols-[minmax(0,1fr)_260px] gap-32 max-[720px]:grid-cols-1">
+        <div className="flex min-w-0 flex-col gap-12">
+          <p className="text-size-13 text-[rgba(25,28,29,0.7)]">标签库</p>
+          <div className="flex flex-col gap-12">
             {storedTags.length ? (
               storedTags.map(tag => (
-                <div key={tag.name} className={styles.tagRow}>
-                  <span className={styles.tagCheckLabel}>
+                <div
+                  key={tag.name}
+                  className="grid min-h-40 grid-cols-[1fr_auto] items-center gap-8 rounded-[8px] border border-[rgba(25,28,29,0.1)] bg-white px-8 py-6"
+                >
+                  <span className="inline-flex min-w-0 items-center gap-8">
                     <TagColorDot color={tag.color} />
-                    <span className={styles.tagChipText}>{tag.name}</span>
+                    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{tag.name}</span>
                   </span>
-                  <div className={styles.tagActions}>
+                  <div className="flex gap-4">
                     <Tooltip title="编辑标签">
                       <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEditTag(tag)} />
                     </Tooltip>
@@ -143,38 +145,43 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
                 </div>
               ))
             ) : (
-              <p className={styles.emptyText}>暂无标签，先创建一个。</p>
+              <p className="text-size-13 leading-[1.5] text-black-45">暂无标签，先创建一个。</p>
             )}
           </div>
         </div>
 
-        <div className={styles.tagEditorPanel}>
-          <p className={styles.panelTitle}>{isEditingTag ? '编辑标签' : '创建标签'}</p>
-          <div className={styles.tagForm}>
-            <div className={styles.formLabel}>
+        <div className="flex min-w-0 flex-col gap-12">
+          <p className="text-size-13 text-[rgba(25,28,29,0.7)]">{isEditingTag ? '编辑标签' : '创建标签'}</p>
+          <div className="flex flex-col gap-18">
+            <div className="flex flex-col gap-6 text-size-13 text-[rgba(25,28,29,0.68)]">
               标签文本
               <Input value={draftName} placeholder="例如：阅读" onChange={event => setDraftName(event.target.value)} />
             </div>
 
-            <div className={`${styles.formLabel} mb-8`}>
+            <div className="mb-8 flex flex-col gap-6 text-size-13 text-[rgba(25,28,29,0.68)]">
               标签颜色
-              <span className={styles.colorInputRow}>
+              <span className="flex items-center gap-8">
                 <ColorPicker
                   value={draftColor}
                   // 统一保存为十六进制字符串，便于标签库持久化和回显。
                   onChange={color => setDraftColor(color.toHexString())}
                   aria-label="选择标签颜色"
                 />
-                <span className={styles.colorValue}>{draftColor.toUpperCase()}</span>
+                <span className="text-size-13 text-[rgba(25,28,29,0.55)]">{draftColor.toUpperCase()}</span>
               </span>
             </div>
 
-            <div className={styles.colorSwatches} aria-label="常用标签颜色">
+            <div className="grid grid-cols-[repeat(6,24px)] gap-18" aria-label="常用标签颜色">
               {TAG_COLOR_OPTIONS.map(color => (
                 <button
                   key={color}
                   type="button"
-                  className={`${styles.colorSwatch} ${color === draftColor ? styles.colorSwatchActive : ''}`}
+                  className={[
+                    'h-24 w-24 cursor-pointer rounded-full border border-[rgba(25,28,29,0.12)]',
+                    color === draftColor ? 'outline-2 outline-offset-2 outline-primary' : ''
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   style={{ backgroundColor: color }}
                   aria-label={`选择颜色 ${color}`}
                   onClick={() => setDraftColor(color)}
@@ -182,9 +189,9 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
               ))}
             </div>
 
-            {formError ? <p className={styles.formError}>{formError}</p> : null}
+            {formError ? <p className="text-size-13 leading-[1.5] text-[#b42318]">{formError}</p> : null}
 
-            <div className={styles.formActions}>
+            <div className="flex flex-wrap gap-8">
               <Button className="mt-24 ml-auto" type="primary" icon={<PlusOutlined />} loading={isSubmitting} onClick={handleSubmitTag}>
                 {isEditingTag ? '保存' : '创建'}
               </Button>
@@ -198,7 +205,7 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
 }
 
 function TagColorDot({ color }: { color: string }) {
-  return <span className={styles.tagColorDot} style={{ backgroundColor: color }} />
+  return <span className="h-8 w-8 flex-[0_0_auto] rounded-full" style={{ backgroundColor: color }} />
 }
 
 function getErrorMessage(error: unknown): string {

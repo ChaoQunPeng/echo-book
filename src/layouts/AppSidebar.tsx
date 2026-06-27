@@ -6,7 +6,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import logoUrl from '../assets/logo.svg'
 import AboutDialog from '../components/AboutDialog'
 import { createDefaultDiary } from '../utils/diaryCreation'
-import styles from './AppShellLayout.module.scss'
 
 const sidebarMenus = [
   {
@@ -94,17 +93,17 @@ function AppSidebar() {
 
   return (
     <>
-      <aside className={styles.sideBar}>
-        <div className={styles.logoGroup}>
+      <aside className="flex flex-[0_0_260px] flex-col border-r border-[var(--echo-border-color)] bg-page">
+        <div className="px-24 pb-24 pt-32">
           {/* 使用独立 logo 资源，避免品牌字样在组件里重复维护。 */}
-          <img className={styles.logoImage} src={logoUrl} alt="爱可日记" />
-          <div className={`${styles.subtitle} text-black-65`}>爱生活，可记录</div>
+          <img className="block h-auto w-140" src={logoUrl} alt="爱可日记" />
+          <div className="mt-12 text-size-14 text-black-65">爱生活，可记录</div>
         </div>
 
         {/*
          * 主导航只表达页面入口，选中态交给 NavLink 根据路由自动计算。
          */}
-        <nav className={styles.sideMenu} aria-label="主导航">
+        <nav className="flex flex-col gap-4 px-16 py-8" aria-label="主导航">
           {sidebarMenus.map(menu => {
             const Icon = menu.icon
 
@@ -148,7 +147,7 @@ function AppSidebar() {
         </div>
 
         <div className="mt-auto pb-12">
-          <nav className={styles.sideMenu} aria-label="辅助导航">
+          <nav className="flex flex-col gap-4 px-16 py-8" aria-label="辅助导航">
             {sidebarFooterRoutes.map(menu => {
               const Icon = menu.icon
 
@@ -174,7 +173,17 @@ function AppSidebar() {
 
 function SidebarNavLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <NavLink to={to} className={({ isActive }) => (isActive ? `${styles.sideMenuItem} ${styles.sideMenuItemActive}` : styles.sideMenuItem)}>
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        [
+          'flex h-42 items-center rounded-full px-12 text-size-16 leading-none text-foreground no-underline transition-all duration-[160ms] ease-in-out hover:bg-primary-soft hover:text-primary',
+          isActive ? 'font-bold text-primary' : ''
+        ]
+          .filter(Boolean)
+          .join(' ')
+      }
+    >
       {children}
     </NavLink>
   )
@@ -183,7 +192,7 @@ function SidebarNavLink({ to, children }: { to: string; children: ReactNode }) {
 function SidebarAction({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <div
-      className={`${styles.sideMenuItem} cursor-pointer`}
+      className="flex h-42 cursor-pointer items-center rounded-full px-12 text-size-16 leading-none text-foreground no-underline transition-all duration-[160ms] ease-in-out hover:bg-primary-soft hover:text-primary"
       onClick={onClick}
       onKeyDown={event => {
         /*

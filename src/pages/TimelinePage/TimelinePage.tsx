@@ -6,7 +6,6 @@ import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
 import PageHeader from '../../components/PageHeader'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
-import styles from './TimelinePage.module.scss'
 
 const TIMELINE_LIMIT = 200
 const TITLE_FALLBACK_LENGTH = 20
@@ -155,35 +154,35 @@ function TimelinePage() {
   }
 
   return (
-    <section className={styles.timelinePage}>
+    <section className="flex h-full flex-col bg-page">
       <PageHeader
         eyebrow="Timeline"
         title="时光"
         extra={
           <>
-            <span className={styles.timelineNumber}>{diaries.length}</span> 篇
+            <span className="font-mono">{diaries.length}</span> 篇
           </>
         }
       />
 
-      {errorMessage ? <p className={styles.timelineError}>{errorMessage}</p> : null}
+      {errorMessage ? <p className="mx-48 mt-14 text-size-13 text-[#b42318]">{errorMessage}</p> : null}
 
-      <div className={styles.timelineScrollArea}>
-        {isLoading ? <p className={styles.timelineLoading}>正在读取时光...</p> : null}
+      <div className="min-h-0 flex-1 overflow-auto px-48 pb-56 pt-26">
+        {isLoading ? <p className="grid min-h-320 place-items-center text-[rgba(25,28,29,0.62)]">正在读取时光...</p> : null}
 
         {!isLoading && diaries.length === 0 ? (
-          <div className={styles.timelineEmpty}>
+          <div className="echo-empty-muted grid min-h-320 place-items-center text-[rgba(25,28,29,0.62)]">
             <Empty description="还没有日记" />
           </div>
         ) : null}
 
         {!isLoading && groupedDiaries.length > 0 ? (
-          <div className={styles.timelineGroups}>
+          <div className="max-w-880">
             {groupedDiaries.map(group => (
-              <section key={group.key} className={styles.timelineGroup}>
-                <h2>{group.label}</h2>
+              <section key={group.key} className="[&+&]:mt-34">
+                <h2 className="mb-24 font-mono text-size-24 text-black-85">{group.label}</h2>
                 <Timeline
-                  className={styles.timeline}
+                  className="echo-timeline"
                   titleSpan="90px"
                   items={group.days.map(day => ({
                     key: day.key,
@@ -191,12 +190,12 @@ function TimelinePage() {
                      * 每个日期只生成一条 Timeline，右侧集中展示当天全部内容。
                      */
                     title: (
-                      <time className={styles.timelineDate} dateTime={day.key}>
+                      <time className="whitespace-nowrap text-right font-mono text-size-18" dateTime={day.key}>
                         {day.label}
                       </time>
                     ),
                     content: (
-                      <div className={styles.timelineDayContent}>
+                      <div className="flex flex-col gap-120">
                         {day.diaries.map(diary => (
                           <TimelineDiaryCard key={diary.id} diary={diary} onOpenDiary={handleOpenDiary} />
                         ))}
@@ -238,7 +237,7 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
      * 不使用 hoverable，避免 AntD 注入默认悬浮阴影。
      */
     // <Card
-    //   className={`${styles.timelineCard} rounded-xl!`}
+    //   className="rounded-xl!"
     //   role="button"
     //   tabIndex={0}
     //   aria-label={`打开日记：${title}`}
@@ -246,13 +245,13 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
     //   onKeyDown={handleCardKeyDown}
     // >
     //   <h3>{title}</h3>
-    //   <div className={styles.timelineCardMeta}>
+    //   <div>
     //     <time dateTime={new Date(diary.createdAt).toISOString()}>{formatCreatedTime(diary.createdAt)}</time>
     //     <span>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
     //   </div>
     //   <p>{summary}</p>
     //   {diary.tags?.length ? (
-    //     <div className={styles.timelineTags}>
+    //     <div>
     //       {diary.tags.map(tag => (
     //         <Tag key={tag} variant="outlined" color="green">
     //           #{tag}
@@ -262,20 +261,27 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
     //   ) : null}
     // </Card>
     <div
-      className={`${styles.timelineCard} rounded-xl!`}
+      className="rounded-xl! group transition-[transform,border-color] duration-[160ms] ease-in-out focus-visible:outline-none"
       role="button"
       tabIndex={0}
       aria-label={`打开日记：${title}`}
       onKeyDown={handleCardKeyDown}
     >
-      <h3 onClick={() => onOpenDiary(diary.id)}>{title}</h3>
-      <div className={styles.timelineCardMeta}>
-        <time dateTime={new Date(diary.createdAt).toISOString()}>{formatCreatedTime(diary.createdAt)}</time>
+      <h3
+        className="mb-8 cursor-pointer text-size-20 leading-[1.35] text-foreground transition-all duration-[160ms] ease-in-out group-hover:text-primary group-focus-visible:text-primary"
+        onClick={() => onOpenDiary(diary.id)}
+      >
+        {title}
+      </h3>
+      <div className="flex items-center gap-12 text-size-12 text-primary">
+        <time className="font-mono text-[rgba(25,28,29,0.5)]" dateTime={new Date(diary.createdAt).toISOString()}>
+          {formatCreatedTime(diary.createdAt)}
+        </time>
         <span>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
       </div>
-      {summary ? <p>{summary}</p> : null}
+      {summary ? <p className="mt-14 text-size-15 leading-[1.75] text-[rgba(25,28,29,0.72)]">{summary}</p> : null}
       {diary.tags?.length ? (
-        <div className={styles.timelineTags}>
+        <div className="echo-zero-tag-margin mt-16 flex flex-wrap gap-8">
           {diary.tags.map(tag => (
             <Tag key={tag} variant="outlined" color="green">
               #{tag}
