@@ -57,7 +57,7 @@ export class DiaryService {
    * 创建日记。
    *
    * id 使用 crypto.randomUUID() 生成，created_at / updated_at 使用毫秒时间戳。
-   * Markdown 文件写在 getNotesPath() 下，SQLite 只保存相对于 notes 目录的 filepath。
+   * Markdown 文件写在 getNotesPath() 下，SQLite 只保存相对于 echoBookNotes 目录的 filepath。
    */
   public createDiary(input: CreateDiaryInput): DiaryDetail {
     const now = Date.now();
@@ -489,9 +489,9 @@ function formatTimestampDate(timestamp: number): string {
 }
 
 /**
- * 生成相对于 notes 目录的文件路径。
+ * 生成相对于 echoBookNotes 目录的文件路径。
  *
- * 格式为 YYYY/MM/YYYY_MM_DD_id.md，不再包含 notes/ 前缀，
+ * 格式为 YYYY/MM/YYYY_MM_DD_id.md，不再包含 echoBookNotes/ 前缀，
  * 因为 resolveDiaryFilePath 会基于 getNotesPath() 解析。
  */
 function generateFilePath(createdAt: number, id: string): string {

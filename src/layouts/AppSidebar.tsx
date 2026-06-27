@@ -3,7 +3,6 @@ import {
   EditOutlined,
   ExportOutlined,
   FieldTimeOutlined,
-  QuestionCircleOutlined,
   ReadOutlined,
   SettingOutlined
 } from '@ant-design/icons'

@@ -12,12 +12,12 @@ import path from "node:path";
  */
 const DATABASE_FILE_NAME = "echoBook.db";
 const DATABASE_DIRECTORY_NAME = "database";
-const NOTES_DIRECTORY_NAME = "notes";
+const NOTES_DIRECTORY_NAME = "echoBookNotes";
 
 /**
- * 自定义 notes 路径在 settings 表中的 key。
+ * 自定义 echoBookNotes 路径在 settings 表中的 key。
  */
-const CUSTOM_NOTES_PATH_KEY = "custom_notes_path";
+const CUSTOM_NOTES_PATH_KEY = "custom_echo_book_notes_path";
 
 /**
  * 主进程内的数据库单例。
@@ -28,7 +28,7 @@ const CUSTOM_NOTES_PATH_KEY = "custom_notes_path";
 let database: Database.Database | null = null;
 
 /**
- * 自定义 notes 目录的内存缓存。
+ * 自定义 echoBookNotes 目录的内存缓存。
  *
  * 启动时从 settings 表读入，后续 set/reset 操作同步更新 settings 表 + 内存。
  * 这样 getNotesPath() 不需要依赖 getDatabase()，避免循环依赖。
@@ -57,16 +57,23 @@ export function getDatabaseDirectoryPath(): string {
 }
 
 /**
- * 获取默认的日记 Markdown 文件目录路径（userData/notes）。
+ * 获取默认的日记 Markdown 文件目录路径（userData/echoBookNotes）。
  */
 export function getDefaultNotesPath(): string {
   return path.join(getStorageRootPath(), NOTES_DIRECTORY_NAME);
 }
 
 /**
+ * 获取当前日记目录的标准目录名。
+ */
+export function getNotesDirectoryName(): string {
+  return NOTES_DIRECTORY_NAME;
+}
+
+/**
  * 获取当前日记 Markdown 文件目录的绝对路径。
  *
- * 如果用户设置了自定义目录，返回自定义路径；否则返回默认的 userData/notes。
+ * 如果用户设置了自定义目录，返回自定义路径；否则返回默认的 userData/echoBookNotes。
  */
 export function getNotesPath(): string {
   if (customNotesPath) {
@@ -84,7 +91,7 @@ export function getDatabasePath(): string {
 }
 
 /**
- * 从 settings 表读取自定义 notes 路径并缓存到内存。
+ * 从 settings 表读取自定义 echoBookNotes 路径并缓存到内存。
  *
  * 在数据库初始化完成后调用，确保 getNotesPath() 能拿到用户自定义路径。
  */
@@ -98,14 +105,14 @@ export function loadCustomNotesPathFromDb(): void {
 }
 
 /**
- * 获取当前自定义 notes 路径（可能为 null）。
+ * 获取当前自定义 echoBookNotes 路径（可能为 null）。
  */
 export function getCustomNotesPathFromMemory(): string | null {
   return customNotesPath;
 }
 
 /**
- * 设置自定义 notes 路径并持久化到 settings 表。
+ * 设置自定义 echoBookNotes 路径并持久化到 settings 表。
  */
 export function setCustomNotesPath(newPath: string): void {
   const db = getDatabase();
@@ -121,7 +128,7 @@ export function setCustomNotesPath(newPath: string): void {
 }
 
 /**
- * 重置自定义 notes 路径为默认值（从 settings 表中删除）。
+ * 重置自定义 echoBookNotes 路径为默认值（从 settings 表中删除）。
  */
 export function resetCustomNotesPath(): void {
   const db = getDatabase();

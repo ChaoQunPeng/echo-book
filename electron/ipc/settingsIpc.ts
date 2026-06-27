@@ -14,6 +14,7 @@ import {
   getDatabaseDirectoryPath,
   getDatabasePath,
   getDefaultNotesPath,
+  getNotesDirectoryName,
   getNotesPath,
   getStorageRootPath,
   resetCustomNotesPath,
@@ -50,7 +51,7 @@ function getStorageInfo(): StorageInfo {
 
   /*
    * 设置页展示的是用户要去找的真实目录。
-   * 即使还没有日记，也先创建 database / notes 根目录，避免用户按路径查找时看到目录不存在。
+   * 即使还没有日记，也先创建 database / echoBookNotes 根目录，避免用户按路径查找时看到目录不存在。
    */
   fs.mkdirSync(databaseDirectoryPath, { recursive: true });
   fs.mkdirSync(notesPath, { recursive: true });
@@ -99,22 +100,22 @@ export function registerSettingsIpcHandlers(): void {
         return { success: false, error: "目录路径不能为空" };
       }
 
-      const resolvedPath = path.resolve(directoryPath);
+      const selectedPath = path.resolve(directoryPath);
+      const resolvedPath = resolveNotesDirectoryPath(directoryPath);
 
-      if (!fs.existsSync(resolvedPath)) {
+      if (!fs.existsSync(selectedPath)) {
         return { success: false, error: "目录不存在" };
       }
 
-      if (!fs.statSync(resolvedPath).isDirectory()) {
+      if (!fs.statSync(selectedPath).isDirectory()) {
         return { success: false, error: "路径不是目录" };
       }
 
-      setCustomNotesPath(resolvedPath);
-
       /*
-       * 确保新目录已经创建好。
+       * 用户选择父目录时，真正写入的是其中的 echoBookNotes 子目录。
        */
       fs.mkdirSync(resolvedPath, { recursive: true });
+      setCustomNotesPath(resolvedPath);
 
       return { success: true };
     } catch (error) {
@@ -141,50 +142,41 @@ export function registerSettingsIpcHandlers(): void {
        * 特殊标记：重置为默认目录。
        */
       const isResetToDefault = newNotesPath === "__RESET_TO_DEFAULT__";
-      const resolvedNewPath = isResetToDefault ? getDefaultNotesPath() : path.resolve(newNotesPath);
+      const resolvedNewPath = isResetToDefault ? getDefaultNotesPath() : resolveNotesDirectoryPath(newNotesPath);
       const { notesPath: oldNotesPath } = getStorageInfo();
+      const resolvedOldPath = path.resolve(oldNotesPath);
 
-      if (path.resolve(oldNotesPath) === resolvedNewPath) {
+      if (resolvedOldPath === resolvedNewPath) {
+        if (isResetToDefault) {
+          resetCustomNotesPath();
+        }
+
         return { success: true, movedCount: 0 };
       }
 
-      if (!fs.existsSync(resolvedNewPath)) {
-        fs.mkdirSync(resolvedNewPath, { recursive: true });
+      if (isPathInside(resolvedNewPath, resolvedOldPath)) {
+        return { success: false, movedCount: 0, error: "新目录不能放在当前日记目录内部" };
       }
 
       if (!fs.existsSync(oldNotesPath)) {
         /*
          * 旧目录不存在，无需迁移。
          */
-        setCustomNotesPath(resolvedNewPath);
+        fs.mkdirSync(resolvedNewPath, { recursive: true });
+        applyNotesPathSelection(isResetToDefault, resolvedNewPath);
         return { success: true, movedCount: 0 };
       }
 
       /*
-       * 获取当前 notes 下所有 Markdown 文件。
+       * 迁移 echoBookNotes 整个目录，确保 Markdown 同级 assets 图片不会丢失。
        */
-      const markdownFiles = collectMarkdownFiles(oldNotesPath);
-      let movedCount = 0;
-
-      for (const relativePath of markdownFiles) {
-        const sourcePath = path.join(oldNotesPath, relativePath);
-        const targetPath = path.join(resolvedNewPath, relativePath);
-
-        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-        fs.copyFileSync(sourcePath, targetPath);
-        fs.unlinkSync(sourcePath);
-        movedCount += 1;
-      }
-
-      /*
-       * 删除旧的空目录结构。
-       */
-      removeEmptyDirectories(oldNotesPath);
+      const movedCount = countMarkdownFiles(oldNotesPath);
+      moveNotesDirectory(oldNotesPath, resolvedNewPath);
 
       /*
        * 更新自定义路径持久化。
        */
-      setCustomNotesPath(resolvedNewPath);
+      applyNotesPathSelection(isResetToDefault, resolvedNewPath);
 
       return { success: true, movedCount };
     } catch (error) {
@@ -231,7 +223,7 @@ export function registerSettingsIpcHandlers(): void {
         },
         {
           sourcePath: notesPath,
-          archivePath: "notes",
+          archivePath: getNotesDirectoryName(),
         },
       ],
       [
@@ -275,10 +267,40 @@ export function registerSettingsIpcHandlers(): void {
 }
 
 /**
- * 递归收集指定目录下的所有 .md 文件，返回相对于根目录的路径列表。
+ * 将用户选择的位置标准化为真正的 echoBookNotes 目录。
+ *
+ * 用户选择 /Users/.../Documents 时，最终目录固定为 /Users/.../Documents/echoBookNotes。
  */
-function collectMarkdownFiles(rootPath: string): string[] {
-  const files: string[] = [];
+function resolveNotesDirectoryPath(selectedPath: string): string {
+  const resolvedPath = path.resolve(selectedPath);
+
+  if (path.basename(resolvedPath) === getNotesDirectoryName()) {
+    return resolvedPath;
+  }
+
+  return path.join(resolvedPath, getNotesDirectoryName());
+}
+
+function applyNotesPathSelection(isResetToDefault: boolean, resolvedNotesPath: string): void {
+  if (isResetToDefault) {
+    resetCustomNotesPath();
+    return;
+  }
+
+  setCustomNotesPath(resolvedNotesPath);
+}
+
+function isPathInside(candidatePath: string, parentPath: string): boolean {
+  const relativePath = path.relative(parentPath, candidatePath);
+
+  return Boolean(relativePath) && !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
+}
+
+/**
+ * 递归统计日记 Markdown 数量，用于迁移后的用户提示。
+ */
+function countMarkdownFiles(rootPath: string): number {
+  let count = 0;
 
   function walk(directory: string): void {
     let entries: string[];
@@ -294,54 +316,45 @@ function collectMarkdownFiles(rootPath: string): string[] {
       let stat: fs.Stats;
 
       try {
-        stat = fs.statSync(fullPath);
+        stat = fs.lstatSync(fullPath);
       } catch {
+        continue;
+      }
+
+      if (stat.isSymbolicLink()) {
         continue;
       }
 
       if (stat.isDirectory()) {
         walk(fullPath);
       } else if (stat.isFile() && entry.toLowerCase().endsWith(".md")) {
-        files.push(path.relative(rootPath, fullPath));
+        count += 1;
       }
     }
   }
 
   walk(rootPath);
-  return files;
+  return count;
 }
 
 /**
- * 递归删除空目录（从叶子向根 cleanup）。
+ * 整体迁移 echoBookNotes 目录。
+ *
+ * 这里复制的是目录本身，而不是把内容摊到用户选择的目录里。
  */
-function removeEmptyDirectories(directory: string): void {
-  let entries: string[];
-
-  try {
-    entries = fs.readdirSync(directory);
-  } catch {
-    return;
-  }
-
-  for (const entry of entries) {
-    const fullPath = path.join(directory, entry);
-
-    try {
-      if (fs.statSync(fullPath).isDirectory()) {
-        removeEmptyDirectories(fullPath);
-      }
-    } catch {
-      // ignored
-    }
-  }
-
-  try {
-    if (fs.readdirSync(directory).length === 0) {
-      fs.rmdirSync(directory);
-    }
-  } catch {
-    // ignored
-  }
+function moveNotesDirectory(sourcePath: string, targetPath: string): void {
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.cpSync(sourcePath, targetPath, {
+    recursive: true,
+    force: true,
+    /*
+     * 日记目录只迁移真实文件和真实目录，避免符号链接把目录外文件带过去。
+     */
+    filter(source) {
+      return !fs.lstatSync(source).isSymbolicLink();
+    },
+  });
+  fs.rmSync(sourcePath, { recursive: true, force: true });
 }
 
 function formatBackupTimestamp(date: Date): string {
@@ -368,11 +381,11 @@ function createBackupReadmeContent(databaseFileName: string): string {
     `- 如果看到 ${databaseFileName}-wal 或 ${databaseFileName}-shm，它们是 SQLite 在 WAL 模式下生成的伴随文件。`,
     "- 数据库主要保存日记索引、标题、日期、标签、心情、软删除状态等结构化信息。",
     "",
-    "notes/",
+    `${getNotesDirectoryName()}/`,
     "- 存放每篇日记的 Markdown 正文文件。",
-    "- 目录通常按年份和月份分组，文件名中包含日期和日记 id。",
+    "- 目录通常按年份和月份分组，图片等资源保存在 Markdown 同级的 assets 目录。",
     "",
-    "恢复或迁移时，请保持 database 和 notes 两个文件夹的相对结构不变。",
+    `恢复或迁移时，请保持 database 和 ${getNotesDirectoryName()} 两个文件夹的相对结构不变。`,
     "建议在 EchoBook 未运行时恢复备份，避免覆盖正在写入的数据。",
     "",
   ].join("\n");

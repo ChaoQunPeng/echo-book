@@ -1,9 +1,9 @@
 import type Database from "better-sqlite3";
 import fs from "node:fs";
 import { getDatabase, getNotesPath, loadCustomNotesPathFromDb } from "./connection.js";
-import { migrateLegacyFilepaths } from "../repositories/diaryRepository.js";
 
 const DB_VERSION = "5";
+const LEGACY_CUSTOM_NOTES_PATH_KEY = "custom_notes_path";
 
 /**
  * 初始化 SQLite schema。
@@ -20,19 +20,17 @@ export function initializeDatabase(db?: Database.Database): void {
 
   if (!db) {
     /*
-     * settings 表初始化后立刻读取自定义 notes 路径，确保 ensureStorageDirectories
+     * settings 表初始化后立刻读取自定义 echoBookNotes 路径，确保 ensureStorageDirectories
      * 根据用户自定义目录创建（而非默认目录）。
-     */
+    */
     loadCustomNotesPathFromDb();
     ensureStorageDirectories();
   }
-
-  migrateLegacyFilepaths(targetDb);
 }
 
 function ensureStorageDirectories(): void {
   /*
-   * notes 是 Markdown 文件根目录，启动时确保它存在。
+   * echoBookNotes 是 Markdown 文件根目录，启动时确保它存在。
    */
   fs.mkdirSync(getNotesPath(), { recursive: true });
 }
@@ -206,6 +204,11 @@ function resetIncompatibleFtsSchema(db: Database.Database): void {
 }
 
 function initializeSettings(db: Database.Database): void {
+  /*
+   * 开发阶段不保留旧 notes 设置，避免旧 custom_notes_path 继续把目录指回 notes。
+   */
+  db.prepare("DELETE FROM settings WHERE key = @key").run({ key: LEGACY_CUSTOM_NOTES_PATH_KEY });
+
   db.prepare(
     `
       INSERT INTO settings (key, value)

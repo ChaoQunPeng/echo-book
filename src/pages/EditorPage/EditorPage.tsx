@@ -1025,7 +1025,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     options: MOODS,
     selectedValue: mood,
     onSelect: handleMoodChange,
-    clearLabel: '不记录心情',
     onKeyDown: handlePickerTriggerKeyDown
   })
 
@@ -1033,7 +1032,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     options: WEATHERS,
     selectedValue: weather,
     onSelect: handleWeatherChange,
-    clearLabel: '不记录天气',
     onKeyDown: handlePickerTriggerKeyDown
   })
 
@@ -1279,13 +1277,11 @@ function renderMetadataPopoverContent({
   options,
   selectedValue,
   onSelect,
-  clearLabel,
   onKeyDown
 }: {
   options: ReadonlyArray<{ name: string; emoji: string }>
   selectedValue: string
   onSelect: (value: string) => void
-  clearLabel: string
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
 }) {
   return (
@@ -1309,17 +1305,6 @@ function renderMetadataPopoverContent({
           <span>{option.name}</span>
         </div>
       ))}
-      {/* {selectedValue ? (
-        <div
-          className="mt-4 flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] border-t border-[rgba(25,28,29,0.08)] px-8 py-5 text-[rgba(25,28,29,0.55)] outline-none hover:bg-[rgba(25,28,29,0.04)] focus-visible:bg-[rgba(25,28,29,0.04)]"
-          role="button"
-          tabIndex={0}
-          onClick={() => onSelect('')}
-          onKeyDown={onKeyDown}
-        >
-          {clearLabel}
-        </div>
-      ) : null} */}
     </div>
   )
 }

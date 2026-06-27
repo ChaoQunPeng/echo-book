@@ -117,7 +117,7 @@ function collectZipEntries(
 
     if (!fs.existsSync(sourcePath)) {
       /*
-       * 备份应该保留固定的 database/notes 顶层结构。
+       * 备份应该保留固定的 database/echoBookNotes 顶层结构。
        * 即使某个目录暂时不存在，也写入一个空目录项，方便用户解压后理解结构。
        */
       pushDirectoryEntry(entries, seenArchivePaths, archivePath, new Date());
@@ -146,7 +146,7 @@ function walkSourceDirectory(
   if (stat.isSymbolicLink()) {
     /*
      * 备份只打包应用自己真实拥有的文件。
-     * 跳过符号链接可以避免用户无意中把 notes 之外的系统文件带进备份包。
+     * 跳过符号链接可以避免用户无意中把 echoBookNotes 之外的系统文件带进备份包。
      */
     return;
   }

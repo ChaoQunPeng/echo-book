@@ -19,7 +19,7 @@ import { registerSettingsIpcHandlers } from "./ipc/settingsIpc.js";
  * Electron 默认会按应用名生成 userData，例如 macOS 上通常是：
  * ~/Library/Application Support/EchoBook。
  *
- * 如果开发环境和正式包都使用默认目录，它们会共用同一个 SQLite 数据库和 notes
+ * 如果开发环境和正式包都使用默认目录，它们会共用同一个 SQLite 数据库和 echoBookNotes
  * 正文目录，调试数据、测试迁移、临时删除等操作就可能污染正式数据。所以开发模式
  * 主动改到 EchoBook-dev，正式包继续保留 EchoBook，不影响已经安装用户的数据位置。
  */

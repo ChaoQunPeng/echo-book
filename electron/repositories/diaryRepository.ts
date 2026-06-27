@@ -61,12 +61,6 @@ export interface DiarySearchIndexRecord {
 }
 
 /**
- * 旧版 filepath 前缀（相对于 storageRoot）。
- * 新版改为相对于 getNotesPath()，不再包含此前缀。
- */
-const LEGACY_FILEPATH_PREFIX = "notes/";
-
-/**
  * 日记 repository：只封装 SQL，不放业务规则。
  */
 export class DiaryRepository {
@@ -408,42 +402,6 @@ export class DiaryRepository {
       )
       .run(record);
   }
-}
-
-/**
- * 迁移旧版 filepath 格式。
- *
- * 旧版 filepath 以 "notes/" 开头（相对于 storageRoot），
- * 新版以 "YYYY/MM/..." 开头（相对于 getNotesPath()）。
- * 启动时自动迁移一次。
- */
-export function migrateLegacyFilepaths(db: Database.Database): void {
-  const rows = db
-    .prepare(
-      `
-        SELECT id, filepath
-        FROM diaries
-        WHERE filepath LIKE @prefix
-      `,
-    )
-    .all({ prefix: `${LEGACY_FILEPATH_PREFIX}%` }) as Array<{ id: string; filepath: string }>;
-
-  if (rows.length === 0) {
-    return;
-  }
-
-  const migrate = db.transaction((records: Array<{ id: string; filepath: string }>) => {
-    for (const record of records) {
-      const newFilepath = record.filepath.slice(LEGACY_FILEPATH_PREFIX.length);
-      db.prepare("UPDATE diaries SET filepath = @newFilepath WHERE id = @id").run({
-        id: record.id,
-        newFilepath,
-      });
-    }
-  });
-
-  migrate(rows);
-  console.info(`Migrated ${rows.length} diary filepaths from legacy format.`);
 }
 
 function mapDiaryRow(row: DiaryRow): Diary {

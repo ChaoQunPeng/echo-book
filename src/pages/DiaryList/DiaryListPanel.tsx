@@ -305,22 +305,4 @@ function formatCreatedTime(timestamp: number): string {
   return `${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`
 }
 
-/**
- * 格式化更新时间
- * 将时间戳转换为列表摘要里的日期时间格式
- */
-function formatUpdatedAt(timestamp: number): string {
-  /*
-   * zh-CN 默认日期分隔符是 /，列表里统一换成 -。
-   */
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-    .format(new Date(timestamp))
-    .replace(/\//g, '-')
-}
-
 export default DiaryListPanel

@@ -19,7 +19,7 @@ export interface StorageInfo {
   databasePath: string;
 
   /**
-   * 当前自定义 notes 路径（如果未自定义则为 null）。
+   * 当前自定义 echoBookNotes 路径（如果未自定义则为 null）。
    */
   customNotesPath: string | null;
 }
@@ -38,7 +38,7 @@ export interface SelectDirectoryResult {
 }
 
 /**
- * 设置自定义 notes 路径的结果。
+ * 设置自定义 echoBookNotes 路径的结果。
  */
 export interface SetCustomNotesPathResult {
   success: boolean;
@@ -64,7 +64,7 @@ export interface SettingsApi {
    * 导出应用数据备份。
    *
    * renderer 只发起"导出当前应用数据"这个业务动作，保存路径由 main process 弹出
-   * 系统保存对话框让用户选择；真正被打包的目录仍然固定为 database 和 notes。
+   * 系统保存对话框让用户选择；真正被打包的目录仍然固定为 database 和 echoBookNotes。
    */
   exportBackup(): Promise<ExportBackupResult>;
 
@@ -77,7 +77,7 @@ export interface SettingsApi {
   openStorageRoot(): Promise<void>;
 
   /**
-   * 打开当前日记文件存放目录（可能是自定义的 notes 目录）。
+   * 打开当前日记文件存放目录（可能是自定义的 echoBookNotes 目录）。
    */
   openNotesDirectory(): Promise<void>;
 
@@ -89,19 +89,19 @@ export interface SettingsApi {
   selectDirectory(): Promise<SelectDirectoryResult>;
 
   /**
-   * 设置自定义 notes 目录路径并持久化到 settings 表。
+   * 设置自定义 echoBookNotes 目录路径并持久化到 settings 表。
    *
    * 调用前应确保用户已通过 selectDirectory 选择了路径。
    */
   setCustomNotesPath(path: string): Promise<SetCustomNotesPathResult>;
 
   /**
-   * 重置自定义 notes 目录为默认值。
+   * 重置自定义 echoBookNotes 目录为默认值。
    */
   resetCustomNotesPath(): Promise<SetCustomNotesPathResult>;
 
   /**
-   * 将现有笔记从旧的 notes 目录迁移到新的目录。
+   * 将现有笔记从旧的 echoBookNotes 目录迁移到新的目录。
    *
    * 迁移逻辑由 main process 处理，包括文件复制和数据库 filepath 更新。
    */

@@ -9,6 +9,8 @@ import { ECHO_THEME_LAYOUT_BG, ECHO_THEMES } from '../../utils/theme'
 import type { EchoThemeId } from '../../utils/theme'
 import styles from './SettingsPage.module.css'
 
+const ECHO_BOOK_NOTES_DIRECTORY_NAME = 'echoBookNotes'
+
 function SettingsPage() {
   /*
    * 使用 App 上下文里的反馈 API，让弹窗继承当前 ConfigProvider 主题。
@@ -21,6 +23,7 @@ function SettingsPage() {
   const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
   const [isSelectingDirectory, setIsSelectingDirectory] = useState(false)
   const [isMigratingNotes, setIsMigratingNotes] = useState(false)
+  const isUsingDefaultNotesDirectory = !storageInfo?.customNotesPath
 
   useEffect(() => {
     let cancelled = false
@@ -103,19 +106,22 @@ function SettingsPage() {
       }
 
       const newDirectory = selectResult.directoryPath
+      const nextNotesDirectory = resolveEchoBookNotesDirectory(newDirectory)
 
       /*
-       * 确认迁移：将旧目录下的笔记文件搬到新目录。
+       * 确认迁移：固定把 echoBookNotes 整个目录搬到用户选择的位置下。
        */
       modal.confirm({
         title: '修改日记存放目录',
         content: (
           <div>
-            <p>你选择的新目录：</p>
+            <p>日记目录会修改为：</p>
             <p>
-              <code style={{ wordBreak: 'break-all' }}>{newDirectory}</code>
+              <code style={{ wordBreak: 'break-all' }}>{nextNotesDirectory}</code>
             </p>
-            <p style={{ marginTop: 12, color: 'var(--color-text-secondary)' }}>已有笔记文件将迁移到新目录，数据库文件不受影响。</p>
+            {/* <p style={{ marginTop: 12, color: 'var(--color-text-secondary)' }}>
+              应用会迁移整个 echoBookNotes 目录，已有笔记和图片资源都会一起移动。
+            </p> */}
           </div>
         ),
         okText: '确认迁移',
@@ -184,7 +190,7 @@ function SettingsPage() {
           }
 
           /*
-           * 默认 notes 路径需要从主进程获取（不经过自定义）。
+           * 默认 echoBookNotes 路径需要从主进程获取（不经过自定义）。
            * 这里通过先 reset 拿到默认路径，然后在 connection 层获取。
            */
           const migrateResult = await window.settingsAPI.migrateNotes('__RESET_TO_DEFAULT__')
@@ -307,13 +313,13 @@ function SettingsPage() {
                 <Space.Compact style={{ width: '100%' }}>
                   <Input readOnly value={storageInfo?.notesPath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
 
-                  <Button
+                  {/* <Button
                     icon={<CopyOutlined />}
                     disabled={!storageInfo?.notesPath}
                     onClick={() => handleCopyPath(storageInfo?.notesPath, '日记文件目录')}
                   >
                     复制
-                  </Button>
+                  </Button> */}
                   <Button
                     icon={<FolderOpenOutlined />}
                     loading={isOpeningStorageRoot}
@@ -326,17 +332,6 @@ function SettingsPage() {
               </Form.Item>
               <Form.Item>
                 <Button
-                  className="mr-16"
-                  color="primary"
-                  variant="outlined"
-                  icon={<UndoOutlined />}
-                  loading={isMigratingNotes}
-                  onClick={handleResetDirectory}
-                >
-                  恢复默认目录
-                </Button>
-
-                <Button
                   type="primary"
                   icon={<FolderAddOutlined />}
                   loading={isSelectingDirectory || isMigratingNotes}
@@ -344,6 +339,18 @@ function SettingsPage() {
                   onClick={handleSelectDirectory}
                 >
                   修改目录
+                </Button>
+
+                <Button
+                  className="ml-16"
+                  color="primary"
+                  variant="outlined"
+                  icon={<UndoOutlined />}
+                  loading={isMigratingNotes}
+                  disabled={isUsingDefaultNotesDirectory || !window.settingsAPI || Boolean(settingsError)}
+                  onClick={handleResetDirectory}
+                >
+                  恢复默认目录
                 </Button>
               </Form.Item>
               {/* <Form.Item label="数据库文件">
@@ -364,6 +371,21 @@ function SettingsPage() {
       </div>
     </section>
   )
+}
+
+function resolveEchoBookNotesDirectory(selectedDirectory: string): string {
+  const normalizedDirectory = selectedDirectory.replace(/[\\/]+$/, '')
+  const pathSeparator = selectedDirectory.includes('\\') ? '\\' : '/'
+  const segments = normalizedDirectory.split(/[\\/]/)
+
+  /*
+   * 设置页只做展示预览；最终路径仍由 main process 使用 path.resolve 计算。
+   */
+  if (segments[segments.length - 1] === ECHO_BOOK_NOTES_DIRECTORY_NAME) {
+    return normalizedDirectory
+  }
+
+  return `${normalizedDirectory}${pathSeparator}${ECHO_BOOK_NOTES_DIRECTORY_NAME}`
 }
 
 export default SettingsPage
