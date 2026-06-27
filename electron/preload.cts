@@ -92,6 +92,14 @@ const settingsAPI: SettingsApi = {
   migrateNotes(newNotesPath: string) {
     return ipcRenderer.invoke("settings:migrateNotes", newNotesPath);
   },
+
+  importBackupDirectory() {
+    return ipcRenderer.invoke("settings:importBackupDirectory");
+  },
+
+  syncMarkdownFiles() {
+    return ipcRenderer.invoke("settings:syncMarkdownFiles");
+  },
 };
 
 /**

@@ -5,6 +5,7 @@ import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
 import { formatMood } from '../../../shared/moods'
+import type { TagLibraryItem } from '../../../shared/tags'
 import { formatWeather } from '../../../shared/weather'
 import PageHeader from '../../components/PageHeader'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
@@ -13,6 +14,7 @@ import styles from './TimelinePage.module.scss'
 const TIMELINE_LIMIT = 200
 const TITLE_FALLBACK_LENGTH = 20
 const SUMMARY_LENGTH = 180
+const DEFAULT_TAG_COLOR = '#237804'
 
 type TimelineDiary = Diary & {
   markdown: string
@@ -36,8 +38,16 @@ function TimelinePage() {
   const navigate = useNavigate()
   const cachedTimelineDiaries = timelineDiaryCache
   const [diaries, setDiaries] = useState<TimelineDiary[]>(() => cachedTimelineDiaries ?? [])
+  const [tagLibrary, setTagLibrary] = useState<TagLibraryItem[]>([])
   const [isLoading, setIsLoading] = useState(!cachedTimelineDiaries)
   const [errorMessage, setErrorMessage] = useState('')
+
+  const tagColorMap = useMemo(() => {
+    /*
+     * 时间线日记只保存标签文本，颜色需要从标签库按名称补齐。
+     */
+    return new Map(tagLibrary.map(tag => [tag.name, tag.color]))
+  }, [tagLibrary])
 
   const groupedDiaries = useMemo(() => {
     /*
@@ -152,6 +162,40 @@ function TimelinePage() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+
+    const loadTagLibrary = async () => {
+      if (!window.tagAPI) {
+        setTagLibrary([])
+        return
+      }
+
+      try {
+        const nextTagLibrary = await window.tagAPI.getTagLibrary()
+
+        if (!cancelled) {
+          setTagLibrary(nextTagLibrary)
+        }
+      } catch (error) {
+        /*
+         * 标签颜色加载失败不影响时光展示，渲染时使用默认色兜底。
+         */
+        console.error('Failed to load tag library:', error)
+
+        if (!cancelled) {
+          setTagLibrary([])
+        }
+      }
+    }
+
+    void loadTagLibrary()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const handleOpenDiary = (diaryId: string) => {
     navigate(`/preview/${diaryId}`)
   }
@@ -184,7 +228,7 @@ function TimelinePage() {
             {groupedDiaries.map(group => (
               <section key={group.key} className="[&+&]:mt-34">
                 <h2 className="mb-24 font-mono! text-size-24 text-color-base-85">{group.label}</h2>
-                <Timeline className={styles.timeline} titleSpan="90px" items={buildTimelineItems(group.key, group.days, handleOpenDiary)} />
+                <Timeline className={styles.timeline} titleSpan="90px" items={buildTimelineItems(group.key, group.days, handleOpenDiary, tagColorMap)} />
               </section>
             ))}
           </div>
@@ -194,7 +238,12 @@ function TimelinePage() {
   )
 }
 
-function buildTimelineItems(groupKey: string, days: TimelineDayGroup[], onOpenDiary: (diaryId: string) => void): TimelineItemProps[] {
+function buildTimelineItems(
+  groupKey: string,
+  days: TimelineDayGroup[],
+  onOpenDiary: (diaryId: string) => void,
+  tagColorMap: Map<string, string>
+): TimelineItemProps[] {
   const dayItems = days.map(day => ({
     key: day.key,
     /*
@@ -208,7 +257,7 @@ function buildTimelineItems(groupKey: string, days: TimelineDayGroup[], onOpenDi
     content: (
       <div className="flex flex-col gap-120">
         {day.diaries.map(diary => (
-          <TimelineDiaryCard key={diary.id} diary={diary} onOpenDiary={onOpenDiary} />
+          <TimelineDiaryCard key={diary.id} diary={diary} tagColorMap={tagColorMap} onOpenDiary={onOpenDiary} />
         ))}
       </div>
     )
@@ -228,10 +277,11 @@ function buildTimelineItems(groupKey: string, days: TimelineDayGroup[], onOpenDi
 
 type TimelineDiaryCardProps = {
   diary: TimelineDiary
+  tagColorMap: Map<string, string>
   onOpenDiary: (diaryId: string) => void
 }
 
-function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
+function TimelineDiaryCard({ diary, tagColorMap, onOpenDiary }: TimelineDiaryCardProps) {
   const plainText = markdownToPlainText(diary.markdown)
   const title = buildTimelineTitle(diary.title, plainText)
   const summary = truncateText(plainText, SUMMARY_LENGTH)
@@ -304,11 +354,15 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       {summary ? <p className="mt-14 text-size-15 leading-[1.75] text-color-base-65">{summary}</p> : null}
       {diary.tags?.length ? (
         <div className={`${styles.zeroTagMargin} mt-16 flex flex-wrap gap-8`}>
-          {diary.tags.map(tag => (
-            <Tag key={tag} variant="outlined" color="green">
-              #{tag}
-            </Tag>
-          ))}
+          {diary.tags.map(tag => {
+            const tagColor = tagColorMap.get(tag) ?? DEFAULT_TAG_COLOR
+
+            return (
+              <Tag key={tag} variant="outlined" color={tagColor}>
+                #{tag}
+              </Tag>
+            )
+          })}
         </div>
       ) : null}
     </div>

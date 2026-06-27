@@ -276,6 +276,23 @@ export class DiaryRepository {
   }
 
   /**
+   * 读取所有已入库的 Markdown 相对路径，用于扫描本地文件时判重。
+   */
+  public getAllDiaryFilepaths(includeDeleted = true): string[] {
+    const rows = this.db
+      .prepare(
+        `
+          SELECT filepath
+          FROM diaries
+          ${includeDeleted ? "" : "WHERE deleted = 0"}
+        `,
+      )
+      .all() as Array<{ filepath: string }>;
+
+    return rows.map((row) => row.filepath);
+  }
+
+  /**
    * 查询需要写入 FTS 的日记元数据，正文仍由 service 从 Markdown 文件读取。
    */
   public getDiariesForSearchIndex(): Diary[] {

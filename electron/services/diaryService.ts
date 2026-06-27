@@ -13,6 +13,7 @@ import type {
 } from "../../shared/diary.js";
 import { CLEARED_DIARY_TITLE_FALLBACK } from "../../shared/defaultDiary.js";
 import { DEFAULT_MOOD } from "../../shared/moods.js";
+import type { SyncMarkdownFilesResult } from "../../shared/settings.js";
 import { formatWeather } from "../../shared/weather.js";
 import { getNotesPath } from "../db/connection.js";
 import type { DiaryRepository, DiarySearchIndexRecord } from "../repositories/diaryRepository.js";
@@ -25,8 +26,12 @@ interface DiaryMarkdownFile {
 }
 
 interface DiaryFrontMatter {
+  title?: string;
   createdAt?: number;
   updatedAt?: number;
+  tags?: string[];
+  mood?: string;
+  weather?: string;
 }
 
 interface BuildDiaryMarkdownFileInput {
@@ -251,6 +256,51 @@ export class DiaryService {
   }
 
   /**
+   * 扫描当前 echoBookNotes 目录，把外部放入的 Markdown 文件补写进 SQLite。
+   */
+  public syncMarkdownFilesToDatabase(): SyncMarkdownFilesResult {
+    const notesPath = getNotesPath();
+    fs.mkdirSync(notesPath, { recursive: true });
+
+    const existingFilepaths = new Set(this.diaryRepository.getAllDiaryFilepaths());
+    const markdownFiles = listMarkdownFiles(notesPath);
+    let importedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    for (const markdownFile of markdownFiles) {
+      if (existingFilepaths.has(markdownFile.filepath)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      try {
+        const diary = this.importMarkdownFile(markdownFile.absolutePath, markdownFile.filepath);
+        existingFilepaths.add(diary.filepath);
+        importedCount += 1;
+      } catch (error) {
+        failedCount += 1;
+        console.error("Failed to import markdown file:", markdownFile.filepath, error);
+      }
+    }
+
+    /*
+     * 文件丢失只作为提醒，不在扫描动作里自动删除或软删除日记。
+     */
+    const missingFileCount = this.diaryRepository
+      .getAllDiaryFilepaths(false)
+      .filter((filepath) => !fs.existsSync(resolveDiaryFilePath(filepath))).length;
+
+    return {
+      success: true,
+      importedCount,
+      skippedCount,
+      failedCount,
+      missingFileCount,
+    };
+  }
+
+  /**
    * 保存日记图片资源。
    *
    * 所有图片都落在当前 Markdown 文件同级的 assets 目录，Markdown 中只保存相对路径。
@@ -314,6 +364,47 @@ export class DiaryService {
       ...syncedDiary,
       markdown: diaryFile.markdown,
     };
+  }
+
+  private importMarkdownFile(absolutePath: string, filepath: string): Diary {
+    const stat = fs.statSync(absolutePath);
+    const rawMarkdown = fs.readFileSync(absolutePath, "utf8");
+    const diaryFile = parseDiaryMarkdownFile(rawMarkdown);
+    const now = Date.now();
+    const fallbackCreatedAt = stat.birthtimeMs || stat.mtimeMs || now;
+    const createdAt = diaryFile.frontMatter?.createdAt ?? fallbackCreatedAt;
+    const fallbackUpdatedAt = stat.mtimeMs || createdAt;
+    const updatedAt = diaryFile.frontMatter?.updatedAt ?? fallbackUpdatedAt;
+    const title = normalizeTitle(
+      diaryFile.frontMatter?.title ?? extractTitleFromMarkdown(diaryFile.markdown) ?? path.basename(filepath, ".md"),
+    );
+    const tags = normalizeTagNames(diaryFile.frontMatter?.tags ?? []);
+    const mood =
+      diaryFile.frontMatter?.mood === undefined ? DEFAULT_MOOD : normalizeMood(diaryFile.frontMatter.mood);
+    const weather =
+      diaryFile.frontMatter?.weather === undefined ? undefined : normalizeWeather(diaryFile.frontMatter.weather);
+
+    this.tagRepository.ensureTagsExist(tags);
+
+    const diary = this.diaryRepository.createDiary({
+      id: randomUUID(),
+      title,
+      filepath,
+      diaryDate: formatTimestampDate(createdAt),
+      createdAt,
+      updatedAt,
+      tags,
+      mood,
+      weather,
+    });
+
+    this.diaryRepository.syncDiarySearchIndex({
+      id: diary.id,
+      title: diary.title,
+      content: diaryFile.markdown,
+    });
+
+    return diary;
   }
 
   private syncDiaryTimestampsFromFrontMatter(
@@ -598,15 +689,39 @@ function splitFrontMatter(markdown: string): { frontMatter: string; markdown: st
 
 function parseDiaryFrontMatter(frontMatter: string): DiaryFrontMatter | null {
   const parsed = {
+    title: parseOptionalFrontMatterString(frontMatter, "title"),
     createdAt: parseFrontMatterTimestamp(frontMatter, "createdAt"),
     updatedAt: parseFrontMatterTimestamp(frontMatter, "updatedAt"),
+    tags: parseFrontMatterTags(frontMatter),
+    mood: parseOptionalFrontMatterString(frontMatter, "mood"),
+    weather: parseOptionalFrontMatterString(frontMatter, "weather"),
   };
 
-  if (parsed.createdAt === undefined && parsed.updatedAt === undefined) {
+  if (
+    parsed.title === undefined &&
+    parsed.createdAt === undefined &&
+    parsed.updatedAt === undefined &&
+    parsed.tags === undefined &&
+    parsed.mood === undefined &&
+    parsed.weather === undefined
+  ) {
     return null;
   }
 
   return parsed;
+}
+
+function parseOptionalFrontMatterString(frontMatter: string, fieldName: string): string | undefined {
+  const line = frontMatter
+    .split(/\r?\n/)
+    .find((frontMatterLine) => frontMatterLine.startsWith(`${fieldName}:`));
+
+  if (!line) {
+    return undefined;
+  }
+
+  const value = parseYamlScalar(line.slice(fieldName.length + 1)).trim();
+  return value ? value : undefined;
 }
 
 function parseFrontMatterTimestamp(frontMatter: string, fieldName: "createdAt" | "updatedAt"): number | undefined {
@@ -620,6 +735,51 @@ function parseFrontMatterTimestamp(frontMatter: string, fieldName: "createdAt" |
 
   const value = parseYamlScalar(line.slice(fieldName.length + 1));
   return parseLocalDateTime(value);
+}
+
+function parseFrontMatterTags(frontMatter: string): string[] | undefined {
+  const lines = frontMatter.split(/\r?\n/);
+  const tagLineIndex = lines.findIndex((frontMatterLine) => frontMatterLine.startsWith("tags:"));
+
+  if (tagLineIndex < 0) {
+    return undefined;
+  }
+
+  const firstValue = lines[tagLineIndex].slice("tags:".length).trim();
+  if (firstValue === "[]") {
+    return [];
+  }
+
+  if (firstValue.startsWith("[") && firstValue.endsWith("]")) {
+    /*
+     * 兼容简单的 JSON/YAML 行内数组，例如 tags: ["读书", "生活"]。
+     */
+    try {
+      const parsed = JSON.parse(firstValue) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((tag): tag is string => typeof tag === "string") : [];
+    } catch {
+      return firstValue
+        .slice(1, -1)
+        .split(",")
+        .map((tag) => parseYamlScalar(tag))
+        .filter(Boolean);
+    }
+  }
+
+  const tags: string[] = [];
+  for (const line of lines.slice(tagLineIndex + 1)) {
+    const match = /^\s*-\s*(.*)$/.exec(line);
+    if (!match) {
+      break;
+    }
+
+    const tag = parseYamlScalar(match[1]).trim();
+    if (tag) {
+      tags.push(tag);
+    }
+  }
+
+  return tags;
 }
 
 function parseYamlScalar(value: string): string {
@@ -639,6 +799,18 @@ function parseYamlScalar(value: string): string {
   }
 
   return trimmed;
+}
+
+function extractTitleFromMarkdown(markdown: string): string | undefined {
+  const titleLine = markdown
+    .split(/\r?\n/)
+    .find((line) => /^#\s+/.test(line.trim()));
+
+  if (!titleLine) {
+    return undefined;
+  }
+
+  return titleLine.trim().replace(/^#\s+/, "").trim();
 }
 
 function formatLocalDateTime(timestamp: number): string {
@@ -689,6 +861,75 @@ function writeDiaryFile(filepath: string, markdown: string): void {
   const absolutePath = resolveDiaryFilePath(filepath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
   fs.writeFileSync(absolutePath, markdown, "utf8");
+}
+
+interface MarkdownFileCandidate {
+  absolutePath: string;
+  filepath: string;
+}
+
+function listMarkdownFiles(notesPath: string): MarkdownFileCandidate[] {
+  const files: MarkdownFileCandidate[] = [];
+
+  function walk(directory: string): void {
+    let entries: string[];
+
+    try {
+      entries = fs.readdirSync(directory);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const absolutePath = path.join(directory, entry);
+      let stat: fs.Stats;
+
+      try {
+        stat = fs.lstatSync(absolutePath);
+      } catch {
+        continue;
+      }
+
+      if (stat.isSymbolicLink()) {
+        continue;
+      }
+
+      if (stat.isDirectory()) {
+        /*
+         * assets 是日记附件目录，里面的 Markdown 不应被当作独立日记导入。
+         */
+        if (entry === "assets") {
+          continue;
+        }
+
+        walk(absolutePath);
+        continue;
+      }
+
+      if (stat.isFile() && entry.toLowerCase().endsWith(".md")) {
+        files.push({
+          absolutePath,
+          filepath: toNotesRelativeFilepath(notesPath, absolutePath),
+        });
+      }
+    }
+  }
+
+  walk(notesPath);
+  return files;
+}
+
+function toNotesRelativeFilepath(notesPath: string, absolutePath: string): string {
+  const relativePath = path.relative(notesPath, absolutePath);
+
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error("Invalid markdown filepath.");
+  }
+
+  /*
+   * 数据库统一保存 POSIX 风格相对路径，避免跨平台路径分隔符泄漏到 renderer。
+   */
+  return relativePath.split(path.sep).join("/");
 }
 
 /**

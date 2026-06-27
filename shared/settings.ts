@@ -55,6 +55,28 @@ export interface MigrateNotesResult {
 }
 
 /**
+ * 扫描 Markdown 文件并同步到 SQLite 后的汇总结果。
+ */
+export interface SyncMarkdownFilesResult {
+  success: boolean;
+  importedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  missingFileCount: number;
+  error?: string;
+}
+
+/**
+ * 导入备份文件夹后的汇总结果。
+ */
+export interface ImportBackupDirectoryResult extends SyncMarkdownFilesResult {
+  canceled: boolean;
+  copiedCount: number;
+  skippedFileCount: number;
+  sourcePath?: string;
+}
+
+/**
  * preload 暴露到 window.settingsAPI 的设置接口。
  */
 export interface SettingsApi {
@@ -106,4 +128,14 @@ export interface SettingsApi {
    * 迁移逻辑由 main process 处理，包括文件复制和数据库 filepath 更新。
    */
   migrateNotes(newNotesPath: string): Promise<MigrateNotesResult>;
+
+  /**
+   * 从备份文件夹导入 Markdown 和 assets，并自动同步到日记列表。
+   */
+  importBackupDirectory(): Promise<ImportBackupDirectoryResult>;
+
+  /**
+   * 扫描当前 echoBookNotes 目录，把未入库的 Markdown 添加到 SQLite。
+   */
+  syncMarkdownFiles(): Promise<SyncMarkdownFilesResult>;
 }

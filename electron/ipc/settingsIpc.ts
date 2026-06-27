@@ -3,13 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 import type {
   ExportBackupResult,
+  ImportBackupDirectoryResult,
   MigrateNotesResult,
   SelectDirectoryResult,
   SetCustomNotesPathResult,
   StorageInfo,
+  SyncMarkdownFilesResult,
 } from "../../shared/settings.js";
 import {
   getCustomNotesPathFromMemory,
+  getDatabase,
   getDatabaseDirectoryPath,
   getDatabasePath,
   getDefaultNotesPath,
@@ -19,6 +22,9 @@ import {
   resetCustomNotesPath,
   setCustomNotesPath,
 } from "../db/connection.js";
+import { DiaryRepository } from "../repositories/diaryRepository.js";
+import { TagRepository } from "../repositories/tagRepository.js";
+import { DiaryService } from "../services/diaryService.js";
 import { createStorageBackupZip } from "../services/exportService.js";
 
 /**
@@ -33,6 +39,8 @@ const SETTINGS_CHANNELS = {
   setCustomNotesPath: "settings:setCustomNotesPath",
   resetCustomNotesPath: "settings:resetCustomNotesPath",
   migrateNotes: "settings:migrateNotes",
+  importBackupDirectory: "settings:importBackupDirectory",
+  syncMarkdownFiles: "settings:syncMarkdownFiles",
 } as const;
 
 /**
@@ -60,6 +68,35 @@ function getStorageInfo(): StorageInfo {
     databaseDirectoryPath,
     databasePath,
     customNotesPath: getCustomNotesPathFromMemory(),
+  };
+}
+
+function createDiaryService(): DiaryService {
+  const db = getDatabase();
+
+  /*
+   * 设置页的导入/扫描也复用日记 service，避免绕过日记元数据和 FTS 索引规则。
+   */
+  return new DiaryService(new DiaryRepository(db), new TagRepository(db));
+}
+
+function createCanceledImportResult(): ImportBackupDirectoryResult {
+  return {
+    ...createEmptyImportResult(true),
+    success: true,
+  };
+}
+
+function createEmptyImportResult(canceled: boolean): ImportBackupDirectoryResult {
+  return {
+    canceled,
+    success: true,
+    copiedCount: 0,
+    skippedFileCount: 0,
+    importedCount: 0,
+    skippedCount: 0,
+    failedCount: 0,
+    missingFileCount: 0,
   };
 }
 
@@ -182,6 +219,84 @@ export function registerSettingsIpcHandlers(): void {
     }
   });
 
+  ipcMain.handle(SETTINGS_CHANNELS.importBackupDirectory, async (event): Promise<ImportBackupDirectoryResult> => {
+    const focusedWindow = BrowserWindow.fromWebContents(event.sender);
+    const dialogOptions = {
+      title: "选择要导入的备份文件夹",
+      buttonLabel: "导入",
+      properties: ["openDirectory"] as Array<"openDirectory">,
+    };
+    const result = focusedWindow
+      ? await dialog.showOpenDialog(focusedWindow, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions);
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return createCanceledImportResult();
+    }
+
+    try {
+      const selectedPath = result.filePaths[0];
+      const sourcePath = resolveBackupNotesSourcePath(selectedPath);
+      if (!sourcePath) {
+        return {
+          ...createEmptyImportResult(false),
+          success: false,
+          error: "未找到可导入的 Markdown 备份目录",
+          sourcePath: selectedPath,
+        };
+      }
+
+      const { notesPath } = getStorageInfo();
+      if (path.resolve(sourcePath) !== path.resolve(notesPath)) {
+        if (isPathInside(notesPath, sourcePath)) {
+          return {
+            ...createEmptyImportResult(false),
+            success: false,
+            error: "备份目录不能包含当前日记目录",
+            sourcePath,
+          };
+        }
+      }
+
+      /*
+       * 文件合并后立即扫描，让列表不需要用户再手动更新数据库。
+       */
+      const copyResult = path.resolve(sourcePath) === path.resolve(notesPath)
+        ? { copiedCount: 0, skippedFileCount: 0 }
+        : copyBackupDirectory(sourcePath, notesPath);
+      const syncResult = createDiaryService().syncMarkdownFilesToDatabase();
+
+      return {
+        ...syncResult,
+        canceled: false,
+        copiedCount: copyResult.copiedCount,
+        skippedFileCount: copyResult.skippedFileCount,
+        sourcePath,
+      };
+    } catch (error) {
+      return {
+        ...createEmptyImportResult(false),
+        success: false,
+        error: `导入备份失败: ${(error as Error).message}`,
+      };
+    }
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.syncMarkdownFiles, (): SyncMarkdownFilesResult => {
+    try {
+      return createDiaryService().syncMarkdownFilesToDatabase();
+    } catch (error) {
+      return {
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        missingFileCount: 0,
+        error: `扫描本地文件失败: ${(error as Error).message}`,
+      };
+    }
+  });
+
   ipcMain.handle(SETTINGS_CHANNELS.exportBackup, async (event): Promise<ExportBackupResult> => {
     const focusedWindow = BrowserWindow.fromWebContents(event.sender);
     const backupFolderName = `EchoBook_${formatBackupTimestamp(new Date())}`;
@@ -263,6 +378,59 @@ function resolveNotesDirectoryPath(selectedPath: string): string {
   return path.join(resolvedPath, getNotesDirectoryName());
 }
 
+function resolveBackupNotesSourcePath(selectedPath: string): string | null {
+  const resolvedPath = path.resolve(selectedPath);
+  const directNotesPath = path.join(resolvedPath, getNotesDirectoryName());
+
+  if (isDirectory(resolvedPath) && path.basename(resolvedPath) === getNotesDirectoryName()) {
+    return resolvedPath;
+  }
+
+  if (isDirectory(directNotesPath)) {
+    return directNotesPath;
+  }
+
+  /*
+   * 兼容从 zip 解压后的 EchoBook_xxx/echoBookNotes 这类备份父目录。
+   */
+  const nestedNotesPath = findNestedNotesDirectory(resolvedPath);
+  if (nestedNotesPath) {
+    return nestedNotesPath;
+  }
+
+  /*
+   * 如果用户选择的是普通 Markdown 文件夹，也允许作为导入来源。
+   */
+  return countMarkdownFiles(resolvedPath) > 0 ? resolvedPath : null;
+}
+
+function findNestedNotesDirectory(directoryPath: string): string | null {
+  let entries: string[];
+
+  try {
+    entries = fs.readdirSync(directoryPath);
+  } catch {
+    return null;
+  }
+
+  for (const entry of entries) {
+    const candidate = path.join(directoryPath, entry, getNotesDirectoryName());
+    if (isDirectory(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function isDirectory(directoryPath: string): boolean {
+  try {
+    return fs.statSync(directoryPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 function applyNotesPathSelection(isResetToDefault: boolean, resolvedNotesPath: string): void {
   if (isResetToDefault) {
     resetCustomNotesPath();
@@ -276,6 +444,66 @@ function isPathInside(candidatePath: string, parentPath: string): boolean {
   const relativePath = path.relative(parentPath, candidatePath);
 
   return Boolean(relativePath) && !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
+}
+
+interface CopyBackupDirectoryResult {
+  copiedCount: number;
+  skippedFileCount: number;
+}
+
+function copyBackupDirectory(sourcePath: string, targetPath: string): CopyBackupDirectoryResult {
+  const result: CopyBackupDirectoryResult = {
+    copiedCount: 0,
+    skippedFileCount: 0,
+  };
+  const resolvedSourcePath = path.resolve(sourcePath);
+  const resolvedTargetPath = path.resolve(targetPath);
+
+  fs.mkdirSync(resolvedTargetPath, { recursive: true });
+
+  function copyEntry(currentSourcePath: string): void {
+    let stat: fs.Stats;
+
+    try {
+      stat = fs.lstatSync(currentSourcePath);
+    } catch {
+      return;
+    }
+
+    if (stat.isSymbolicLink()) {
+      return;
+    }
+
+    const relativePath = path.relative(resolvedSourcePath, currentSourcePath);
+    const currentTargetPath = path.join(resolvedTargetPath, relativePath);
+
+    if (stat.isDirectory()) {
+      fs.mkdirSync(currentTargetPath, { recursive: true });
+      for (const entry of fs.readdirSync(currentSourcePath)) {
+        copyEntry(path.join(currentSourcePath, entry));
+      }
+      return;
+    }
+
+    if (!stat.isFile()) {
+      return;
+    }
+
+    if (fs.existsSync(currentTargetPath)) {
+      /*
+       * 导入备份默认不覆盖当前文件，避免把用户正在编辑的 Markdown 冲掉。
+       */
+      result.skippedFileCount += 1;
+      return;
+    }
+
+    fs.mkdirSync(path.dirname(currentTargetPath), { recursive: true });
+    fs.copyFileSync(currentSourcePath, currentTargetPath);
+    result.copiedCount += 1;
+  }
+
+  copyEntry(resolvedSourcePath);
+  return result;
 }
 
 /**

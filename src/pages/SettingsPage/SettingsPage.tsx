@@ -1,8 +1,17 @@
-import { BgColorsOutlined, CheckOutlined, CopyOutlined, FolderOpenOutlined, FolderAddOutlined, UndoOutlined } from '@ant-design/icons'
+import {
+  BgColorsOutlined,
+  CheckOutlined,
+  DatabaseOutlined,
+  FolderOpenOutlined,
+  FolderAddOutlined,
+  ImportOutlined,
+  SyncOutlined,
+  UndoOutlined
+} from '@ant-design/icons'
 import { Alert, App as AntdApp, Button, Card, Form, Input, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { StorageInfo } from '../../../shared/settings'
+import type { ImportBackupDirectoryResult, StorageInfo, SyncMarkdownFilesResult } from '../../../shared/settings'
 import PageHeader from '../../components/PageHeader'
 import { useEchoTheme } from '../../contexts/EchoThemeContext'
 import { ECHO_THEME_LAYOUT_BG, ECHO_THEMES } from '../../utils/theme'
@@ -23,6 +32,8 @@ function SettingsPage() {
   const [isOpeningStorageRoot, setIsOpeningStorageRoot] = useState(false)
   const [isSelectingDirectory, setIsSelectingDirectory] = useState(false)
   const [isMigratingNotes, setIsMigratingNotes] = useState(false)
+  const [isImportingBackup, setIsImportingBackup] = useState(false)
+  const [isSyncingMarkdown, setIsSyncingMarkdown] = useState(false)
   const isUsingDefaultNotesDirectory = !storageInfo?.customNotesPath
 
   useEffect(() => {
@@ -217,22 +228,79 @@ function SettingsPage() {
     })
   }
 
-  const handleCopyPath = (path: string | undefined, label: string) => {
-    /*
-     * 复制按钮只处理已读取到的真实路径，避免把加载文案写进剪贴板。
-     */
-    if (!path) {
+  const handleImportBackupDirectory = async () => {
+    if (!window.settingsAPI) {
+      message.error('请通过 Electron 启动应用后导入回忆')
       return
     }
 
-    navigator.clipboard
-      .writeText(path)
-      .then(() => {
-        message.success(`${label}已复制`)
-      })
-      .catch(() => {
-        message.error('复制失败')
-      })
+    setIsImportingBackup(true)
+    try {
+      const result = await window.settingsAPI.importBackupDirectory()
+      if (result.canceled) {
+        return
+      }
+
+      if (!result.success) {
+        message.error(result.error ?? '导入备份失败')
+        return
+      }
+
+      /*
+       * 导入成功要先给出明确反馈，再补充 main process 自动扫描后的数量摘要。
+       */
+      showImportBackupResultMessage(result)
+    } catch {
+      message.error('导入回忆失败')
+    } finally {
+      setIsImportingBackup(false)
+    }
+  }
+
+  const handleSyncMarkdownFiles = async () => {
+    if (!window.settingsAPI) {
+      message.error('请通过 Electron 启动应用后更新日记数据')
+      return
+    }
+
+    setIsSyncingMarkdown(true)
+    try {
+      const result = await window.settingsAPI.syncMarkdownFiles()
+      if (!result.success) {
+        message.error(result.error ?? '扫描本地文件失败')
+        return
+      }
+
+      showSyncResultMessage(result)
+    } catch {
+      message.error('更新日记数据失败')
+    } finally {
+      setIsSyncingMarkdown(false)
+    }
+  }
+
+  const showSyncResultMessage = (result: SyncMarkdownFilesResult, prefix?: string) => {
+    const parts = [
+      prefix,
+      `新增 ${result.importedCount} 篇`,
+      `跳过 ${result.skippedCount} 篇`,
+      result.failedCount > 0 ? `失败 ${result.failedCount} 篇` : '',
+      result.missingFileCount > 0 ? `丢失文件 ${result.missingFileCount} 篇` : ''
+    ].filter(Boolean)
+
+    if (result.failedCount > 0) {
+      message.warning(parts.join('，'))
+      return
+    }
+
+    message.success(parts.join('，'))
+  }
+
+  const showImportBackupResultMessage = (result: ImportBackupDirectoryResult) => {
+    /*
+     * 导入提示单独处理，避免用户只看到同步统计而不知道导入已经完成。
+     */
+    showSyncResultMessage(result, `导入成功，已复制 ${result.copiedCount} 个文件`)
   }
 
   const handleThemeChange = (nextThemeId: EchoThemeId) => {
@@ -332,7 +400,8 @@ function SettingsPage() {
               </Form.Item>
               <Form.Item>
                 <Button
-                  type="primary"
+                  color="primary"
+                  variant="outlined"
                   icon={<FolderAddOutlined />}
                   loading={isSelectingDirectory || isMigratingNotes}
                   disabled={!window.settingsAPI || Boolean(settingsError)}
@@ -353,19 +422,39 @@ function SettingsPage() {
                   恢复默认目录
                 </Button>
               </Form.Item>
-              {/* <Form.Item label="数据库文件">
-                <Space.Compact style={{ width: '100%' }}>
-                  <Input readOnly value={storageInfo?.databasePath ?? (isLoadingStorageInfo ? '读取中...' : '')} />
-                  <Button
-                    icon={<CopyOutlined />}
-                    disabled={!storageInfo?.databasePath}
-                    onClick={() => handleCopyPath(storageInfo?.databasePath, '数据库文件')}
-                  >
-                    复制
-                  </Button>
-                </Space.Compact>
-              </Form.Item> */}
             </Form>
+          </Card>
+
+          <Card
+            className="rounded-[8px]!"
+            title={
+              <Space size={8}>
+                <DatabaseOutlined />
+                数据
+              </Space>
+            }
+          >
+            <Button
+              icon={<ImportOutlined />}
+              color="primary"
+              variant="outlined"
+              loading={isImportingBackup}
+              disabled={!window.settingsAPI || Boolean(settingsError) || isSyncingMarkdown}
+              onClick={handleImportBackupDirectory}
+            >
+              导入回忆
+            </Button>
+            <Button
+              className="ml-16"
+              color="primary"
+              variant="outlined"
+              icon={<SyncOutlined />}
+              loading={isSyncingMarkdown}
+              disabled={!window.settingsAPI || Boolean(settingsError) || isImportingBackup}
+              onClick={handleSyncMarkdownFiles}
+            >
+              更新日记数据
+            </Button>
           </Card>
         </div>
       </div>
