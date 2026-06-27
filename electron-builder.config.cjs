@@ -57,9 +57,13 @@ module.exports = {
   },
   mac: {
     category: "public.app-category.productivity",
+    // macOS 安装包和 .app 使用的应用图标。
+    icon: "build/icon.icns",
     target: ["dmg", "dir"],
   },
   win: {
+    // Windows 安装包、快捷方式和任务栏使用的应用图标。
+    icon: "build/icon.ico",
     target: ["nsis", "portable"],
   },
   nsis: {

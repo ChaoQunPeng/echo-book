@@ -26,6 +26,19 @@ import { registerSettingsIpcHandlers } from "./ipc/settingsIpc.js";
 const DEVELOPMENT_USER_DATA_DIRECTORY_NAME = "EchoBook-dev";
 
 /**
+ * 开发环境直接从仓库 build 目录读取应用图标。
+ * 正式包图标由 electron-builder.config.cjs 写入安装包，这里不重复处理。
+ */
+function getDevelopmentAppIconPath(): string | undefined {
+  if (app.isPackaged) {
+    return undefined;
+  }
+
+  const iconFileName = process.platform === "win32" ? "icon.ico" : "icon.png";
+  return path.join(process.cwd(), "build", iconFileName);
+}
+
+/**
  * 在应用 ready 前固定开发环境的数据根目录。
  *
  * app.getPath("userData") 是数据库、Markdown 正文、设置页路径展示和备份导出的共同
@@ -46,6 +59,19 @@ function configureEnvironmentStoragePath(): void {
 configureEnvironmentStoragePath();
 
 /**
+ * macOS 开发环境下 Dock 图标不看 BrowserWindow.icon，需要单独设置。
+ */
+function configureDevelopmentDockIcon(): void {
+  const developmentIconPath = getDevelopmentAppIconPath();
+
+  if (!developmentIconPath || process.platform !== "darwin") {
+    return;
+  }
+
+  app.dock.setIcon(developmentIconPath);
+}
+
+/**
  * 创建主窗口。
  *
  * 安全策略：
@@ -54,9 +80,12 @@ configureEnvironmentStoragePath();
  * - preload 只暴露受控的 diaryAPI，数据库操作必须走 IPC
  */
 function createWindow(): void {
+  const developmentIconPath = getDevelopmentAppIconPath();
+
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    ...(developmentIconPath ? { icon: developmentIconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -92,6 +121,7 @@ function createWindow(): void {
 void app
   .whenReady()
   .then(() => {
+    configureDevelopmentDockIcon();
     registerDiaryIpcHandlers();
     registerSettingsIpcHandlers();
     createWindow();
