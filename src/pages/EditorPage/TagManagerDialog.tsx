@@ -1,6 +1,6 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, ColorPicker, Input, Modal, Popconfirm, Tooltip } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import type { TagLibraryItem } from '../../../shared/tags'
 
 const DEFAULT_TAG_COLOR = '#52c41a'
@@ -68,6 +68,15 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
       return
     }
 
+    /*
+     * 创建同名标签会被数据库忽略，这里提前提示用户，避免看起来保存成功。
+     */
+    const hasSameNameTag = storedTags.some(tag => tag.name === normalizedName && tag.name !== editingTagName)
+    if (hasSameNameTag) {
+      setFormError('已有同名标签')
+      return
+    }
+
     setIsSubmitting(true)
     setFormError('')
 
@@ -95,6 +104,18 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
     setFormError('')
   }
 
+  const handleDraftNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextName = event.target.value
+
+    /*
+     * 用户补上标签文本后立刻隐藏错误，避免“请输入标签文本”残留。
+     */
+    setDraftName(nextName)
+    if (nextName.trim()) {
+      setFormError('')
+    }
+  }
+
   const handleDeleteTag = async (tag: TagLibraryItem) => {
     /*
      * 删除只移除 tags 表里的标签库记录，不改历史日记里的 tags 数组。
@@ -120,10 +141,10 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
   }
 
   return (
-    <Modal title="管理标签" open={open} onCancel={() => onOpenChange(false)} footer={null} width={640}>
+    <Modal title="标签" open={open} onCancel={() => onOpenChange(false)} footer={null} width={640}>
       <div className="grid grid-cols-[minmax(0,1fr)_260px] gap-32 max-[720px]:grid-cols-1">
         <div className="flex min-w-0 flex-col gap-12">
-          <p className="text-size-13 text-[rgba(25,28,29,0.7)]">标签库</p>
+          <p className="text-size-13 text-[rgba(25,28,29,0.7)]">最近使用</p>
           <div className="flex flex-col gap-12">
             {storedTags.length ? (
               storedTags.map(tag => (
@@ -136,9 +157,9 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
                     <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{tag.name}</span>
                   </span>
                   <div className="flex gap-4">
-                    <Tooltip title="编辑标签">
+                    {/* <Tooltip title="编辑标签">
                       <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEditTag(tag)} />
-                    </Tooltip>
+                    </Tooltip> */}
                     <Popconfirm
                       title="删除标签"
                       description="只会从标签库删除，不会改动已保存日记。"
@@ -164,7 +185,8 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
           <div className="flex flex-col gap-18">
             <div className="flex flex-col gap-6 text-size-13 text-[rgba(25,28,29,0.68)]">
               标签文本
-              <Input value={draftName} placeholder="例如：阅读" onChange={event => setDraftName(event.target.value)} />
+              <Input value={draftName} placeholder="例如：阅读" onChange={handleDraftNameChange} />
+              {formError ? <p className="text-size-14 text-error">{formError}</p> : null}
             </div>
 
             <div className="mb-8 flex flex-col gap-6 text-size-13 text-[rgba(25,28,29,0.68)]">
@@ -198,10 +220,8 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
               ))}
             </div>
 
-            {formError ? <p className="text-size-13 leading-[1.5] text-[#b42318]">{formError}</p> : null}
-
-            <div className="flex flex-wrap gap-8">
-              <Button className="mt-24 ml-auto" type="primary" icon={<PlusOutlined />} loading={isSubmitting} onClick={handleSubmitTag}>
+            <div className="flex flex-wrap gap-16">
+              <Button className="ml-auto" type="primary" icon={<PlusOutlined />} loading={isSubmitting} onClick={handleSubmitTag}>
                 {isEditingTag ? '保存' : '创建'}
               </Button>
               {isEditingTag ? <Button onClick={resetForm}>取消编辑</Button> : null}

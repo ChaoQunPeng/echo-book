@@ -12,6 +12,7 @@
    * 注册项目颜色，基础字色命名参考 Ant Design 的 colorTextBase token。
    */
   --color-primary: var(--echo-color-primary);
+  --color-error: var(--echo-color-error);
   --color-primary-soft: var(--echo-color-primary-soft);
   --color-primary-surface: var(--echo-color-primary-surface);
   --color-page: var(--echo-color-page);

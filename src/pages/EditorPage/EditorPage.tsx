@@ -1,7 +1,6 @@
 import {
   ArrowLeftOutlined,
   BoldOutlined,
-  CheckSquareOutlined,
   CloudOutlined,
   DownOutlined,
   FontSizeOutlined,
@@ -290,6 +289,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
   const lastPersistedSnapshotRef = useRef('')
   const isAutoSavingRef = useRef(false)
   const isManualSavingRef = useRef(false)
+  const hasQueuedFieldCommitSaveRef = useRef(false)
   const [editorVersion, setEditorVersion] = useState(0)
   const [, setToolbarStateVersion] = useState(0)
   const [isEditorReady, setIsEditorReady] = useState(false)
@@ -661,7 +661,18 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       const shouldUpdateStatus = reason !== 'leave'
       const isFieldCommit = reason === 'field-commit'
 
-      if (!diaryId || !isEditorReady || loadError || isAutoSavingRef.current || isManualSavingRef.current) {
+      if (!diaryId || !isEditorReady || loadError) {
+        return
+      }
+
+      if (isAutoSavingRef.current || isManualSavingRef.current) {
+        /*
+         * 连续点选标签时，当前保存可能还没结束；排队补一次即可写入最新字段。
+         */
+        if (isFieldCommit) {
+          hasQueuedFieldCommitSaveRef.current = true
+        }
+
         return
       }
 
@@ -742,6 +753,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
         }
       } finally {
         isAutoSavingRef.current = false
+
+        if (hasQueuedFieldCommitSaveRef.current) {
+          /*
+           * 保存期间发生的字段提交在这里串行补保存，避免旧快照覆盖最新标签。
+           */
+          hasQueuedFieldCommitSaveRef.current = false
+          void saveExistingDiaryDraft('field-commit')
+        }
       }
     },
     [diaryId, getCurrentMarkdown, isEditorReady, loadError, onDiarySaved]
@@ -857,6 +876,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     } finally {
       setIsSaving(false)
       isManualSavingRef.current = false
+
+      if (hasQueuedFieldCommitSaveRef.current) {
+        /*
+         * 手动保存期间发生的字段提交也要补写，保证标签最终立即落库落盘。
+         */
+        hasQueuedFieldCommitSaveRef.current = false
+        void saveExistingDiaryDraft('field-commit')
+      }
     }
   }
 
@@ -957,14 +984,28 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     void saveExistingDiaryDraft('field-commit')
   }
 
+  const commitSelectedTags = (nextTags: string[]) => {
+    const nextTagsInput = nextTags.join(', ')
+
+    /*
+     * 先写 ref 再触发保存，确保 IPC 读取到刚刚选择或移除的标签。
+     */
+    latestFieldsRef.current = {
+      ...latestFieldsRef.current,
+      tagsInput: nextTagsInput
+    }
+    setTagsInput(nextTagsInput)
+    markExistingDiaryChanged()
+    void saveExistingDiaryDraft('field-commit')
+  }
+
   const handleTagCheckedChange = (tagName: string, checked: boolean) => {
     /*
      * Popover 勾选结果最终仍同步回 tagsInput，复用原来的保存与快照逻辑。
      */
     const nextTags = checked ? normalizeTagList([...selectedTags, tagName]) : selectedTags.filter(tag => tag !== tagName)
 
-    setTagsInput(nextTags.join(', '))
-    markExistingDiaryChanged()
+    commitSelectedTags(nextTags)
   }
 
   const handleTagClose = (tagName: string) => {
@@ -973,8 +1014,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
      */
     const nextTags = selectedTags.filter(tag => tag !== tagName)
 
-    setTagsInput(nextTags.join(', '))
-    markExistingDiaryChanged()
+    commitSelectedTags(nextTags)
   }
 
   const isToolbarDisabled = !editor || !isEditorReady || Boolean(loadError)
@@ -1043,10 +1083,6 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
 
   const handleToggleOrderedList = () => {
     editor?.chain().focus().toggleOrderedList().run()
-  }
-
-  const handleToggleTaskList = () => {
-    editor?.chain().focus().toggleTaskList().run()
   }
 
   const handleImageInputChange = (event: ReactChangeEvent<HTMLInputElement>) => {

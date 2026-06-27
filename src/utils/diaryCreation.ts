@@ -17,14 +17,7 @@ export async function createDefaultDiary(): Promise<DiaryDetail> {
 
 function buildDefaultDiaryTitle(): string {
   /*
-   * 标题带上短时间，连续创建多篇时列表里更容易区分。
+   * 默认标题固定为“这一天”，让新建日记先聚焦当天记录本身。
    */
-  const createdAtLabel = new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date())
-
-  return `${DEFAULT_DIARY_TITLE_PREFIX} ${createdAtLabel}`
+  return DEFAULT_DIARY_TITLE_PREFIX
 }

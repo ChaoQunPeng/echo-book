@@ -5,6 +5,6 @@
 export const CLEARED_DIARY_TITLE_FALLBACK = "这一天";
 
 /*
- * 新建日记仍然按创建时间生成标题，清空标题时才使用固定兜底名。
+ * 新建日记默认使用固定标题，保持入口和清空兜底一致。
  */
-export const DEFAULT_DIARY_TITLE_PREFIX = "";
+export const DEFAULT_DIARY_TITLE_PREFIX = "这一天";

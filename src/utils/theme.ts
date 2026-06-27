@@ -26,7 +26,10 @@ export type EchoThemeId = string
 
 const THEME_STORAGE_KEY = 'echo-book-theme'
 
-export const DEFAULT_ECHO_THEME_ID: string = 'dust-red'
+/*
+ * 新用户首次进入时默认使用墨白主题。
+ */
+export const DEFAULT_ECHO_THEME_ID: string = 'monochrome'
 
 export const ECHO_THEME_LAYOUT_BG = '#fafafa'
 
@@ -226,7 +229,7 @@ export function getEchoTheme(themeId: string): EchoTheme {
   /*
    * 兜底到默认主题，避免旧版本本地缓存保存了已经不存在的主题 id。
    */
-  return ECHO_THEMES.find(theme => theme.id === themeId) ?? ECHO_THEMES[0]
+  return ECHO_THEMES.find(theme => theme.id === themeId) ?? ECHO_THEMES.find(theme => theme.id === DEFAULT_ECHO_THEME_ID) ?? ECHO_THEMES[0]
 }
 
 export function isEchoThemeId(themeId: string | null): boolean {

@@ -2,17 +2,18 @@
   /*
    * 默认主题变量用于首屏兜底，运行时会由 applyEchoTheme 写入当前主题值。
    */
-  --echo-color-primary: #cf1322;
-  --echo-color-page: #f8f9fa;
-  --echo-color-base: #191c1d;
-  --echo-color-base-hover: rgb(25 28 29 / 4%);
-  --echo-color-base-45: rgb(25 28 29 / 45%);
-  --echo-color-base-65: rgb(25 28 29 / 65%);
-  --echo-color-base-85: rgb(25 28 29 / 85%);
+  --echo-color-primary: #1f1f1f;
+  --echo-color-error: #ba1a1a;
+  --echo-color-page: #fafafa;
+  --echo-color-base: #1f1f1f;
+  --echo-color-base-hover: rgb(31 31 31 / 4%);
+  --echo-color-base-45: rgb(31 31 31 / 45%);
+  --echo-color-base-65: rgb(31 31 31 / 65%);
+  --echo-color-base-85: rgb(31 31 31 / 85%);
   --echo-color-primary-soft: color-mix(in srgb, var(--echo-color-primary) 8%, transparent);
   --echo-color-primary-surface: color-mix(in srgb, var(--echo-color-primary) 5%, #ffffff);
   --echo-border-color: #d9d9d9;
-  --echo-gradient-primary: linear-gradient(135deg, #cf1322, #ff4d4f);
+  --echo-gradient-primary: linear-gradient(135deg, #1f1f1f, #595959);
   --ant-button-primary-shadow: none;
 }
 
