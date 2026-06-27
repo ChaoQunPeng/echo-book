@@ -184,11 +184,7 @@ function TimelinePage() {
             {groupedDiaries.map(group => (
               <section key={group.key} className="[&+&]:mt-34">
                 <h2 className="mb-24 font-mono! text-size-24 text-color-base-85">{group.label}</h2>
-                <Timeline
-                  className={styles.timeline}
-                  titleSpan="90px"
-                  items={buildTimelineItems(group.key, group.days, handleOpenDiary)}
-                />
+                <Timeline className={styles.timeline} titleSpan="90px" items={buildTimelineItems(group.key, group.days, handleOpenDiary)} />
               </section>
             ))}
           </div>
@@ -293,7 +289,7 @@ function TimelineDiaryCard({ diary, onOpenDiary }: TimelineDiaryCardProps) {
       onKeyDown={handleCardKeyDown}
     >
       <h3
-        className="mb-8 cursor-pointer text-size-20 leading-[1.35] text-color-base transition-all duration-[160ms] ease-in-out group-hover:text-primary group-focus-visible:text-primary"
+        className="mb-8 font-mono! cursor-pointer text-size-20 leading-[1.35] text-color-base transition-all duration-[160ms] ease-in-out group-hover:text-primary group-focus-visible:text-primary"
         onClick={() => onOpenDiary(diary.id)}
       >
         {title}

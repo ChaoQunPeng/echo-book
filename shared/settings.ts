@@ -64,7 +64,7 @@ export interface SettingsApi {
    * 导出应用数据备份。
    *
    * renderer 只发起"导出当前应用数据"这个业务动作，保存路径由 main process 弹出
-   * 系统保存对话框让用户选择；真正被打包的目录仍然固定为 database 和 echoBookNotes。
+   * 系统保存对话框让用户选择；真正被打包的是当前 echoBookNotes 日记目录。
    */
   exportBackup(): Promise<ExportBackupResult>;
 

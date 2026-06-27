@@ -9,7 +9,6 @@ import type {
   StorageInfo,
 } from "../../shared/settings.js";
 import {
-  checkpointDatabase,
   getCustomNotesPathFromMemory,
   getDatabaseDirectoryPath,
   getDatabasePath,
@@ -35,7 +34,6 @@ const SETTINGS_CHANNELS = {
   resetCustomNotesPath: "settings:resetCustomNotesPath",
   migrateNotes: "settings:migrateNotes",
 } as const;
-const BACKUP_README_FILE_NAME = "导出须知.txt";
 
 /**
  * 统一计算设置页需要展示和操作的存储路径。
@@ -186,10 +184,8 @@ export function registerSettingsIpcHandlers(): void {
 
   ipcMain.handle(SETTINGS_CHANNELS.exportBackup, async (event): Promise<ExportBackupResult> => {
     const focusedWindow = BrowserWindow.fromWebContents(event.sender);
-    const defaultPath = path.join(
-      app.getPath("documents"),
-      `EchoBook-backup-${formatBackupTimestamp(new Date())}.zip`,
-    );
+    const backupFolderName = `EchoBook_${formatBackupTimestamp(new Date())}`;
+    const defaultPath = path.join(app.getPath("documents"), `${backupFolderName}.zip`);
     const dialogOptions: SaveDialogOptions = {
       title: "导出 EchoBook 备份",
       defaultPath,
@@ -205,31 +201,17 @@ export function registerSettingsIpcHandlers(): void {
       return { canceled: true };
     }
 
-    const { databaseDirectoryPath, databasePath, notesPath } = getStorageInfo();
-
-    /*
-     * SQLite 开启 WAL 后，新数据可能先写在 diaries.db-wal 里。
-     * 导出前主动 checkpoint 一次，让主库文件尽量包含最新内容；随后仍然整体打包
-     * database 文件夹，保留 SQLite 自己认为需要的伴随文件。
-     */
-    checkpointDatabase();
+    const { notesPath } = getStorageInfo();
 
     createStorageBackupZip(
       result.filePath,
       [
         {
-          sourcePath: databaseDirectoryPath,
-          archivePath: "database",
-        },
-        {
+          /*
+           * 压缩包内只保留同名备份目录和 echoBookNotes，避免带出数据库等额外文件。
+           */
           sourcePath: notesPath,
-          archivePath: getNotesDirectoryName(),
-        },
-      ],
-      [
-        {
-          archivePath: BACKUP_README_FILE_NAME,
-          content: createBackupReadmeContent(path.basename(databasePath)),
+          archivePath: `${backupFolderName}/${getNotesDirectoryName()}`,
         },
       ],
     );
@@ -365,28 +347,5 @@ function formatBackupTimestamp(date: Date): string {
   const minute = String(date.getMinutes()).padStart(2, "0");
   const second = String(date.getSeconds()).padStart(2, "0");
 
-  return `${year}${month}${day}-${hour}${minute}${second}`;
-}
-
-function createBackupReadmeContent(databaseFileName: string): string {
-  /*
-   * 说明文件放在 zip 根目录，用户解压后第一眼就能看到。
-   * 内容只解释备份结构，不写入本机绝对路径，避免用户分享备份时泄露本机用户名或目录。
-   */
-  return [
-    "EchoBook 备份说明",
-    "",
-    "database/",
-    `- 存放 EchoBook 的 SQLite 数据库文件，例如 ${databaseFileName}。`,
-    `- 如果看到 ${databaseFileName}-wal 或 ${databaseFileName}-shm，它们是 SQLite 在 WAL 模式下生成的伴随文件。`,
-    "- 数据库主要保存日记索引、标题、日期、标签、心情、软删除状态等结构化信息。",
-    "",
-    `${getNotesDirectoryName()}/`,
-    "- 存放每篇日记的 Markdown 正文文件。",
-    "- 目录通常按年份和月份分组，图片等资源保存在 Markdown 同级的 assets 目录。",
-    "",
-    `恢复或迁移时，请保持 database 和 ${getNotesDirectoryName()} 两个文件夹的相对结构不变。`,
-    "建议在 EchoBook 未运行时恢复备份，避免覆盖正在写入的数据。",
-    "",
-  ].join("\n");
+  return `${year}${month}${day}_${hour}${minute}${second}`;
 }

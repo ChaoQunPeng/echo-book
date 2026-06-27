@@ -145,7 +145,7 @@ function AppSidebar() {
             loading={isExportingBackup}
             onClick={handleExportBackup}
           >
-            <span>导出</span>
+            <span>打包回忆</span>
           </Button>
         </div>
 

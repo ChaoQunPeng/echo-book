@@ -117,7 +117,7 @@ function collectZipEntries(
 
     if (!fs.existsSync(sourcePath)) {
       /*
-       * 备份应该保留固定的 database/echoBookNotes 顶层结构。
+       * 备份应该保留调用方指定的顶层目录结构。
        * 即使某个目录暂时不存在，也写入一个空目录项，方便用户解压后理解结构。
        */
       pushDirectoryEntry(entries, seenArchivePaths, archivePath, new Date());
