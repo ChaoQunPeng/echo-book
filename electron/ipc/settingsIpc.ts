@@ -312,10 +312,10 @@ export function registerSettingsIpcHandlers(): void {
 
   ipcMain.handle(SETTINGS_CHANNELS.exportBackup, async (event): Promise<ExportBackupResult> => {
     const focusedWindow = BrowserWindow.fromWebContents(event.sender);
-    const backupFolderName = `EchoBook_${formatBackupTimestamp(new Date())}`;
+    const backupFolderName = `你的回忆_${formatBackupTimestamp(new Date())}`;
     const defaultPath = path.join(app.getPath("documents"), `${backupFolderName}.zip`);
     const dialogOptions: SaveDialogOptions = {
-      title: "导出 EchoBook 备份",
+      title: "导出回忆备份",
       defaultPath,
       buttonLabel: "导出",
       filters: [{ name: "ZIP 备份文件", extensions: ["zip"] }],

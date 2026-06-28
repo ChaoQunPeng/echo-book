@@ -285,6 +285,9 @@ function TimelineDiaryCard({ diary, tagColorMap, onOpenDiary }: TimelineDiaryCar
   const plainText = markdownToPlainText(diary.markdown)
   const title = buildTimelineTitle(diary.title, plainText)
   const summary = truncateText(plainText, SUMMARY_LENGTH)
+  const visibleTags = diary.tags ?? []
+  const hasSummary = summary.trim() !== ''
+  const hasTags = visibleTags.length > 0
   /*
    * 先整理展示文案，避免 JSX 里塞复杂条件表达式。
    */
@@ -351,10 +354,10 @@ function TimelineDiaryCard({ diary, tagColorMap, onOpenDiary }: TimelineDiaryCar
         {moodLabel ? <span>{moodLabel}</span> : null}
         {weatherLabel ? <span>{weatherLabel}</span> : null}
       </div>
-      {summary ? <p className="mt-14 text-size-15 leading-[1.75] text-color-base-65">{summary}</p> : null}
-      {diary.tags?.length ? (
+      {hasSummary ? <p className="mt-14 text-size-15 leading-[1.75] text-color-base-65">{summary}</p> : null}
+      {hasTags ? (
         <div className={`${styles.zeroTagMargin} mt-16 flex flex-wrap gap-8`}>
-          {diary.tags.map(tag => {
+          {visibleTags.map(tag => {
             const tagColor = tagColorMap.get(tag) ?? DEFAULT_TAG_COLOR
 
             return (
@@ -396,6 +399,10 @@ function formatTimelineMetaLabel(rawValue: string | undefined, meta: TimelineMet
  */
 function markdownToPlainText(markdown: string): string {
   return markdown
+    /*
+     * 编辑器用 &nbsp; 保存空段落，摘要里只需要把它当普通空白处理。
+     */
+    .replace(/&nbsp;|&#160;|&#xA0;/gi, ' ')
     .replace(/```[\s\S]*?```/g, codeBlock => codeBlock.replace(/```[^\n]*\n?|```/g, ' '))
     .replace(/`([^`]+)`/g, '$1')
     .replace(/!\[[^\]]*]\([^)]*\)/g, '')
@@ -416,8 +423,9 @@ function markdownToPlainText(markdown: string): string {
  */
 function buildTimelineTitle(title: string, plainText: string): string {
   const normalizedTitle = title.trim()
+  const hasTitle = normalizedTitle !== ''
 
-  if (normalizedTitle) {
+  if (hasTitle) {
     return normalizedTitle
   }
 
