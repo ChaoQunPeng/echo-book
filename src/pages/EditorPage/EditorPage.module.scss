@@ -27,27 +27,22 @@
 
   :global(.ProseMirror h1) {
     margin: 22px 0 12px;
-    font-size: 28px;
+    font-size: 26px;
   }
 
   :global(.ProseMirror h2) {
     margin: 20px 0 10px;
-    font-size: 23px;
+    font-size: 22px;
   }
 
-  :global(.ProseMirror h3) {
-    margin: 18px 0 8px;
-    font-size: 19px;
-  }
-
-  :global(.ProseMirror h4) {
-    margin: 16px 0 8px;
-    font-size: 17px;
-  }
-
+  /*
+   * 历史 H4/H5 归入最小标题档，新工具栏不再创建它们。
+   */
+  :global(.ProseMirror h3),
+  :global(.ProseMirror h4),
   :global(.ProseMirror h5) {
-    margin: 14px 0 6px;
-    font-size: 15px;
+    margin: 18px 0 8px;
+    font-size: 18px;
   }
 
   :global(.ProseMirror p),

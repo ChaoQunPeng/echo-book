@@ -2,6 +2,7 @@ import {
   ArrowLeftOutlined,
   BoldOutlined,
   CloudOutlined,
+  CloseCircleOutlined,
   DownOutlined,
   FontSizeOutlined,
   FormOutlined,
@@ -26,7 +27,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Button, Checkbox, Dropdown, Input, Popover, Space, Tag, Tooltip, type MenuProps } from 'antd'
-import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Markdown, type MarkdownNodeSpec, type MarkdownStorage } from 'tiptap-markdown'
@@ -41,9 +42,26 @@ import styles from './EditorPage.module.scss'
 const DEFAULT_TAG_COLOR = '#237804'
 const AUTO_SAVE_INTERVAL_MS = 60 * 1000
 const DIARY_IMAGE_WIDTH_TITLE_PREFIX = 'echo-width:'
-const HEADING_LEVELS = [1, 2, 3, 4, 5] as const
+const HEADING_SIZE_OPTIONS = [
+  { level: 1, label: '一级标题' },
+  { level: 2, label: '二级标题' },
+  { level: 3, label: '三级标题' }
+] as const
+type HeadingLevel = (typeof HEADING_SIZE_OPTIONS)[number]['level']
 
-type HeadingLevel = (typeof HEADING_LEVELS)[number]
+const HEADING_LEVELS: HeadingLevel[] = HEADING_SIZE_OPTIONS.map(option => option.level)
+const PARAGRAPH_MENU_KEY = 'paragraph'
+const WEATHER_NONE_OPTION = {
+  name: '',
+  label: '无',
+  emoji: '',
+  icon: <CloseCircleOutlined />
+}
+const METADATA_POPOVER_DIVIDER = {
+  type: 'divider'
+} as const
+
+type MetadataPopoverOption = { name: string; emoji: string; label?: string; icon?: ReactNode } | typeof METADATA_POPOVER_DIVIDER
 
 type DiaryDraftFields = {
   title: string
@@ -348,10 +366,12 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
 
     return Array.from(tagMap.values())
   }, [selectedTags, tagLibrary])
-  const selectedMood = mood ? formatMood(mood) : null
+  const isMoodSelected = mood.trim() !== ''
+  const selectedMood = isMoodSelected ? formatMood(mood) : null
   const selectedMoodName = selectedMood?.name ?? mood
   const selectedMoodEmoji = selectedMood?.emoji ?? ''
-  const selectedWeather = weather ? formatWeather(weather) : null
+  const isWeatherSelected = weather.trim() !== ''
+  const selectedWeather = isWeatherSelected ? formatWeather(weather) : null
   const selectedWeatherName = selectedWeather?.name ?? weather
   const selectedWeatherEmoji = selectedWeather?.emoji ?? ''
 
@@ -433,7 +453,13 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
            * 日记编辑器只保留轻量写作格式，禁用代码相关能力。
            */
           code: false,
-          codeBlock: false
+          codeBlock: false,
+          heading: {
+            /*
+             * 标题大小只开放三档，和工具栏里的 26/22/18 对应。
+             */
+            levels: HEADING_LEVELS
+          }
         }),
         Markdown.configure({
           html: false,
@@ -688,8 +714,9 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       }
 
       const normalizedTitle = normalizeDiaryTitle(fields.title)
+      const isTitleEmpty = fields.title.trim() === ''
 
-      if (isFieldCommit && !fields.title.trim()) {
+      if (isFieldCommit && isTitleEmpty) {
         /*
          * 失焦提交时把空标题回填到输入框，让界面和已保存标题保持一致。
          */
@@ -715,12 +742,20 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           throw new Error('Electron diary API is unavailable.')
         }
 
+        /*
+         * 元数据保存要显式区分“未选择”和真实枚举值。
+         */
+        const trimmedMood = fields.mood.trim()
+        const trimmedWeather = fields.weather.trim()
+        const hasMood = trimmedMood !== ''
+        const hasWeather = trimmedWeather !== ''
+
         const updatedDiary = await window.diaryAPI.updateDiary({
           id: diaryId,
           title: normalizedTitle,
           markdown,
-          mood: fields.mood.trim() ? fields.mood : null,
-          weather: fields.weather.trim() ? fields.weather : null,
+          mood: hasMood ? fields.mood : null,
+          weather: hasWeather ? fields.weather : null,
           tags: parseTags(fields.tagsInput)
         })
 
@@ -788,6 +823,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
      */
     const markdown = getCurrentMarkdown()
     const normalizedTitle = normalizeDiaryTitle(title)
+    const isTitleEmpty = title.trim() === ''
 
     console.info('Diary save button clicked:', {
       diaryId,
@@ -801,7 +837,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
       return
     }
 
-    if (!title.trim()) {
+    if (isTitleEmpty) {
       /*
        * 手动保存允许正文为空，但空标题仍回填默认名，避免列表出现空白标题。
        */
@@ -825,12 +861,20 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
         throw new Error('Electron diary API is unavailable.')
       }
 
+      /*
+       * 手动保存和自动保存保持同一套空值归一规则。
+       */
+      const trimmedMood = mood.trim()
+      const trimmedWeather = weather.trim()
+      const hasMood = trimmedMood !== ''
+      const hasWeather = trimmedWeather !== ''
+
       const updatedDiary = await window.diaryAPI.updateDiary({
         id: diaryId,
         title: normalizedTitle,
         markdown,
-        mood: mood.trim() ? mood : null,
-        weather: weather.trim() ? weather : null,
+        mood: hasMood ? mood : null,
+        weather: hasWeather ? weather : null,
         tags: parseTags(tagsInput)
       })
 
@@ -1010,10 +1054,22 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
   const canUndo = Boolean(editor && !isToolbarDisabled && editor.can().chain().undo().run())
   const canRedo = Boolean(editor && !isToolbarDisabled && editor.can().chain().redo().run())
   const activeHeadingLevel = HEADING_LEVELS.find(level => editor?.isActive('heading', { level })) ?? null
-  const headingMenuItems: MenuProps['items'] = HEADING_LEVELS.map(level => ({
-    key: String(level),
-    label: `${level}级标题`
-  }))
+  const activeHeadingOption = HEADING_SIZE_OPTIONS.find(option => option.level === activeHeadingLevel) ?? null
+  const isParagraphActive = Boolean(editor?.isActive('paragraph'))
+  const selectedHeadingMenuKeys = resolveSelectedHeadingMenuKeys(activeHeadingLevel, isParagraphActive)
+  const headingMenuItems: MenuProps['items'] = [
+    ...HEADING_SIZE_OPTIONS.map(option => ({
+      key: String(option.level),
+      label: option.label
+    })),
+    {
+      type: 'divider'
+    },
+    {
+      key: PARAGRAPH_MENU_KEY,
+      label: '正文'
+    }
+  ]
 
   const handleEditorToolbarMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     /*
@@ -1038,6 +1094,14 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
   }
 
   const handleHeadingMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === PARAGRAPH_MENU_KEY) {
+      /*
+       * “正文”是清除标题的显式入口，避免用户需要再点一次当前标题来取消。
+       */
+      editor?.chain().focus().setParagraph().run()
+      return
+    }
+
     const level = Number(key) as HeadingLevel
 
     /*
@@ -1093,7 +1157,10 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
   })
 
   const weatherPopoverContent = renderMetadataPopoverContent({
-    options: WEATHERS,
+    /*
+     * 天气允许主动清空，保存时会落成 null 并从列表/预览中隐藏。
+     */
+    options: [...WEATHERS, METADATA_POPOVER_DIVIDER, WEATHER_NONE_OPTION],
     selectedValue: weather,
     onSelect: handleWeatherChange,
     onKeyDown: handlePickerTriggerKeyDown
@@ -1163,7 +1230,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           onOpenChange={setIsMoodPopoverOpen}
         >
           <Button icon={<SmileOutlined />}>
-            {mood ? (
+            {isMoodSelected ? (
               <div className="flex items-center leading-none!">
                 <span className="mood-name leading-none! mr-4">{selectedMoodName}</span>
                 <span className="mood-emoji text-size-18">{selectedMoodEmoji}</span>
@@ -1182,7 +1249,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           onOpenChange={setIsWeatherPopoverOpen}
         >
           <Button icon={<CloudOutlined />}>
-            {weather ? (
+            {isWeatherSelected ? (
               <div className="flex items-center leading-none!">
                 <span className="mood-name leading-none! mr-4">{selectedWeatherName}</span>
                 <span className="mood-emoji text-size-18">{selectedWeatherEmoji}</span>
@@ -1240,13 +1307,13 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
                     disabled={isToolbarDisabled}
                     menu={{
                       items: headingMenuItems,
-                      selectedKeys: activeHeadingLevel ? [String(activeHeadingLevel)] : [],
+                      selectedKeys: selectedHeadingMenuKeys,
                       onClick: handleHeadingMenuClick
                     }}
                     trigger={['click']}
                   >
                     <Button icon={<FontSizeOutlined />} disabled={isToolbarDisabled} type={activeHeadingLevel ? 'primary' : 'default'}>
-                      {activeHeadingLevel ? `H${activeHeadingLevel}` : '标题'} <DownOutlined />
+                      {activeHeadingOption ? activeHeadingOption.label : '正文'} <DownOutlined />
                     </Button>
                   </Dropdown>
                 </Tooltip>
@@ -1336,40 +1403,78 @@ function parseTags(value: string): string[] {
   return normalizeTagList(value.split(/[,，]/))
 }
 
+function resolveSelectedHeadingMenuKeys(activeHeadingLevel: HeadingLevel | null, isParagraphActive: boolean): string[] {
+  /*
+   * 标题菜单需要把正文也当成可选项，列表等块类型则不高亮任何项。
+   */
+  if (activeHeadingLevel !== null) {
+    return [String(activeHeadingLevel)]
+  }
+
+  if (isParagraphActive) {
+    return [PARAGRAPH_MENU_KEY]
+  }
+
+  return []
+}
+
 function renderMetadataPopoverContent({
   options,
   selectedValue,
   onSelect,
   onKeyDown
 }: {
-  options: ReadonlyArray<{ name: string; emoji: string }>
+  options: ReadonlyArray<MetadataPopoverOption>
   selectedValue: string
   onSelect: (value: string) => void
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
 }) {
   return (
     <div className="flex min-w-180 flex-col gap-4">
-      {options.map(option => (
-        <div
-          key={option.name}
-          className={[
-            'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-color-base outline-none hover:bg-base-hover focus-visible:bg-base-hover',
-            selectedValue === option.name ? 'bg-primary-soft font-bold text-primary' : ''
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          role="button"
-          tabIndex={0}
-          aria-pressed={selectedValue === option.name}
-          onClick={() => onSelect(option.name)}
-          onKeyDown={onKeyDown}
-        >
-          <span className="w-20 text-center">{option.emoji}</span>
-          <span>{option.name}</span>
-        </div>
-      ))}
+      {options.map((option, optionIndex) => {
+        if (isMetadataPopoverDivider(option)) {
+          /*
+           * 清空入口和真实枚举项分组，避免误以为它也是一种天气。
+           */
+          return <div key={`divider-${optionIndex}`} className="my-4 border-t border-primary-soft" role="separator" />
+        }
+
+        const optionLabel = option.label ?? option.name
+        const isSelected = selectedValue === option.name
+        /*
+         * 清空这类操作项用图标，真实元数据项仍展示原来的 emoji。
+         */
+        const optionVisual = option.icon ?? option.emoji
+
+        return (
+          <div
+            key={optionLabel}
+            className={[
+              'flex min-h-32 cursor-pointer items-center gap-8 rounded-[6px] px-8 py-5 text-color-base outline-none hover:bg-base-hover focus-visible:bg-base-hover',
+              isSelected ? 'bg-primary-soft font-bold text-primary' : ''
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            onClick={() => onSelect(option.name)}
+            onKeyDown={onKeyDown}
+          >
+            <span className="w-20 text-center">{optionVisual}</span>
+            <span>{optionLabel}</span>
+          </div>
+        )
+      })}
     </div>
   )
+}
+
+function isMetadataPopoverDivider(option: MetadataPopoverOption): option is typeof METADATA_POPOVER_DIVIDER {
+  /*
+   * 元数据弹层的分割线是展示项，不参与选择和保存。
+   */
+  return 'type' in option && option.type === 'divider'
 }
 
 function selectWordAroundCursor(editor: Editor): boolean {
