@@ -12,13 +12,13 @@ jobs:
     steps:
       # 拉取仓库代码。
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 安装 Node.js，并缓存 npm 依赖。
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       # 按 package-lock.json 精确安装依赖。
@@ -31,7 +31,7 @@ jobs:
 
       # 上传 .exe，方便在 Actions 页面下载。
       - name: Upload Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: EchoBook-Windows-Installer
           path: release/*.exe
