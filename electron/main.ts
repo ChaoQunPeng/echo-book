@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, ipcMain } from "electron";
 import path from "node:path";
 import { closeDatabase } from "./db/connection.js";
 import { registerDiaryIpcHandlers } from "./ipc/diaryIpc.js";
@@ -131,6 +131,19 @@ function configureDevelopmentDockIcon(): void {
 }
 
 /**
+ * Windows/Linux 不显示 Electron 默认菜单栏，避免出现 File/Edit/View 等系统菜单。
+ */
+function configureApplicationMenu(): void {
+  const shouldKeepNativeMenu = process.platform === "darwin";
+
+  if (shouldKeepNativeMenu) {
+    return;
+  }
+
+  Menu.setApplicationMenu(null);
+}
+
+/**
  * 创建主窗口。
  *
  * 安全策略：
@@ -144,6 +157,7 @@ function createWindow(): void {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    autoHideMenuBar: true,
     ...(developmentIconPath ? { icon: developmentIconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -152,6 +166,13 @@ function createWindow(): void {
       sandbox: true,
     },
   });
+
+  const shouldHideWindowMenu = process.platform !== "darwin";
+
+  if (shouldHideWindowMenu) {
+    // 双保险：窗口级别也禁用菜单栏，确保 Windows 正式包不会露出默认菜单。
+    win.setMenu(null);
+  }
 
   registerWindowErrorLogHandlers(win);
 
@@ -177,6 +198,7 @@ void app
     registerProcessErrorLogHandlers();
     registerRendererErrorLogIpc();
     configureDevelopmentDockIcon();
+    configureApplicationMenu();
     registerDiaryIpcHandlers();
     registerSettingsIpcHandlers();
     createWindow();
