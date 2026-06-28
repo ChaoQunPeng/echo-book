@@ -4,7 +4,7 @@ import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Diary } from '../../../shared/diary'
-import { createDefaultDiary } from '../../utils/diaryCreation'
+import { createDefaultDiary, waitForDefaultDiaryCreationLoading } from '../../utils/diaryCreation'
 import { buildWebPreviewData } from '../../utils/webPreviewDiaries'
 import EditorPage from '../EditorPage'
 import DiaryListLoading from './DiaryListLoading'
@@ -229,6 +229,10 @@ function DiaryListPage() {
     } catch (error) {
       setErrorMessage(`创建日记失败：${getErrorMessage(error)}`)
     } finally {
+      /*
+       * 创建结果立即用于跳转，loading 延迟消失用来阻止 0.5 秒内重复创建。
+       */
+      await waitForDefaultDiaryCreationLoading()
       setIsCreatingDiary(false)
     }
   }

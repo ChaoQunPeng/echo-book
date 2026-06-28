@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import logoUrl from '../assets/logo.svg'
 import AboutDialog from '../components/AboutDialog'
-import { createDefaultDiary } from '../utils/diaryCreation'
+import { createDefaultDiary, waitForDefaultDiaryCreationLoading } from '../utils/diaryCreation'
 import styles from './AppSidebar.module.scss'
 
 const sidebarMenus = [
@@ -52,6 +52,10 @@ function AppSidebar() {
     } catch (error) {
       message.error(`创建日记失败：${getErrorMessage(error)}`)
     } finally {
+      /*
+       * 日记已创建后可以马上跳转，但按钮 loading 固定保留 0.5 秒作为防连点窗口。
+       */
+      await waitForDefaultDiaryCreationLoading()
       setIsCreatingDiary(false)
     }
   }
