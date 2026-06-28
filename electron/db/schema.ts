@@ -8,13 +8,12 @@ const LEGACY_CUSTOM_NOTES_PATH_KEY = "custom_notes_path";
 /**
  * 初始化 SQLite schema。
  *
- * 开发阶段不保留旧 schema 数据；如果发现表结构不是当前版本，直接重建相关表。
+ * 启动时只补齐当前版本需要的表和索引，不主动清理已有业务数据。
  */
 export function initializeDatabase(db?: Database.Database): void {
   const targetDb = db ?? getDatabase();
 
   targetDb.pragma("trusted_schema = ON");
-  resetIncompatibleSchema(targetDb);
   createCurrentSchema(targetDb);
   initializeSettings(targetDb);
 
@@ -33,54 +32,6 @@ function ensureStorageDirectories(): void {
    * echoBookNotes 是 Markdown 文件根目录，启动时确保它存在。
    */
   fs.mkdirSync(getNotesPath(), { recursive: true });
-}
-
-function resetIncompatibleSchema(db: Database.Database): void {
-  /*
-   * 开发阶段只保留当前 schema 需要的表，多余表不做数据保留。
-   */
-  dropUnexpectedTables(db);
-
-  if (
-    hasTable(db, "diaries") &&
-    !hasExactColumns(db, "diaries", [
-      "id",
-      "title",
-      "filepath",
-      "diary_date",
-      "created_at",
-      "updated_at",
-      "mood",
-      "weather",
-      "tags",
-      "deleted",
-    ])
-  ) {
-    dropTableIfExists(db, "diaries");
-  }
-
-  if (hasTable(db, "tags") && !hasExactColumns(db, "tags", ["name", "color", "created_at"])) {
-    dropTableIfExists(db, "tags");
-  }
-}
-
-function dropUnexpectedTables(db: Database.Database): void {
-  const rows = db
-    .prepare(
-      `
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table'
-          AND name NOT LIKE 'sqlite_%'
-      `,
-    )
-    .all() as Array<{ name: string }>;
-
-  for (const row of rows) {
-    if (!isCurrentSchemaTable(row.name)) {
-      dropTableIfExists(db, row.name);
-    }
-  }
 }
 
 function createCurrentSchema(db: Database.Database): void {
@@ -238,15 +189,6 @@ function hasTable(db: Database.Database, tableName: string): boolean {
   return Boolean(table);
 }
 
-function isCurrentSchemaTable(tableName: string): boolean {
-  const currentTables = new Set(["diaries", "tags", "settings", "diary_fts"]);
-
-  /*
-   * FTS5 会为虚拟表生成 shadow tables，不能被开发期清理逻辑误删。
-   */
-  return currentTables.has(tableName) || tableName.startsWith("diary_fts_");
-}
-
 function hasExpectedDiaryFtsSql(db: Database.Database): boolean {
   const row = db
     .prepare(
@@ -273,7 +215,7 @@ function hasExactColumns(db: Database.Database, tableName: string, expectedColum
 
 function getColumnNames(db: Database.Database, tableName: string): Set<string> {
   /*
-   * PRAGMA table_info 返回当前表列，用于开发期判断是否需要重建旧表。
+   * PRAGMA table_info 返回当前表列，用于判断 FTS 缓存是否需要重建。
    */
   const columns = db.prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`).all() as Array<{ name: string }>;
 
