@@ -7,6 +7,12 @@
   "scripts": {
     "dev": "node scripts/electron-dev.mjs",
     "dev-rebuild": "node scripts/electron-dev.mjs --rebuild",
+    "web:dev": "vite",
+    "build": "tsc --noEmit && npm run electron:build && vite build",
+    "preview": "vite preview",
+    "electron:build": "tsc -p tsconfig.electron.json && node scripts/write-electron-dist-package.mjs",
+    "electron:rebuild": "electron-rebuild -f -w better-sqlite3",
+    "electron": "node scripts/electron-run.mjs",
     "dist": "npm run build && electron-builder --config electron-builder.config.cjs",
     "dist:mac": "npm run build && electron-builder --config electron-builder.config.cjs --mac",
     "dist:dmg": "npm run build && electron-builder --config electron-builder.config.cjs --mac dmg",

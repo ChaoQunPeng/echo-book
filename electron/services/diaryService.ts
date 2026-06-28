@@ -74,7 +74,7 @@ export class DiaryService {
      * 这样数据库里的日期字段始终和创建时间保持一致。
      */
     const diaryDate = formatTimestampDate(now);
-    const filepath = generateFilePath(now, id);
+    const filepath = generateFilePath(now);
     const tags = normalizeTagNames(input.tags);
     const mood = input.mood === undefined ? DEFAULT_MOOD : normalizeMood(input.mood);
     const weather = input.weather === undefined ? undefined : normalizeWeather(input.weather);
@@ -582,16 +582,40 @@ function formatTimestampDate(timestamp: number): string {
 /**
  * 生成相对于 echoBookNotes 目录的文件路径。
  *
- * 格式为 YYYY/MM/YYYY_MM_DD_id.md，不再包含 echoBookNotes/ 前缀，
+ * 格式为 YYYY/MM/YYYY_MM_DD_HHmmss.md，不再包含 echoBookNotes/ 前缀，
  * 因为 resolveDiaryFilePath 会基于 getNotesPath() 解析。
  */
-function generateFilePath(createdAt: number, id: string): string {
+function generateFilePath(createdAt: number): string {
   const date = new Date(createdAt);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const directory = `${year}/${month}`;
+  const filenamePrefix = `${year}_${month}_${day}_${hours}${minutes}${seconds}`;
 
-  return `${year}/${month}/${year}_${month}_${day}_${id}.md`;
+  return generateAvailableDiaryFilePath(directory, filenamePrefix);
+}
+
+function generateAvailableDiaryFilePath(directory: string, filenamePrefix: string): string {
+  let sequence = 1;
+
+  while (true) {
+    /*
+     * 同一秒内重复创建时追加 _2、_3，避免文件名碰撞。
+     */
+    const sequenceSuffix = sequence === 1 ? "" : `_${sequence}`;
+    const filepath = `${directory}/${filenamePrefix}${sequenceSuffix}.md`;
+    const isFilepathAvailable = fs.existsSync(resolveDiaryFilePath(filepath)) === false;
+
+    if (isFilepathAvailable) {
+      return filepath;
+    }
+
+    sequence += 1;
+  }
 }
 
 function buildDiaryMarkdownFile(input: BuildDiaryMarkdownFileInput): string {
