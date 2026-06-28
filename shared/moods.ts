@@ -7,9 +7,12 @@ export const MOODS = [
     name: '开心',
     emoji: '😀'
   },
+  /*
+   * 使用较早版本就支持的 emoji，避免部分 Windows 字体缺字。
+   */
   {
     name: '疲惫',
-    emoji: '🫠'
+    emoji: '😫'
   },
   {
     name: '无语',
