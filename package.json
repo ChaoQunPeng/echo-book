@@ -16,6 +16,7 @@
     "dist": "npm run build && electron-builder --config electron-builder.config.cjs",
     "dist:mac": "npm run build && electron-builder --config electron-builder.config.cjs --mac",
     "dist:dmg": "npm run build && electron-builder --config electron-builder.config.cjs --mac dmg",
+    "dist:dmg:x64": "npm run build && electron-builder --config electron-builder.config.cjs --mac dmg --x64",
     "dist:win": "npm run build && electron-builder --config electron-builder.config.cjs --win",
     "dist:win-installer": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis"
   },

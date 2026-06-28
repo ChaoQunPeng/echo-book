@@ -1,0 +1,38 @@
+name: Build Windows
+
+on:
+  # 手动触发 Windows 安装包构建。
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      # 拉取仓库代码。
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 安装 Node.js，并缓存 npm 依赖。
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 按 package-lock.json 精确安装依赖。
+      - name: Install Dependencies
+        run: npm ci
+
+      # 在 Windows 环境生成 NSIS 安装包。
+      - name: Build Installer
+        run: npm run dist:win-installer
+
+      # 上传 .exe，方便在 Actions 页面下载。
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: EchoBook-Windows-Installer
+          path: release/*.exe
+          if-no-files-found: error

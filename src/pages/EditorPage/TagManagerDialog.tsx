@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, ColorPicker, Input, Modal, Popconfirm, Tooltip } from 'antd'
 import { useEffect, useState, type ChangeEvent } from 'react'
 import type { TagLibraryItem } from '../../../shared/tags'
@@ -97,12 +97,12 @@ function TagManagerDialog({ open, onOpenChange, onTagsChanged }: TagManagerDialo
     }
   }
 
-  const handleEditTag = (tag: TagLibraryItem) => {
-    setEditingTagName(tag.name)
-    setDraftName(tag.name)
-    setDraftColor(tag.color)
-    setFormError('')
-  }
+  // const handleEditTag = (tag: TagLibraryItem) => {
+  //   setEditingTagName(tag.name)
+  //   setDraftName(tag.name)
+  //   setDraftColor(tag.color)
+  //   setFormError('')
+  // }
 
   const handleDraftNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextName = event.target.value
