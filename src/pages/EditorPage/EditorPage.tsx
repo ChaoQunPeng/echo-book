@@ -20,6 +20,7 @@ import {
 import { mergeAttributes, type NodeViewRendererProps } from '@tiptap/core'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
+import { Paragraph } from '@tiptap/extension-paragraph'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
@@ -60,6 +61,16 @@ const WEATHER_NONE_OPTION = {
 const METADATA_POPOVER_DIVIDER = {
   type: 'divider'
 } as const
+const EMPTY_PARAGRAPH_MARKDOWN = '&nbsp;'
+const EMPTY_PARAGRAPH_TEXT = '\u00A0'
+
+const DiaryParagraph = Paragraph.extend({
+  addStorage() {
+    return {
+      markdown: createDiaryParagraphMarkdownSpec()
+    }
+  }
+})
 
 type MetadataPopoverOption = { name: string; emoji: string; label?: string; icon?: ReactNode } | typeof METADATA_POPOVER_DIVIDER
 
@@ -83,6 +94,42 @@ type EditorPageProps = {
 }
 
 type DiaryImageUrlResolver = (url: string) => Promise<string>
+
+function createDiaryParagraphMarkdownSpec(): MarkdownNodeSpec {
+  return {
+    serialize(state, node, parent) {
+      const isEmptyParagraph = node.childCount === 0
+      const isOnlyEmptyParagraph = parent.childCount === 1 && isEmptyParagraph
+
+      if (isEmptyParagraph && !isOnlyEmptyParagraph) {
+        /*
+         * Markdown 会折叠连续空行；写入实体占位后，多敲的回车才能在保存后恢复。
+         */
+        state.write(EMPTY_PARAGRAPH_MARKDOWN)
+        state.closeBlock(node)
+        return
+      }
+
+      state.renderInline(node)
+      state.closeBlock(node)
+    },
+    parse: {
+      updateDOM(element) {
+        /*
+         * 读回保存的空段落占位时，把它还原成真正的空段落供 TipTap 编辑。
+         */
+        element.querySelectorAll('p').forEach(paragraph => {
+          const paragraphText = paragraph.textContent ?? ''
+          const hasOnlyEmptyMarker = paragraph.childNodes.length === 1 && paragraphText === EMPTY_PARAGRAPH_TEXT
+
+          if (hasOnlyEmptyMarker) {
+            paragraph.textContent = ''
+          }
+        })
+      }
+    }
+  }
+}
 
 function createDiaryImageExtension(resolveImageUrl: DiaryImageUrlResolver) {
   return Image.extend({
@@ -454,6 +501,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
            */
           code: false,
           codeBlock: false,
+          paragraph: false,
           heading: {
             /*
              * 标题大小只开放三档，和工具栏里的 26/22/18 对应。
@@ -464,8 +512,13 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
         Markdown.configure({
           html: false,
           linkify: true,
+          /*
+           * 读取旧 Markdown 时保留单换行，避免历史正文重新打开后被并到同一段。
+           */
+          breaks: true,
           tightLists: true
         }),
+        DiaryParagraph,
         diaryImageExtension,
         Link.configure({
           openOnClick: false,
