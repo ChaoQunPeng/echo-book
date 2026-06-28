@@ -30,6 +30,16 @@ export interface ExportBackupResult {
 }
 
 /**
+ * 导出当天错误日志的结果。
+ */
+export interface ExportTodayErrorLogResult {
+  canceled: boolean;
+  exported: boolean;
+  filePath?: string;
+  error?: string;
+}
+
+/**
  * 选择目录对话框的返回结果。
  */
 export interface SelectDirectoryResult {
@@ -89,6 +99,14 @@ export interface SettingsApi {
    * 系统保存对话框让用户选择；真正被打包的是当前 echoBookNotes 日记目录。
    */
   exportBackup(): Promise<ExportBackupResult>;
+
+  /**
+   * 导出当天错误日志。
+   *
+   * 日志由 main process 统一写入 errorLog/errorLog_YYYYMMDD.log；
+   * renderer 只触发导出动作，不能读取任意日志文件内容。
+   */
+  exportTodayErrorLog(): Promise<ExportTodayErrorLogResult>;
 
   /**
    * 打开应用自己的存储根目录。

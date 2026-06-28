@@ -10,6 +10,62 @@ import type {
 import type { SettingsApi } from "../shared/settings.js";
 import type { CreateTagInput, TagApi, UpdateTagInput } from "../shared/tags.js";
 
+const RENDERER_ERROR_LOG_CHANNEL = "error-log:renderer-error";
+
+function normalizeUnknownError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack ?? error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  try {
+    const jsonText = JSON.stringify(error);
+    const hasJsonText = typeof jsonText === "string" && jsonText.length > 0;
+
+    return hasJsonText ? jsonText : String(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function reportRendererError(payload: {
+  kind: "error" | "unhandledrejection";
+  message: string;
+  source?: string;
+  line?: number;
+  column?: number;
+  stack?: string;
+}): void {
+  /*
+   * renderer 错误只单向上报给 main process，由 main process 统一写入 app error log。
+   */
+  ipcRenderer.send(RENDERER_ERROR_LOG_CHANNEL, payload);
+}
+
+window.addEventListener("error", (event) => {
+  reportRendererError({
+    kind: "error",
+    message: event.message,
+    source: event.filename,
+    line: event.lineno,
+    column: event.colno,
+    stack: normalizeUnknownError(event.error),
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reasonText = normalizeUnknownError(event.reason);
+
+  reportRendererError({
+    kind: "unhandledrejection",
+    message: reasonText,
+    stack: reasonText,
+  });
+});
+
 /**
  * preload 是 renderer 与 main process 之间唯一被允许的桥。
  *
@@ -99,6 +155,10 @@ const settingsAPI: SettingsApi = {
 
   syncMarkdownFiles() {
     return ipcRenderer.invoke("settings:syncMarkdownFiles");
+  },
+
+  exportTodayErrorLog() {
+    return ipcRenderer.invoke("settings:exportTodayErrorLog");
   },
 };
 

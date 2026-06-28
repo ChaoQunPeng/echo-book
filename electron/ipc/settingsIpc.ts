@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type {
   ExportBackupResult,
+  ExportTodayErrorLogResult,
   ImportBackupDirectoryResult,
   MigrateNotesResult,
   SelectDirectoryResult,
@@ -25,6 +26,12 @@ import {
 import { DiaryRepository } from "../repositories/diaryRepository.js";
 import { TagRepository } from "../repositories/tagRepository.js";
 import { DiaryService } from "../services/diaryService.js";
+import {
+  appendErrorLog,
+  copyTodayErrorLogFile,
+  getTodayErrorLogFilePath,
+  hasTodayErrorLogFile,
+} from "../services/errorLogService.js";
 import { createStorageBackupZip } from "../services/exportService.js";
 
 /**
@@ -33,6 +40,7 @@ import { createStorageBackupZip } from "../services/exportService.js";
 const SETTINGS_CHANNELS = {
   getStorageInfo: "settings:getStorageInfo",
   exportBackup: "settings:exportBackup",
+  exportTodayErrorLog: "settings:exportTodayErrorLog",
   openStorageRoot: "settings:openStorageRoot",
   openNotesDirectory: "settings:openNotesDirectory",
   selectDirectory: "settings:selectDirectory",
@@ -154,6 +162,7 @@ export function registerSettingsIpcHandlers(): void {
 
       return { success: true };
     } catch (error) {
+      appendErrorLog("settings:setCustomNotesPath", "Failed to set custom notes path", error as Error);
       return { success: false, error: `设置自定义目录失败: ${(error as Error).message}` };
     }
   });
@@ -163,6 +172,7 @@ export function registerSettingsIpcHandlers(): void {
       resetCustomNotesPath();
       return { success: true };
     } catch (error) {
+      appendErrorLog("settings:resetCustomNotesPath", "Failed to reset custom notes path", error as Error);
       return { success: false, error: `重置目录失败: ${(error as Error).message}` };
     }
   });
@@ -215,6 +225,7 @@ export function registerSettingsIpcHandlers(): void {
 
       return { success: true, movedCount };
     } catch (error) {
+      appendErrorLog("settings:migrateNotes", "Failed to migrate notes", error as Error);
       return { success: false, movedCount: 0, error: `迁移失败: ${(error as Error).message}` };
     }
   });
@@ -274,6 +285,7 @@ export function registerSettingsIpcHandlers(): void {
         sourcePath,
       };
     } catch (error) {
+      appendErrorLog("settings:importBackupDirectory", "Failed to import backup directory", error as Error);
       return {
         ...createEmptyImportResult(false),
         success: false,
@@ -286,6 +298,7 @@ export function registerSettingsIpcHandlers(): void {
     try {
       return createDiaryService().syncMarkdownFilesToDatabase();
     } catch (error) {
+      appendErrorLog("settings:syncMarkdownFiles", "Failed to sync markdown files", error as Error);
       return {
         success: false,
         importedCount: 0,
@@ -318,23 +331,72 @@ export function registerSettingsIpcHandlers(): void {
 
     const { notesPath } = getStorageInfo();
 
-    createStorageBackupZip(
-      result.filePath,
-      [
-        {
-          /*
-           * 压缩包内只保留同名备份目录和 echoBookNotes，避免带出数据库等额外文件。
-           */
-          sourcePath: notesPath,
-          archivePath: `${backupFolderName}/${getNotesDirectoryName()}`,
-        },
-      ],
-    );
+    try {
+      createStorageBackupZip(
+        result.filePath,
+        [
+          {
+            /*
+             * 压缩包内只保留同名备份目录和 echoBookNotes，避免带出数据库等额外文件。
+             */
+            sourcePath: notesPath,
+            archivePath: `${backupFolderName}/${getNotesDirectoryName()}`,
+          },
+        ],
+      );
 
-    return {
-      canceled: false,
-      filePath: result.filePath.toLowerCase().endsWith(".zip") ? result.filePath : `${result.filePath}.zip`,
+      return {
+        canceled: false,
+        filePath: result.filePath.toLowerCase().endsWith(".zip") ? result.filePath : `${result.filePath}.zip`,
+      };
+    } catch (error) {
+      appendErrorLog("settings:exportBackup", "Failed to export backup", error as Error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(SETTINGS_CHANNELS.exportTodayErrorLog, async (event): Promise<ExportTodayErrorLogResult> => {
+    const hasLogFile = hasTodayErrorLogFile();
+
+    if (hasLogFile === false) {
+      return { canceled: false, exported: false, error: "暂无错误日志" };
+    }
+
+    const focusedWindow = BrowserWindow.fromWebContents(event.sender);
+    const sourceLogPath = getTodayErrorLogFilePath();
+    const defaultPath = path.join(app.getPath("documents"), path.basename(sourceLogPath));
+    const dialogOptions: SaveDialogOptions = {
+      title: "导出错误日志",
+      defaultPath,
+      buttonLabel: "导出",
+      filters: [{ name: "日志文件", extensions: ["log"] }],
+      properties: ["showOverwriteConfirmation"],
     };
+    const result = focusedWindow
+      ? await dialog.showSaveDialog(focusedWindow, dialogOptions)
+      : await dialog.showSaveDialog(dialogOptions);
+    const hasSelectedFilePath = typeof result.filePath === "string" && result.filePath.length > 0;
+
+    if (result.canceled === true || hasSelectedFilePath === false) {
+      return { canceled: true, exported: false };
+    }
+
+    try {
+      /*
+       * 只复制当天错误日志，避免导出目录中其它应用日志或历史文件。
+       */
+      const exportedFilePath = copyTodayErrorLogFile(result.filePath);
+
+      return { canceled: false, exported: true, filePath: exportedFilePath };
+    } catch (error) {
+      appendErrorLog("settings:exportTodayErrorLog", "Failed to export today error log", error as Error);
+
+      return {
+        canceled: false,
+        exported: false,
+        error: `导出错误日志失败: ${(error as Error).message}`,
+      };
+    }
   });
 
   ipcMain.handle(SETTINGS_CHANNELS.openStorageRoot, async (): Promise<void> => {
@@ -346,6 +408,7 @@ export function registerSettingsIpcHandlers(): void {
      * 抛出 Error 可以让 renderer 侧统一走 Promise rejection，并显示用户可读提示。
      */
     if (errorMessage) {
+      appendErrorLog("settings:openStorageRoot", "Failed to open storage root", { errorMessage, storageRoot });
       throw new Error(errorMessage);
     }
   });
@@ -358,6 +421,7 @@ export function registerSettingsIpcHandlers(): void {
      * 打开当前日记存放目录（可能是自定义目录）。
      */
     if (errorMessage) {
+      appendErrorLog("settings:openNotesDirectory", "Failed to open notes directory", { errorMessage, notesPath });
       throw new Error(errorMessage);
     }
   });

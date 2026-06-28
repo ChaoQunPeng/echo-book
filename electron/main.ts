@@ -1,8 +1,9 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { closeDatabase } from "./db/connection.js";
 import { registerDiaryIpcHandlers } from "./ipc/diaryIpc.js";
 import { registerSettingsIpcHandlers } from "./ipc/settingsIpc.js";
+import { appendErrorLog } from "./services/errorLogService.js";
 
 /**
  * 编译后的 Electron main process 运行在 dist-electron/package.json 标记的
@@ -24,6 +25,64 @@ import { registerSettingsIpcHandlers } from "./ipc/settingsIpc.js";
  * 主动改到 EchoBook-dev，正式包继续保留 EchoBook，不影响已经安装用户的数据位置。
  */
 const DEVELOPMENT_USER_DATA_DIRECTORY_NAME = "EchoBook-dev";
+const RENDERER_ERROR_LOG_CHANNEL = "error-log:renderer-error";
+
+type RendererErrorLogPayload = {
+  kind: "error" | "unhandledrejection";
+  message: string;
+  source?: string;
+  line?: number;
+  column?: number;
+  stack?: string;
+};
+
+function registerProcessErrorLogHandlers(): void {
+  /*
+   * 主进程兜底错误写入 app error log，方便正式包没有终端时定位启动失败。
+   */
+  process.on("uncaughtException", (error) => {
+    appendErrorLog("main:uncaughtException", error.message, error);
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    const detail = reason instanceof Error || typeof reason === "string" ? reason : { reason };
+
+    appendErrorLog("main:unhandledRejection", "Unhandled promise rejection", detail);
+  });
+}
+
+function registerRendererErrorLogIpc(): void {
+  ipcMain.on(RENDERER_ERROR_LOG_CHANNEL, (_event, payload: RendererErrorLogPayload) => {
+    appendErrorLog(`renderer:${payload.kind}`, payload.message, payload);
+  });
+}
+
+function registerWindowErrorLogHandlers(win: BrowserWindow): void {
+  win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    const isDevelopment = app.isPackaged === false;
+    const isErrorLevel = level >= 3;
+
+    if (isDevelopment) {
+      console.log(`[renderer:${level}] ${message}`);
+    }
+
+    if (isErrorLevel) {
+      appendErrorLog("renderer:console", message, { level, line, sourceId });
+    }
+  });
+
+  win.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+    appendErrorLog("renderer:did-fail-load", errorDescription, { errorCode, validatedURL });
+  });
+
+  win.webContents.on("render-process-gone", (_event, details) => {
+    appendErrorLog("renderer:render-process-gone", details.reason, details);
+  });
+
+  win.webContents.on("unresponsive", () => {
+    appendErrorLog("window:unresponsive", "Renderer window became unresponsive");
+  });
+}
 
 /**
  * 开发环境直接从仓库 build 目录读取应用图标。
@@ -94,6 +153,8 @@ function createWindow(): void {
     },
   });
 
+  registerWindowErrorLogHandlers(win);
+
   if (!app.isPackaged) {
     void win.loadURL("http://localhost:5173");
   } else {
@@ -101,14 +162,6 @@ function createWindow(): void {
   }
 
   if (!app.isPackaged) {
-    /*
-     * 开发阶段把 renderer 的 console 转发到启动终端。
-     * 保存失败这类错误常发生在 renderer catch 中，只看主进程日志会漏掉关键信息。
-     */
-    win.webContents.on("console-message", (_event, level, message) => {
-      console.log(`[renderer:${level}] ${message}`);
-    });
-
     win.webContents.openDevTools();
   }
 }
@@ -121,6 +174,8 @@ function createWindow(): void {
 void app
   .whenReady()
   .then(() => {
+    registerProcessErrorLogHandlers();
+    registerRendererErrorLogIpc();
     configureDevelopmentDockIcon();
     registerDiaryIpcHandlers();
     registerSettingsIpcHandlers();
@@ -139,6 +194,7 @@ void app
      * UnhandledPromiseRejectionWarning，并让进程用非 0 退出码告诉启动脚本失败。
      */
     console.error("Failed to start Electron main process:", error);
+    appendErrorLog("main:start", "Failed to start Electron main process", error as Error);
     app.quit();
     process.exitCode = 1;
   });

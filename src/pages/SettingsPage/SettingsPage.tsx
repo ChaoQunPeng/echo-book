@@ -2,6 +2,7 @@ import {
   BgColorsOutlined,
   CheckOutlined,
   DatabaseOutlined,
+  FileTextOutlined,
   FolderOpenOutlined,
   FolderAddOutlined,
   ImportOutlined,
@@ -34,6 +35,7 @@ function SettingsPage() {
   const [isMigratingNotes, setIsMigratingNotes] = useState(false)
   const [isImportingBackup, setIsImportingBackup] = useState(false)
   const [isSyncingMarkdown, setIsSyncingMarkdown] = useState(false)
+  const [isExportingErrorLog, setIsExportingErrorLog] = useState(false)
   const isUsingDefaultNotesDirectory = !storageInfo?.customNotesPath
 
   useEffect(() => {
@@ -279,6 +281,37 @@ function SettingsPage() {
     }
   }
 
+  const handleExportTodayErrorLog = async () => {
+    const hasSettingsAPI = window.settingsAPI !== undefined
+
+    if (hasSettingsAPI === false) {
+      message.error('请通过 Electron 启动应用后导出错误日志')
+      return
+    }
+
+    setIsExportingErrorLog(true)
+    try {
+      const result = await window.settingsAPI.exportTodayErrorLog()
+      if (result.canceled === true) {
+        return
+      }
+
+      if (result.exported === false) {
+        message.warning(result.error ?? '暂无错误日志')
+        return
+      }
+
+      /*
+       * 导出成功后直接展示保存位置，便于用户发送给开发者。
+       */
+      message.success(`错误日志已导出：${result.filePath ?? ''}`)
+    } catch {
+      message.error('导出错误日志失败')
+    } finally {
+      setIsExportingErrorLog(false)
+    }
+  }
+
   const showSyncResultMessage = (result: SyncMarkdownFilesResult, prefix?: string) => {
     const parts = [
       prefix,
@@ -454,6 +487,17 @@ function SettingsPage() {
               onClick={handleSyncMarkdownFiles}
             >
               更新日记数据
+            </Button>
+            <Button
+              className="ml-16"
+              color="primary"
+              variant="outlined"
+              icon={<FileTextOutlined />}
+              loading={isExportingErrorLog}
+              disabled={window.settingsAPI === undefined || Boolean(settingsError)}
+              onClick={handleExportTodayErrorLog}
+            >
+              导出错误日志
             </Button>
           </Card>
         </div>

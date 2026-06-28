@@ -12,6 +12,7 @@ import { initializeDatabase } from "../db/schema.js";
 import { DiaryRepository } from "../repositories/diaryRepository.js";
 import { TagRepository } from "../repositories/tagRepository.js";
 import { DiaryService } from "../services/diaryService.js";
+import { appendErrorLog } from "../services/errorLogService.js";
 import { TagService } from "../services/tagService.js";
 
 /**
@@ -74,8 +75,9 @@ export function registerDiaryIpcHandlers(): void {
       /*
        * 保存失败时把 main process 的真实错误留在终端里。
        * renderer 只能拿到跨进程后的 Error 文本，终端日志更适合定位 SQLite / 文件系统问题。
-       */
+      */
       console.error("Failed to create diary:", error);
+      appendErrorLog("diary:create", "Failed to create diary", error as Error);
       throw error;
     }
   });
@@ -86,8 +88,9 @@ export function registerDiaryIpcHandlers(): void {
     } catch (error) {
       /*
        * 更新链路同样记录原始错误，避免 renderer 只显示泛化的“保存失败”。
-       */
+      */
       console.error("Failed to update diary:", error);
+      appendErrorLog("diary:update", "Failed to update diary", error as Error);
       throw error;
     }
   });
@@ -116,6 +119,7 @@ export function registerDiaryIpcHandlers(): void {
       return diaryService.saveDiaryAsset(input);
     } catch (error) {
       console.error("Failed to save diary asset:", error);
+      appendErrorLog("diary:saveAsset", "Failed to save diary asset", error as Error);
       throw error;
     }
   });
