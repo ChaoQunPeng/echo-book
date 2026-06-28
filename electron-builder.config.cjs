@@ -47,11 +47,15 @@ module.exports = {
     category: 'public.app-category.productivity',
     // macOS 安装包和 .app 使用的应用图标。
     icon: 'build/icon.icns',
+    // macOS Electron locale 目录使用 zh_CN.lproj 这类下划线命名。
+    electronLanguages: ['zh_CN'],
     target: ['dmg', 'dir']
   },
   win: {
     // Windows 安装包、快捷方式和任务栏使用的应用图标。
     icon: 'build/icon.ico',
+    // Windows Electron locale 文件使用 zh-CN.pak 这类连字符命名。
+    electronLanguages: ['zh-CN'],
     target: ['nsis', 'portable']
   },
   nsis: {
