@@ -29,13 +29,27 @@ const THEME_STORAGE_KEY = 'echo-book-theme'
 /*
  * 新用户首次进入时默认使用墨白主题。
  */
-export const DEFAULT_ECHO_THEME_ID: string = 'monochrome'
+export const DEFAULT_ECHO_THEME_ID: string = 'polar-green'
 
 export const ECHO_THEME_LAYOUT_BG = '#fafafa'
 
 const COLOR_TEXT_BASE = '#1f1f1f'
 
 export const ECHO_THEMES: EchoTheme[] = [
+  {
+    id: 'polar-green',
+    // 原名：极光绿
+    name: '森林',
+    descriptions: '自然、宁静',
+    colorTextBase: COLOR_TEXT_BASE,
+    colorPrimary: '#389e0d',
+    colorInfo: '#389e0d',
+    gradient: {
+      from: '#73d13d',
+      to: '#389e0d',
+      angle: 135
+    }
+  },
   {
     id: 'dust-red',
     // 原名：薄暮
@@ -78,21 +92,6 @@ export const ECHO_THEMES: EchoTheme[] = [
   //   colorPrimary: '#d4380d',
   //   colorInfo: '#d4380d'
   // },
-
-  {
-    id: 'polar-green',
-    // 原名：极光绿
-    name: '森林',
-    descriptions: '自然、宁静',
-    colorTextBase: COLOR_TEXT_BASE,
-    colorPrimary: '#389e0d',
-    colorInfo: '#389e0d',
-    gradient: {
-      from: '#73d13d',
-      to: '#389e0d',
-      angle: 135
-    }
-  },
 
   {
     id: 'sunset-orange',
