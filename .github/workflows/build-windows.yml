@@ -27,7 +27,7 @@ jobs:
 
       # 在 Windows 环境生成 NSIS 安装包。
       - name: Build Installer
-        run: npm run dist:win-installer -- --publish never
+        run: npm run dist:win-installer
 
       # 上传 .exe，方便在 Actions 页面下载。
       - name: Upload Installer
