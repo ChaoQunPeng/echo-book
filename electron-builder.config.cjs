@@ -27,6 +27,25 @@ module.exports = {
   directories: {
     output: 'release'
   },
+  dmg: {
+    // 使用纯色背景时，下面的窗口尺寸会稳定生效，避免默认背景图压缩可视区域。
+    backgroundColor: '#ffffff',
+    iconSize: 88,
+    iconTextSize: 13,
+    window: {
+      width: 760,
+      height: 500
+    },
+    contents: [
+      // 应用本体，用户可以拖到 Applications 完成安装。
+      { x: 190, y: 170, type: 'file', name: '爱可日记.app' },
+      // Applications 快捷方式，保持 macOS 常见 DMG 安装体验。
+      { x: 570, y: 170, type: 'link', path: '/Applications' },
+      // 修复脚本和安装说明放在 DMG 根目录，方便用户遇到拦截时手动处理。
+      { x: 220, y: 360, type: 'file', path: '爱可日记修复.command', name: '爱可日记修复.command' },
+      { x: 540, y: 360, type: 'file', path: '安装说明.txt', name: '安装说明.txt' }
+    ]
+  },
   async afterPack(context) {
     const resourcesPath = getResourcesPath(context)
     if (!resourcesPath) {
