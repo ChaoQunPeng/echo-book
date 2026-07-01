@@ -41,9 +41,9 @@ module.exports = {
       { x: 190, y: 170, type: 'file', name: '爱可日记.app' },
       // Applications 快捷方式，保持 macOS 常见 DMG 安装体验。
       { x: 570, y: 170, type: 'link', path: '/Applications' },
-      // 修复脚本和安装说明放在 DMG 根目录，方便用户遇到拦截时手动处理。
-      { x: 220, y: 360, type: 'file', path: '爱可日记修复.command', name: '爱可日记修复.command' },
-      { x: 540, y: 360, type: 'file', path: '安装说明.txt', name: '安装说明.txt' }
+      // 仓库内统一放在 support 目录，打包到 DMG 时仍展示在根目录。
+      { x: 220, y: 360, type: 'file', path: 'support/爱可日记修复.command', name: '爱可日记修复.command' },
+      { x: 540, y: 360, type: 'file', path: 'support/安装说明.txt', name: '安装说明.txt' }
     ]
   },
   async afterPack(context) {
