@@ -33,17 +33,14 @@ module.exports = {
     iconSize: 88,
     iconTextSize: 13,
     window: {
-      width: 760,
+      width: 800,
       height: 500
     },
     contents: [
-      // 应用本体，用户可以拖到 Applications 完成安装。
-      { x: 190, y: 170, type: 'file', name: '爱可日记.app' },
-      // Applications 快捷方式，保持 macOS 常见 DMG 安装体验。
-      { x: 570, y: 170, type: 'link', path: '/Applications' },
-      // 仓库内统一放在 support 目录，打包到 DMG 时仍展示在根目录。
-      { x: 220, y: 360, type: 'file', path: 'support/爱可日记修复.command', name: '爱可日记修复.command' },
-      { x: 540, y: 360, type: 'file', path: 'support/安装说明.txt', name: '安装说明.txt' }
+      { x: 120, y: 170, type: 'file', path: 'support/爱可日记安装说明.png', name: '请先点我~.png' },
+      { x: 300, y: 170, type: 'file', name: '爱可日记.app' },
+      { x: 480, y: 170, type: 'link', path: '/Applications' },
+      { x: 660, y: 170, type: 'file', path: 'support/爱可日记启动助手.command', name: '爱可日记启动助手.command' }
     ]
   },
   async afterPack(context) {
