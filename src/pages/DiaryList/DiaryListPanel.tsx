@@ -236,15 +236,18 @@ function DiaryListPanel({
  * 列表不读取 Markdown 正文，只展示可由数据库索引直接提供的信息
  */
 function buildDiaryMetaSummary(diary: Diary): string {
-  const moodMeta = diary.mood ? formatMood(diary.mood) : undefined
-  const weatherMeta = diary.weather ? formatWeather(diary.weather) : undefined
-  const summaryParts = [
-    /*
-     * 标准枚举展示 emoji 和名称；历史自定义值找不到枚举时仍显示原文。
-     */
-    diary.mood ? (moodMeta ? `${moodMeta.name} ${moodMeta.emoji}` : diary.mood) : '',
-    diary.weather ? (weatherMeta ? `${weatherMeta.name} ${weatherMeta.emoji}` : diary.weather) : ''
-  ].filter(Boolean)
+  const moodValue = diary.mood ?? ''
+  const weatherValue = diary.weather ?? ''
+  const hasMood = moodValue.trim() !== ''
+  const hasWeather = weatherValue.trim() !== ''
+  const moodMeta = hasMood ? formatMood(moodValue) : undefined
+  const weatherMeta = hasWeather ? formatWeather(weatherValue) : undefined
+  const moodLabel = hasMood ? (moodMeta !== undefined ? moodMeta.name : moodValue) : ''
+  const weatherLabel = hasWeather ? (weatherMeta !== undefined ? weatherMeta.name : weatherValue) : ''
+  /*
+   * 标准枚举展示名称；历史自定义值找不到枚举时仍显示原文。
+   */
+  const summaryParts = [moodLabel, weatherLabel].filter(part => part !== '')
 
   return summaryParts.join(' · ')
 }

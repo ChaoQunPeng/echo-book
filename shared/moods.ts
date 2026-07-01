@@ -1,30 +1,21 @@
 export const MOODS = [
   {
-    name: '平静',
-    emoji: '🙂'
+    name: '平静'
   },
   {
-    name: '开心',
-    emoji: '😀'
-  },
-  /*
-   * 使用较早版本就支持的 emoji，避免部分 Windows 字体缺字。
-   */
-  {
-    name: '疲惫',
-    emoji: '😫'
+    name: '开心'
   },
   {
-    name: '无语',
-    emoji: '😶'
+    name: '疲惫'
   },
   {
-    name: '低落',
-    emoji: '😔'
+    name: '无语'
   },
   {
-    name: '大哭',
-    emoji: '😭'
+    name: '低落'
+  },
+  {
+    name: '大哭'
   }
 ] as const
 
@@ -35,9 +26,9 @@ export const DEFAULT_MOOD = MOODS[0].name
 
 export function formatMood(mood: string) {
   /*
-   * 数据库存储心情名称，展示层再补 emoji；历史自定义心情找不到时保持原文。
+   * 数据库存储心情名称；历史自定义心情找不到时由调用方保持原文。
    */
   const matchedMood = MOODS.find(moodOption => moodOption.name === mood)
 
-  return matchedMood;
+  return matchedMood
 }

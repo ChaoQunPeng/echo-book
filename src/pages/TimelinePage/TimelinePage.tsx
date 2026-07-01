@@ -291,10 +291,14 @@ function TimelineDiaryCard({ diary, tagColorMap, onOpenDiary }: TimelineDiaryCar
   /*
    * 先整理展示文案，避免 JSX 里塞复杂条件表达式。
    */
-  const moodMeta = diary.mood ? formatMood(diary.mood) : undefined
-  const weatherMeta = diary.weather ? formatWeather(diary.weather) : undefined
-  const moodLabel = formatTimelineMetaLabel(diary.mood, moodMeta)
-  const weatherLabel = formatTimelineMetaLabel(diary.weather, weatherMeta)
+  const moodValue = diary.mood ?? ''
+  const weatherValue = diary.weather ?? ''
+  const hasMood = moodValue.trim() !== ''
+  const hasWeather = weatherValue.trim() !== ''
+  const moodMeta = hasMood ? formatMood(moodValue) : undefined
+  const weatherMeta = hasWeather ? formatWeather(weatherValue) : undefined
+  const moodLabel = formatTimelineMetaLabel(moodValue, moodMeta)
+  const weatherLabel = formatTimelineMetaLabel(weatherValue, weatherMeta)
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     /*
@@ -310,30 +314,6 @@ function TimelineDiaryCard({ diary, tagColorMap, onOpenDiary }: TimelineDiaryCar
     /*
      * 不使用 hoverable，避免 AntD 注入默认悬浮阴影。
      */
-    // <Card
-    //   className="rounded-xl!"
-    //   role="button"
-    //   tabIndex={0}
-    //   aria-label={`打开日记：${title}`}
-    //   onClick={() => onOpenDiary(diary.id)}
-    //   onKeyDown={handleCardKeyDown}
-    // >
-    //   <h3>{title}</h3>
-    //   <div>
-    //     <time dateTime={new Date(diary.createdAt).toISOString()}>{formatCreatedTime(diary.createdAt)}</time>
-    //     <span>{diary.mood ? formatMood(diary.mood)?.name : '🙂 未记录'}</span>
-    //   </div>
-    //   <p>{summary}</p>
-    //   {diary.tags?.length ? (
-    //     <div>
-    //       {diary.tags.map(tag => (
-    //         <Tag key={tag} variant="outlined" color="green">
-    //           #{tag}
-    //         </Tag>
-    //       ))}
-    //     </div>
-    //   ) : null}
-    // </Card>
     <div
       className="rounded-xl! group transition-[transform,border-color] duration-[160ms] ease-in-out focus-visible:outline-none"
       role="button"
@@ -374,23 +354,25 @@ function TimelineDiaryCard({ diary, tagColorMap, onOpenDiary }: TimelineDiaryCar
 
 type TimelineMetaOption = {
   name: string
-  emoji: string
 }
 
 /**
  * 格式化时间线元信息
- * 标准枚举展示 emoji + 名称；历史自定义值直接回显。
+ * 标准枚举展示名称；历史自定义值直接回显。
  */
 function formatTimelineMetaLabel(rawValue: string | undefined, meta: TimelineMetaOption | undefined): string {
-  if (!rawValue) {
+  const normalizedRawValue = rawValue?.trim() ?? ''
+  const hasRawValue = normalizedRawValue !== ''
+
+  if (!hasRawValue) {
     return ''
   }
 
-  if (!meta) {
-    return rawValue
+  if (meta === undefined) {
+    return rawValue ?? ''
   }
 
-  return `${meta.name} ${meta.emoji}`
+  return meta.name
 }
 
 /**

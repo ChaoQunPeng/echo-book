@@ -34,8 +34,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Markdown, type MarkdownNodeSpec, type MarkdownStorage } from 'tiptap-markdown'
 import { CLEARED_DIARY_TITLE_FALLBACK } from '../../../shared/defaultDiary'
 import type { Diary } from '../../../shared/diary'
-import { formatMood, MOODS } from '../../../shared/moods'
-import { formatWeather, WEATHERS } from '../../../shared/weather'
+import { MOODS } from '../../../shared/moods'
+import { WEATHERS } from '../../../shared/weather'
 import type { TagLibraryItem } from '../../../shared/tags'
 import TagManagerDialog from './TagManagerDialog'
 import styles from './EditorPage.module.scss'
@@ -55,7 +55,6 @@ const PARAGRAPH_MENU_KEY = 'paragraph'
 const WEATHER_NONE_OPTION = {
   name: '',
   label: '无',
-  emoji: '',
   icon: <CloseCircleOutlined />
 }
 const METADATA_POPOVER_DIVIDER = {
@@ -72,7 +71,7 @@ const DiaryParagraph = Paragraph.extend({
   }
 })
 
-type MetadataPopoverOption = { name: string; emoji: string; label?: string; icon?: ReactNode } | typeof METADATA_POPOVER_DIVIDER
+type MetadataPopoverOption = { name: string; label?: string; icon?: ReactNode } | typeof METADATA_POPOVER_DIVIDER
 
 type DiaryDraftFields = {
   title: string
@@ -414,13 +413,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
     return Array.from(tagMap.values())
   }, [selectedTags, tagLibrary])
   const isMoodSelected = mood.trim() !== ''
-  const selectedMood = isMoodSelected ? formatMood(mood) : null
-  const selectedMoodName = selectedMood?.name ?? mood
-  const selectedMoodEmoji = selectedMood?.emoji ?? ''
   const isWeatherSelected = weather.trim() !== ''
-  const selectedWeather = isWeatherSelected ? formatWeather(weather) : null
-  const selectedWeatherName = selectedWeather?.name ?? weather
-  const selectedWeatherEmoji = selectedWeather?.emoji ?? ''
 
   const uploadDiaryImage = useCallback(
     async (file: File): Promise<string> => {
@@ -1058,7 +1051,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
 
   const handleWeatherChange = (nextWeather: string) => {
     /*
-     * 天气和心情一样，只保存枚举名称，展示层再补 emoji。
+     * 天气和心情一样，只保存枚举名称，展示层直接显示名称。
      */
     latestFieldsRef.current = {
       ...latestFieldsRef.current,
@@ -1285,8 +1278,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           <Button icon={<SmileOutlined />}>
             {isMoodSelected ? (
               <div className="flex items-center leading-none!">
-                <span className="mood-name leading-none! mr-4">{selectedMoodName}</span>
-                <span className="mood-emoji text-size-18">{selectedMoodEmoji}</span>
+                <span className="mood-name leading-none!">{mood}</span>
               </div>
             ) : (
               '选择今天的心情'
@@ -1304,8 +1296,7 @@ function EditorPage({ diaryId: providedDiaryId, embedded = false, showHeader = t
           <Button icon={<CloudOutlined />}>
             {isWeatherSelected ? (
               <div className="flex items-center leading-none!">
-                <span className="mood-name leading-none! mr-4">{selectedWeatherName}</span>
-                <span className="mood-emoji text-size-18">{selectedWeatherEmoji}</span>
+                <span className="mood-name leading-none!">{weather}</span>
               </div>
             ) : (
               '选择天气'
@@ -1495,9 +1486,10 @@ function renderMetadataPopoverContent({
         const optionLabel = option.label ?? option.name
         const isSelected = selectedValue === option.name
         /*
-         * 清空这类操作项用图标，真实元数据项仍展示原来的 emoji。
+         * 清空这类操作项保留图标，真实元数据项只展示名称。
          */
-        const optionVisual = option.icon ?? option.emoji
+        const optionIcon = option.icon
+        const hasOptionIcon = optionIcon !== undefined && optionIcon !== null
 
         return (
           <div
@@ -1514,7 +1506,7 @@ function renderMetadataPopoverContent({
             onClick={() => onSelect(option.name)}
             onKeyDown={onKeyDown}
           >
-            <span className="w-20 text-center">{optionVisual}</span>
+            {hasOptionIcon ? <span className="w-20 text-center">{optionIcon}</span> : null}
             <span>{optionLabel}</span>
           </div>
         )

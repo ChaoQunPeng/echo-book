@@ -1,28 +1,23 @@
 export const WEATHERS = [
   {
-    name: '晴',
-    emoji: '☀️'
+    name: '晴'
   },
   {
-    name: '阴天',
-    emoji: '☁️'
+    name: '阴天'
   },
   {
-    name: '多云',
-    emoji: '⛅'
+    name: '多云'
   },
   {
-    name: '雨',
-    emoji: '🌧️'
+    name: '雨'
   },
   {
-    name: '雪',
-    emoji: '❄️'
+    name: '雪'
   }
 ] as const
 
 /*
- * 天气只保存名称，展示层再补 emoji。
+ * 天气只保存名称。
  * 历史记录里如果出现自定义值，仍然保持原文。
  */
 export function formatWeather(weather: string) {
