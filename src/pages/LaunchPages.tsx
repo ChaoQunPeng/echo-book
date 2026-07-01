@@ -41,18 +41,18 @@ const WELCOME_MOTION_STYLES = `
 }
 
 .echo-welcome-logo {
-  animation: echoWelcomeIn 1600ms ease-in-out 220ms both;
+  animation: echoWelcomeIn 1000ms ease-in-out 0ms both;
   width: 200px;
   height: auto;
   display: block;
 }
 
 .echo-welcome-slogan {
-  animation: echoWelcomeIn 1900ms ease-in-out 900ms both;
+  animation: echoWelcomeIn 1000ms ease-in-out 1200ms both;
 }
 
 .echo-welcome-button {
-  animation: echoWelcomeButtonIn 1800ms ease-in-out 2600ms both;
+  animation: echoWelcomeButtonIn 1000ms ease-in-out 1800ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -137,7 +137,7 @@ export function WelcomePage() {
         <div className="flex flex-col items-center text-center">
           {/* 欢迎页复用品牌 logo 资源，避免首页标题和侧边栏品牌露出不一致。 */}
           <img className="echo-welcome-logo mb-18!" src={logoUrl} alt="爱可日记" />
-          <Typography.Text className="echo-welcome-slogan text-size-20! font-normal!">陪你记下每一天</Typography.Text>
+          <Typography.Text className="echo-welcome-slogan text-size-20! font-normal!">属于你的日记</Typography.Text>
 
           <Button
             className="echo-gradient-button echo-welcome-button mt-50 h-44 min-w-144 px-28 text-size-15"
